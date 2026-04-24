@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>競艇予想 — BoatAI</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d0f14;
+  --bg2: #13161e;
+  --bg3: #1a1e2a;
+  --bg4: #222636;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #e8eaf0;
+  --text2: #8892a4;
+  --text3: #5a6478;
+  --accent: #4f7cff;
+  --accent2: #6b94ff;
+  --gold: #f5c842;
+  --green: #3dd68c;
+  --green2: #1a6640;
+  --red: #ff5a5a;
+  --red2: #5a1a1a;
+  --orange: #ff9f3d;
+  --orange2: #5a3a10;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── HEADER ── */
+.site-header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.25rem;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: .03em;
+}
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.header-meta {
+  font-size: 12px;
+  color: var(--text2);
+  text-align: right;
+}
+.header-meta strong { color: var(--text); }
+
+/* ── LAYOUT ── */
+.container { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
+
+/* ── VENUE STATS ── */
+.venue-bar {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+.vstat { text-align: center; }
+.vstat-val { font-size: 1.3rem; font-weight: 700; color: var(--accent2); }
+.vstat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ── RACE GRID ── */
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.race-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+@media (max-width: 600px) {
+  .race-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 400px) {
+  .race-grid { grid-template-columns: repeat(2, 1fr); }
+}
+.race-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .75rem .875rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
+  overflow: hidden;
+}
+.race-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: transparent;
+  transition: background .15s;
+}
+.race-card:hover { border-color: var(--border2); background: var(--bg3); }
+.race-card.active { border-color: var(--accent); background: var(--bg3); }
+.race-card.active::before { background: var(--accent); }
+.rc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.rc-no { font-weight: 700; font-size: .875rem; }
+.rc-time { font-size: 10px; color: var(--text3); }
+.arek-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.arek-lo { background: rgba(61,214,140,.12); color: var(--green); }
+.arek-md { background: rgba(245,200,66,.12); color: var(--gold); }
+.arek-hi { background: rgba(255,90,90,.12); color: var(--red); }
+.rc-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.boat-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.b1 { background: #4f7cff; color: #fff; }
+.b2 { background: #3a8fd4; color: #fff; }
+.b3 { background: #d44e3a; color: #fff; }
+.b4 { background: #3ab87a; color: #fff; }
+.b5 { background: #d49e3a; color: #fff; }
+.b6 { background: #9b5de5; color: #fff; }
+.rc-name { font-size: 12px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc-prob { font-size: 12px; font-weight: 700; color: var(--accent2); font-family: var(--mono); }
+.rc-bar { height: 3px; background: var(--bg4); border-radius: 2px; margin-top: 7px; }
+.rc-fill { height: 100%; border-radius: 2px; background: var(--accent); transition: width .4s ease; }
+
+/* ── DETAIL PANEL ── */
+.detail-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.dp-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: var(--bg3);
+}
+.dp-title { font-size: 1rem; font-weight: 700; }
+.dp-meta { font-size: 12px; color: var(--text2); }
+.scenario-bar {
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.scenario-bar.safe { background: rgba(61,214,140,.07); border-left: 3px solid var(--green); }
+.scenario-bar.warn { background: rgba(255,90,90,.07); border-left: 3px solid var(--red); }
+.scenario-bar.mix  { background: rgba(79,124,255,.07); border-left: 3px solid var(--accent); }
+
+/* ── BOAT TABLE ── */
+.boat-table { width: 100%; }
+.bt-head {
+  display: grid;
+  grid-template-columns: 36px 1fr 42px 54px 54px 54px 50px 72px;
+  gap: 6px;
+  padding: .5rem 1.25rem;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.bt-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 42px 54px 54px 54px 50px 72px;
+  gap: 6px;
+  padding: .75rem 1.25rem;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background .12s;
+}
+.bt-row:last-child { border-bottom: none; }
+.bt-row:hover { background: var(--bg3); }
+.bt-row.top1 { background: rgba(79,124,255,.05); }
+.grade-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.ga1 { background: rgba(79,124,255,.2); color: var(--accent2); }
+.ga2 { background: rgba(79,124,255,.1); color: #8aabff; }
+.gb1 { background: var(--bg4); color: var(--text2); }
+.gb2 { background: rgba(255,90,90,.1); color: #ff8a8a; }
+.dq-tag {
+  display: inline-block;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+.dq-venue { background: rgba(61,214,140,.15); color: var(--green); }
+.dq-venue_raw { background: rgba(61,214,140,.08); color: #70d4a0; }
+.dq-course { background: rgba(245,200,66,.12); color: var(--gold); }
+.dq-fallback { background: var(--bg4); color: var(--text3); }
+.prob-cell { display: flex; align-items: center; gap: 7px; }
+.prob-bar-wrap { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; min-width: 30px; }
+.prob-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+.prob-num { font-family: var(--mono); font-size: 12px; font-weight: 500; min-width: 36px; text-align: right; }
+.form-dots { display: flex; gap: 3px; align-items: center; }
+.fdot {
+  width: 7px; height: 7px; border-radius: 50%;
+  display: inline-block;
+}
+.fd1 { background: var(--green); }
+.fd2 { background: var(--accent); }
+.fd3 { background: var(--gold); }
+.fd4, .fd5, .fd6 { background: var(--text3); }
+.fdS, .fdF { background: var(--red); }
+
+/* ── BUY SECTION ── */
+.buy-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+}
+@media (max-width: 480px) { .buy-grid { grid-template-columns: 1fr; } }
+.buy-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .875rem 1rem;
+}
+.buy-card-title { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; }
+.buy-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.buy-row:last-child { border-bottom: none; }
+.buy-label {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 30px;
+  text-align: center;
+}
+.bl-honmei { background: rgba(61,214,140,.15); color: var(--green); }
+.bl-taikou { background: rgba(245,200,66,.12); color: var(--gold); }
+.bl-ana, .bl-gyaku { background: rgba(255,90,90,.1); color: #ff8a8a; }
+.buy-combo { font-family: var(--mono); font-size: 15px; font-weight: 500; flex: 1; letter-spacing: 2px; }
+.buy-weight { display: flex; gap: 2px; }
+.wdot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.wdot.empty { background: var(--bg4); }
+
+/* ── FILE UPLOAD ── */
+.upload-area {
+  background: var(--bg2);
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 2rem 1.25rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  margin-bottom: 1.25rem;
+}
+.upload-area:hover { border-color: var(--accent); background: var(--bg3); }
+.upload-area.drag { border-color: var(--accent); background: var(--bg3); }
+.upload-icon { font-size: 2rem; margin-bottom: .5rem; }
+.upload-text { font-size: 14px; color: var(--text2); }
+.upload-text strong { color: var(--text); }
+#file-input { display: none; }
+.upload-hint { font-size: 11px; color: var(--text3); margin-top: 6px; }
+
+/* ── TABS ── */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab-btn {
+  padding: 7px 16px;
+  font-size: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s;
+  font-weight: 500;
+}
+.tab-btn:hover { color: var(--text2); }
+.tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+/* ── RESPONSIVE TABLE ── */
+@media (max-width: 640px) {
+  .bt-head { display: none; }
+  .bt-row {
+    grid-template-columns: 36px 1fr 42px 72px;
+    grid-template-rows: auto auto;
+  }
+  .bt-col-wr, .bt-col-lr, .bt-col-m2 { display: none; }
+  .bt-col-form { grid-column: 2; }
+  .bt-col-prob { grid-column: 4; grid-row: 1 / 3; }
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(60px);
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: .625rem 1.25rem;
+  font-size: 13px;
+  transition: transform .3s ease;
+  z-index: 200;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── BADGE FOR RANK ── */
+.rank-crown { font-size: 12px; margin-left: 4px; }
+
+/* ── SCROLL ── */
+html { scroll-behavior: smooth; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    BoatAI 予想
+  </div>
+  <div class="header-meta" id="header-meta">
+    <strong>鳴門</strong> — 2026/04/24
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- FILE UPLOAD (shown when no data loaded) -->
+  <div class="upload-area" id="upload-area" onclick="document.getElementById('file-input').click()">
+    <div class="upload-icon">📂</div>
+    <div class="upload-text"><strong>当日CSVをドロップ or クリックして読み込む</strong></div>
+    <div class="upload-hint">例: 鳴門_2026-04-24.csv&nbsp;|&nbsp;エンコード: UTF-8 / Shift-JIS 両対応</div>
+    <input type="file" id="file-input" accept=".csv">
+  </div>
+
+  <!-- VENUE STATS -->
+  <div class="venue-bar" id="venue-bar" style="display:none">
+    <div class="vstat"><div class="vstat-val" id="vs-inn">—</div><div class="vstat-lbl">イン逃げ率</div></div>
+    <div class="vstat"><div class="vstat-val" id="vs-arek">—</div><div class="vstat-lbl">荒れスコア</div></div>
+    <div class="vstat"><div class="vstat-val" id="vs-c1">—</div><div class="vstat-lbl">1コース1着率</div></div>
+    <div class="vstat"><div class="vstat-val" id="vs-races">12</div><div class="vstat-lbl">レース数</div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar" id="tab-bar" style="display:none">
+    <button class="tab-btn active" onclick="switchTab('races')">全レース一覧</button>
+    <button class="tab-btn" onclick="switchTab('detail')">詳細予想</button>
+    <button class="tab-btn" onclick="switchTab('buy')">買い目</button>
+  </div>
+
+  <!-- RACE GRID -->
+  <div id="tab-races">
+    <div class="section-title">レース選択</div>
+    <div class="race-grid" id="race-grid"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div id="tab-detail" style="display:none">
+    <div class="detail-panel" id="detail-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">上のレースカードを選択してください</div>
+    </div>
+  </div>
+
+  <!-- BUY -->
+  <div id="tab-buy" style="display:none">
+    <div class="detail-panel" id="buy-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MASTER = {"venue":"鳴門","date":"2026-04-24","inn_data":{"inn_rate":0.4531,"arek_score":54.7,"course_rates":[0,0.473,0.15,0.155,0.133,0.074,0.014],"inn_2place":[0,0,0.324,0.269,0.205,0.131,0.071]},"races":{"1":{"arek":25.2,"time":"08:48","boats":[{"boat":6,"name":"大井清貴","grade":"B1","win_rate":4.55,"local_rate":3.56,"motor2":0.0,"boat2":60.0,"results":"544","hayami":9.0,"score":0.7334,"dq":"fallback","time":"08:48","prob":0.2366},{"boat":5,"name":"近藤稔也","grade":"B1","win_rate":3.94,"local_rate":4.78,"motor2":20.0,"boat2":0.0,"results":"435","hayami":7.0,"score":0.6195,"dq":"fallback","time":"08:48","prob":0.1999},{"boat":3,"name":"池上隆行","grade":"B1","win_rate":3.8,"local_rate":4.0,"motor2":0.0,"boat2":50.0,"results":"643","hayami":9.0,"score":0.619,"dq":"fallback","time":"08:48","prob":0.1997},{"boat":1,"name":"岡谷健吾","grade":"B1","win_rate":4.94,"local_rate":4.69,"motor2":0.0,"boat2":0.0,"results":"443","hayami":7.0,"score":0.5097,"dq":"course","time":"08:48","prob":0.1644},{"boat":4,"name":"吉岡　誠","grade":"B1","win_rate":3.6,"local_rate":0.0,"motor2":0.0,"boat2":0.0,"results":"446","hayami":null,"score":0.496,"dq":"fallback","time":"08:48","prob":0.16},{"boat":2,"name":"黒柳浩孝","grade":"A2","win_rate":5.4,"local_rate":7.63,"motor2":30.0,"boat2":27.3,"results":"5242","hayami":null,"score":0.1219,"dq":"course","time":"08:48","prob":0.0393}]},"2":{"arek":58.5,"time":"09:14","boats":[{"boat":1,"name":"廣瀬　凜","grade":"A2","win_rate":6.93,"local_rate":4.79,"motor2":37.5,"boat2":27.3,"results":"3532","hayami":10.0,"score":1.2047,"dq":"fallback","time":"09:14","prob":0.7896},{"boat":5,"name":"土屋智則","grade":"A1","win_rate":6.75,"local_rate":5.83,"motor2":0.0,"boat2":14.3,"results":"3113","hayami":10.0,"score":0.1503,"dq":"course","time":"09:14","prob":0.0985},{"boat":2,"name":"廣瀬将亨","grade":"A2","win_rate":5.95,"local_rate":5.23,"motor2":10.0,"boat2":20.0,"results":"2421","hayami":11.0,"score":0.0926,"dq":"course","time":"09:14","prob":0.0607},{"boat":4,"name":"中井俊祐","grade":"B1","win_rate":4.35,"local_rate":4.41,"motor2":0.0,"boat2":45.5,"results":"335","hayami":6.0,"score":0.0447,"dq":"venue","time":"09:14","prob":0.0293},{"boat":6,"name":"小林甘寧","grade":"B1","win_rate":3.81,"local_rate":1.96,"motor2":0.0,"boat2":0.0,"results":"612","hayami":12.0,"score":0.0234,"dq":"course","time":"09:14","prob":0.0153},{"boat":3,"name":"上瀧絢也","grade":"B2","win_rate":4.03,"local_rate":3.2,"motor2":0.0,"boat2":0.0,"results":"352","hayami":7.0,"score":0.01,"dq":"course","time":"09:14","prob":0.0066}]},"3":{"arek":46.7,"time":"09:40","boats":[{"boat":3,"name":"松本博昭","grade":"A2","win_rate":6.16,"local_rate":5.49,"motor2":36.4,"boat2":0.0,"results":"2325","hayami":10.0,"score":0.7806,"dq":"venue","time":"09:40","prob":0.2795},{"boat":6,"name":"山口広樹","grade":"B1","win_rate":3.91,"local_rate":4.0,"motor2":60.0,"boat2":60.0,"results":"533","hayami":8.0,"score":0.7155,"dq":"fallback","time":"09:40","prob":0.2562},{"boat":4,"name":"向井田直","grade":"B2","win_rate":4.21,"local_rate":5.58,"motor2":27.3,"boat2":50.0,"results":"254","hayami":8.0,"score":0.7062,"dq":"fallback","time":"09:40","prob":0.2529},{"boat":1,"name":"森下　勇","grade":"B1","win_rate":3.7,"local_rate":4.11,"motor2":0.0,"boat2":0.0,"results":"464","hayami":null,"score":0.5327,"dq":"fallback","time":"09:40","prob":0.1907},{"boat":2,"name":"岡瀬正人","grade":"A2","win_rate":5.73,"local_rate":5.73,"motor2":18.2,"boat2":0.0,"results":"4252","hayami":11.0,"score":0.0479,"dq":"venue","time":"09:40","prob":0.0172},{"boat":5,"name":"一柳和孝","grade":"B1","win_rate":5.24,"local_rate":5.91,"motor2":0.0,"boat2":0.0,"results":"2S6","hayami":7.0,"score":0.01,"dq":"course","time":"09:40","prob":0.0036}]},"4":{"arek":45.9,"time":"10:06","boats":[{"boat":3,"name":"滝沢　崚","grade":"B2","win_rate":4.2,"local_rate":3.09,"motor2":50.0,"boat2":40.0,"results":"125","hayami":11.0,"score":0.7675,"dq":"fallback","time":"10:06","prob":0.3053},{"boat":1,"name":"武重雄介","grade":"A2","win_rate":4.64,"local_rate":5.38,"motor2":10.0,"boat2":45.5,"results":"5242","hayami":10.0,"score":0.7642,"dq":"course","time":"10:06","prob":0.304},{"boat":6,"name":"貫地谷直","grade":"B1","win_rate":3.55,"local_rate":0.0,"motor2":30.0,"boat2":0.0,"results":"426","hayami":8.0,"score":0.5599,"dq":"fallback","time":"10:06","prob":0.2227},{"boat":4,"name":"荒井輝年","grade":"B1","win_rate":5.4,"local_rate":5.16,"motor2":50.0,"boat2":0.0,"results":"113","hayami":11.0,"score":0.1991,"dq":"course","time":"10:06","prob":0.0792},{"boat":2,"name":"寳田亮治","grade":"B1","win_rate":4.47,"local_rate":0.0,"motor2":70.0,"boat2":0.0,"results":"165","hayami":9.0,"score":0.1297,"dq":"course","time":"10:06","prob":0.0516},{"boat":5,"name":"田中駿兵","grade":"A1","win_rate":7.35,"local_rate":5.67,"motor2":0.0,"boat2":0.0,"results":"5411","hayami":12.0,"score":0.0932,"dq":"venue","time":"10:06","prob":0.0371}]},"5":{"arek":56.5,"time":"10:32","boats":[{"boat":6,"name":"佐々木完","grade":"A1","win_rate":7.18,"local_rate":6.84,"motor2":0.0,"boat2":0.0,"results":"2314","hayami":12.0,"score":1.242,"dq":"fallback","time":"10:32","prob":0.3598},{"boat":2,"name":"垂水　悠","grade":"B1","win_rate":5.27,"local_rate":5.01,"motor2":0.0,"boat2":0.0,"results":"164","hayami":12.0,"score":0.875,"dq":"fallback","time":"10:32","prob":0.2535},{"boat":1,"name":"富澤祐作","grade":"B1","win_rate":5.07,"local_rate":5.67,"motor2":0.0,"boat2":0.0,"results":"631","hayami":11.0,"score":0.7971,"dq":"venue","time":"10:32","prob":0.2309},{"boat":4,"name":"酒見峻介","grade":"A2","win_rate":4.7,"local_rate":6.44,"motor2":63.6,"boat2":40.0,"results":"S56","hayami":9.0,"score":0.3217,"dq":"course","time":"10:32","prob":0.0932},{"boat":5,"name":"渡辺浩司","grade":"A1","win_rate":6.9,"local_rate":7.22,"motor2":0.0,"boat2":30.0,"results":"3212","hayami":11.0,"score":0.2065,"dq":"course","time":"10:32","prob":0.0598},{"boat":3,"name":"松井貫太","grade":"B1","win_rate":4.1,"local_rate":2.71,"motor2":0.0,"boat2":70.0,"results":"366","hayami":null,"score":0.01,"dq":"course","time":"10:32","prob":0.0029}]},"6":{"arek":66.1,"time":"11:02","boats":[{"boat":3,"name":"草川壮良","grade":"B1","win_rate":2.85,"local_rate":2.17,"motor2":0.0,"boat2":0.0,"results":"546","hayami":null,"score":0.3856,"dq":"fallback","time":"11:02","prob":0.3183},{"boat":1,"name":"中渡修作","grade":"B1","win_rate":4.93,"local_rate":4.77,"motor2":0.0,"boat2":0.0,"results":"234","hayami":12.0,"score":0.3249,"dq":"course","time":"11:02","prob":0.2682},{"boat":5,"name":"丸岡正典","grade":"A2","win_rate":6.14,"local_rate":6.28,"motor2":40.0,"boat2":0.0,"results":"2113","hayami":10.0,"score":0.2007,"dq":"course","time":"11:02","prob":0.1657},{"boat":4,"name":"松田竜馬","grade":"B1","win_rate":4.93,"local_rate":5.62,"motor2":50.0,"boat2":45.5,"results":"115","hayami":10.0,"score":0.1972,"dq":"course","time":"11:02","prob":0.1628},{"boat":2,"name":"金子猛志","grade":"A2","win_rate":4.8,"local_rate":0.0,"motor2":30.0,"boat2":50.0,"results":"3624","hayami":null,"score":0.093,"dq":"course","time":"11:02","prob":0.0768},{"boat":6,"name":"中井俊祐","grade":"B1","win_rate":4.35,"local_rate":4.41,"motor2":0.0,"boat2":45.5,"results":"335","hayami":2.0,"score":0.01,"dq":"course","time":"11:02","prob":0.0083}]},"7":{"arek":69.4,"time":"11:33","boats":[{"boat":1,"name":"上瀧絢也","grade":"B2","win_rate":4.03,"local_rate":3.2,"motor2":0.0,"boat2":0.0,"results":"352","hayami":2.0,"score":0.2815,"dq":"course","time":"11:33","prob":0.3904},{"boat":3,"name":"岡谷健吾","grade":"B1","win_rate":4.94,"local_rate":4.69,"motor2":0.0,"boat2":0.0,"results":"443","hayami":1.0,"score":0.2695,"dq":"venue","time":"11:33","prob":0.3737},{"boat":6,"name":"木村仁紀","grade":"A1","win_rate":6.49,"local_rate":7.33,"motor2":14.3,"boat2":0.0,"results":"1511","hayami":12.0,"score":0.1188,"dq":"course","time":"11:33","prob":0.1647},{"boat":5,"name":"中村裕将","grade":"B1","win_rate":4.28,"local_rate":3.82,"motor2":20.0,"boat2":70.0,"results":"554","hayami":null,"score":0.0313,"dq":"course","time":"11:33","prob":0.0434},{"boat":2,"name":"一柳和孝","grade":"B1","win_rate":5.24,"local_rate":5.91,"motor2":0.0,"boat2":0.0,"results":"2S6","hayami":3.0,"score":0.01,"dq":"course","time":"11:33","prob":0.0139},{"boat":4,"name":"近藤稔也","grade":"B1","win_rate":3.94,"local_rate":4.78,"motor2":20.0,"boat2":0.0,"results":"435","hayami":1.0,"score":0.01,"dq":"venue","time":"11:33","prob":0.0139}]},"8":{"arek":63.8,"time":"12:04","boats":[{"boat":5,"name":"向井田直","grade":"B2","win_rate":4.21,"local_rate":5.58,"motor2":27.3,"boat2":50.0,"results":"254","hayami":3.0,"score":0.6562,"dq":"fallback","time":"12:04","prob":0.3947},{"boat":1,"name":"貫地谷直","grade":"B1","win_rate":3.55,"local_rate":0.0,"motor2":30.0,"boat2":0.0,"results":"426","hayami":4.0,"score":0.5199,"dq":"fallback","time":"12:04","prob":0.3127},{"boat":6,"name":"笠置博之","grade":"A2","win_rate":6.44,"local_rate":6.41,"motor2":0.0,"boat2":20.0,"results":"111F","hayami":null,"score":0.1488,"dq":"course","time":"12:04","prob":0.0895},{"boat":4,"name":"大谷健太","grade":"B2","win_rate":5.14,"local_rate":4.71,"motor2":0.0,"boat2":60.0,"results":"355","hayami":null,"score":0.1392,"dq":"course","time":"12:04","prob":0.0837},{"boat":3,"name":"山口広樹","grade":"B1","win_rate":3.91,"local_rate":4.0,"motor2":60.0,"boat2":60.0,"results":"533","hayami":3.0,"score":0.109,"dq":"course","time":"12:04","prob":0.0656},{"boat":2,"name":"安藤裕貴","grade":"B1","win_rate":4.89,"local_rate":0.0,"motor2":33.3,"boat2":18.2,"results":"466","hayami":null,"score":0.0894,"dq":"course","time":"12:04","prob":0.0538}]},"9":{"arek":59.8,"time":"12:38","boats":[{"boat":1,"name":"池上隆行","grade":"B1","win_rate":3.8,"local_rate":4.0,"motor2":0.0,"boat2":50.0,"results":"643","hayami":1.0,"score":0.2657,"dq":"course","time":"12:38","prob":0.6732},{"boat":6,"name":"酒見峻介","grade":"A2","win_rate":4.7,"local_rate":6.44,"motor2":63.6,"boat2":40.0,"results":"S56","hayami":5.0,"score":0.0579,"dq":"course","time":"12:38","prob":0.1467},{"boat":3,"name":"中里昌志","grade":"B1","win_rate":4.23,"local_rate":4.6,"motor2":0.0,"boat2":63.6,"results":"653","hayami":null,"score":0.0337,"dq":"course","time":"12:38","prob":0.0854},{"boat":5,"name":"寳田亮治","grade":"B1","win_rate":4.47,"local_rate":0.0,"motor2":70.0,"boat2":0.0,"results":"165","hayami":4.0,"score":0.0174,"dq":"course","time":"12:38","prob":0.0441},{"boat":2,"name":"星野政彦","grade":"B2","win_rate":3.64,"local_rate":5.36,"motor2":0.0,"boat2":0.0,"results":"663","hayami":null,"score":0.01,"dq":"course","time":"12:38","prob":0.0253},{"boat":4,"name":"大井清貴","grade":"B1","win_rate":4.55,"local_rate":3.56,"motor2":0.0,"boat2":60.0,"results":"544","hayami":1.0,"score":0.01,"dq":"course","time":"12:38","prob":0.0253}]},"10":{"arek":56.5,"time":"13:12","boats":[{"boat":6,"name":"廣瀬　凜","grade":"A2","win_rate":6.93,"local_rate":4.79,"motor2":37.5,"boat2":27.3,"results":"3532","hayami":2.0,"score":1.1247,"dq":"fallback","time":"13:12","prob":0.4015},{"boat":1,"name":"丸岡正典","grade":"A2","win_rate":6.14,"local_rate":6.28,"motor2":40.0,"boat2":0.0,"results":"2113","hayami":6.0,"score":1.0357,"dq":"venue","time":"13:12","prob":0.3697},{"boat":2,"name":"土屋智則","grade":"A1","win_rate":6.75,"local_rate":5.83,"motor2":0.0,"boat2":14.3,"results":"3113","hayami":2.0,"score":0.346,"dq":"course","time":"13:12","prob":0.1235},{"boat":4,"name":"松本博昭","grade":"A2","win_rate":6.16,"local_rate":5.49,"motor2":36.4,"boat2":0.0,"results":"2325","hayami":3.0,"score":0.2053,"dq":"venue","time":"13:12","prob":0.0733},{"boat":3,"name":"松田竜馬","grade":"B1","win_rate":4.93,"local_rate":5.62,"motor2":50.0,"boat2":45.5,"results":"115","hayami":6.0,"score":0.0794,"dq":"course","time":"13:12","prob":0.0283},{"boat":5,"name":"武重雄介","grade":"A2","win_rate":4.64,"local_rate":5.38,"motor2":10.0,"boat2":45.5,"results":"5242","hayami":4.0,"score":0.01,"dq":"course","time":"13:12","prob":0.0036}]},"11":{"arek":39.4,"time":"13:51","boats":[{"boat":6,"name":"富澤祐作","grade":"B1","win_rate":5.07,"local_rate":5.67,"motor2":0.0,"boat2":0.0,"results":"631","hayami":5.0,"score":0.7867,"dq":"fallback","time":"13:51","prob":0.3674},{"boat":4,"name":"滝沢　崚","grade":"B2","win_rate":4.2,"local_rate":3.09,"motor2":50.0,"boat2":40.0,"results":"125","hayami":4.0,"score":0.6975,"dq":"fallback","time":"13:51","prob":0.3257},{"boat":2,"name":"渡辺浩司","grade":"A1","win_rate":6.9,"local_rate":7.22,"motor2":0.0,"boat2":30.0,"results":"3212","hayami":5.0,"score":0.2686,"dq":"course","time":"13:51","prob":0.1254},{"boat":3,"name":"廣瀬将亨","grade":"A2","win_rate":5.95,"local_rate":5.23,"motor2":10.0,"boat2":20.0,"results":"2421","hayami":2.0,"score":0.237,"dq":"course","time":"13:51","prob":0.1107},{"boat":1,"name":"荒井輝年","grade":"B1","win_rate":5.4,"local_rate":5.16,"motor2":50.0,"boat2":0.0,"results":"113","hayami":4.0,"score":0.1415,"dq":"venue","time":"13:51","prob":0.0661},{"boat":5,"name":"岡瀬正人","grade":"A2","win_rate":5.73,"local_rate":5.73,"motor2":18.2,"boat2":0.0,"results":"4252","hayami":3.0,"score":0.01,"dq":"course","time":"13:51","prob":0.0047}]},"12":{"arek":41.9,"time":"14:29","boats":[{"boat":2,"name":"佐々木完","grade":"A1","win_rate":7.18,"local_rate":6.84,"motor2":0.0,"boat2":0.0,"results":"2314","hayami":5.0,"score":1.172,"dq":"fallback","time":"14:29","prob":0.3078},{"boat":6,"name":"垂水　悠","grade":"B1","win_rate":5.27,"local_rate":5.01,"motor2":0.0,"boat2":0.0,"results":"164","hayami":5.0,"score":0.805,"dq":"fallback","time":"14:29","prob":0.2114},{"boat":1,"name":"木村仁紀","grade":"A1","win_rate":6.49,"local_rate":7.33,"motor2":14.3,"boat2":0.0,"results":"1511","hayami":7.0,"score":0.7997,"dq":"course","time":"14:29","prob":0.21},{"boat":5,"name":"中渡修作","grade":"B1","win_rate":4.93,"local_rate":4.77,"motor2":0.0,"boat2":0.0,"results":"234","hayami":6.0,"score":0.7615,"dq":"fallback","time":"14:29","prob":0.2},{"boat":3,"name":"田中駿兵","grade":"A1","win_rate":7.35,"local_rate":5.67,"motor2":0.0,"boat2":0.0,"results":"5411","hayami":4.0,"score":0.2595,"dq":"venue","time":"14:29","prob":0.0682},{"boat":4,"name":"小林甘寧","grade":"B1","win_rate":3.81,"local_rate":1.96,"motor2":0.0,"boat2":0.0,"results":"612","hayami":2.0,"score":0.01,"dq":"course","time":"14:29","prob":0.0026}]}}};
+
+let DATA = MASTER;
+let selectedRace = 2;
+
+function arekClass(v){ return v < 45 ? 'arek-lo' : v < 65 ? 'arek-md' : 'arek-hi'; }
+function arekLabel(v){ return v < 45 ? '安定' : v < 65 ? '中荒れ' : '大荒れ'; }
+
+function formDots(s){
+  s = s.replace(/[^1-6SF]/g,'');
+  return s.split('').slice(-5).map(c=>{
+    const cls = c==='1'?'fd1':c==='2'?'fd2':c==='3'?'fd3':c==='F'||c==='S'?'fdF':'fd4';
+    return `<span class="fdot ${cls}"></span>`;
+  }).join('');
+}
+
+function gradeBadge(g){
+  const cls={A1:'ga1',A2:'ga2',B1:'gb1',B2:'gb2'}[g]||'gb1';
+  return `<span class="grade-tag ${cls}">${g}</span>`;
+}
+
+function dqTag(dq){
+  const map={venue:'当地実績',venue_raw:'当地(生)',course:'全国実績',fallback:'推定'};
+  return `<span class="dq-tag dq-${dq}">${map[dq]||'推定'}</span>`;
+}
+
+function weightDots(w, max=3){
+  let s='';
+  for(let i=0;i<max;i++) s+=`<span class="wdot${i<w?'':' empty'}"></span>`;
+  return `<div class="buy-weight">${s}</div>`;
+}
+
+function buildVenueBar(){
+  const inn = DATA.inn_data;
+  document.getElementById('vs-inn').textContent = (inn.inn_rate*100).toFixed(1)+'%';
+  document.getElementById('vs-arek').textContent = inn.arek_score.toFixed(1);
+  document.getElementById('vs-c1').textContent = (inn.course_rates[1]*100).toFixed(1)+'%';
+  document.getElementById('vs-races').textContent = Object.keys(DATA.races).length;
+  document.getElementById('venue-bar').style.display='';
+  document.getElementById('tab-bar').style.display='';
+  document.getElementById('header-meta').innerHTML = `<strong>${DATA.venue}</strong> — ${DATA.date}`;
+}
+
+function buildRaceGrid(){
+  const grid = document.getElementById('race-grid');
+  grid.innerHTML='';
+  Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
+    const top = rd.boats[0];
+    const div = document.createElement('div');
+    div.className = 'race-card' + (parseInt(rno)===selectedRace?' active':'');
+    div.id = `rc-${rno}`;
+    div.onclick = ()=>{ selectRace(parseInt(rno)); };
+    div.innerHTML = `
+      <div class="rc-head">
+        <span class="rc-no">${rno}R <span class="rc-time">${rd.time}</span></span>
+        <span class="arek-pill ${arekClass(rd.arek)}">${arekLabel(rd.arek)}</span>
+      </div>
+      <div class="rc-top">
+        <span class="boat-circle b${top.boat}">${top.boat}</span>
+        <span class="rc-name">${top.name}</span>
+        <span class="rc-prob">${(top.prob*100).toFixed(0)}%</span>
+      </div>
+      <div class="rc-bar"><div class="rc-fill" style="width:${(top.prob*100).toFixed(0)}%"></div></div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+function selectRace(rno){
+  selectedRace = rno;
+  document.querySelectorAll('.race-card').forEach(c=>c.classList.remove('active'));
+  const card = document.getElementById(`rc-${rno}`);
+  if(card) card.classList.add('active');
+  renderDetail(rno);
+  renderBuy(rno);
+}
+
+function renderDetail(rno){
+  const rd = DATA.races[rno];
+  if(!rd) return;
+  const boats = rd.boats;
+  const top = boats[0];
+  let sc, scCls;
+  if(rd.arek < 40){
+    sc = `安定展開 — インが強い。荒れスコア${rd.arek}で逃げ展開が濃厚`;
+    scCls = 'safe';
+  } else if(rd.arek >= 65){
+    sc = `大荒れ注意 — まくり・差しが頻発。荒れスコア${rd.arek}、外枠にも注目`;
+    scCls = 'warn';
+  } else {
+    sc = `混戦 — 差し・まくりが絡む展開。${top.name}(艇${top.boat})を軸に対応`;
+    scCls = 'mix';
+  }
+  document.getElementById('detail-panel').innerHTML = `
+    <div class="dp-header">
+      <div>
+        <div class="dp-title">${rno}R 詳細予想</div>
+        <div class="dp-meta">${DATA.venue} &nbsp;${rd.time} 締切</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3)">荒れスコア <strong style="color:${rd.arek>=65?'var(--red)':rd.arek>=45?'var(--gold)':'var(--green)'}">${rd.arek}</strong></div>
+    </div>
+    <div class="scenario-bar ${scCls}">${sc}</div>
+    <div class="bt-head">
+      <div>艇</div><div>選手</div><div>級別</div>
+      <div class="bt-col-wr">全国勝率</div>
+      <div class="bt-col-lr">当地勝率</div>
+      <div class="bt-col-m2">M2率</div>
+      <div class="bt-col-form">今節</div>
+      <div>確率</div>
+    </div>
+    ${boats.map((bt,i)=>`
+      <div class="bt-row${i===0?' top1':''}">
+        <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
+        <div>
+          <span style="font-weight:${i===0?700:400}">${bt.name}</span>${i===0?'<span class="rank-crown">👑</span>':''}
+          <div>${dqTag(bt.dq)}</div>
+        </div>
+        <div>${gradeBadge(bt.grade)}</div>
+        <div class="bt-col-wr" style="font-family:var(--mono);font-size:12px">${bt.win_rate.toFixed(2)}</div>
+        <div class="bt-col-lr" style="font-family:var(--mono);font-size:12px">${bt.local_rate>0?bt.local_rate.toFixed(2):'—'}</div>
+        <div class="bt-col-m2" style="font-family:var(--mono);font-size:12px">${bt.motor2>0?bt.motor2.toFixed(1)+'%':'—'}</div>
+        <div class="bt-col-form"><div class="form-dots">${formDots(bt.results)}</div></div>
+        <div class="prob-cell">
+          <div class="prob-bar-wrap"><div class="prob-bar-fill" style="width:${(bt.prob*100).toFixed(0)}%"></div></div>
+          <span class="prob-num" style="color:${i===0?'var(--accent2)':'var(--text2)'}">${(bt.prob*100).toFixed(1)}%</span>
+        </div>
+      </div>
+    `).join('')}
+  `;
+}
+
+function renderBuy(rno){
+  const rd = DATA.races[rno];
+  if(!rd) return;
+  const boats = rd.boats;
+  const [t,s,h,f] = [boats[0].boat,boats[1].boat,boats[2].boat,(boats[3]||boats[2]).boat];
+  const buy3 = [
+    {c:`${t}−${s}−${h}`,l:'本命',lc:'bl-honmei',w:3},
+    {c:`${t}−${h}−${s}`,l:'対抗',lc:'bl-taikou',w:2},
+    {c:`${t}−${s}−${f}`,l:'穴',lc:'bl-ana',w:1},
+    {c:`${s}−${t}−${h}`,l:'穴',lc:'bl-ana',w:1},
+  ];
+  const buy2 = [
+    {c:`${t}−${s}`,l:'本命',lc:'bl-honmei',w:3},
+    {c:`${t}−${h}`,l:'対抗',lc:'bl-taikou',w:2},
+    {c:`${s}−${t}`,l:'逆転',lc:'bl-gyaku',w:1},
+  ];
+  document.getElementById('buy-panel').innerHTML = `
+    <div class="dp-header">
+      <div>
+        <div class="dp-title">${rno}R 買い目</div>
+        <div class="dp-meta">本命: 艇${t} ${boats[0].name}</div>
+      </div>
+    </div>
+    <div class="buy-grid">
+      <div class="buy-card">
+        <div class="buy-card-title">3連単</div>
+        ${buy3.map(r=>`<div class="buy-row">
+          <span class="buy-label ${r.lc}">${r.l}</span>
+          <span class="buy-combo">${r.c}</span>
+          ${weightDots(r.w)}
+        </div>`).join('')}
+      </div>
+      <div class="buy-card">
+        <div class="buy-card-title">2連単</div>
+        ${buy2.map(r=>`<div class="buy-row">
+          <span class="buy-label ${r.lc}">${r.l}</span>
+          <span class="buy-combo">${r.c}</span>
+          ${weightDots(r.w)}
+        </div>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function switchTab(name){
+  ['races','detail','buy'].forEach(t=>{
+    document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', ['races','detail','buy'][i]===name);
+  });
+  if(name==='detail') renderDetail(selectedRace);
+  if(name==='buy') renderBuy(selectedRace);
+}
+
+// ── FILE UPLOAD ──
+function handleCSV(text){
+  const lines = text.trim().split('\n').filter(l=>l.trim());
+  if(lines.length < 2){ showToast('CSVの形式が不正です'); return; }
+  const headers = lines[0].split(',').map(h=>h.trim().replace(/"/g,''));
+  if(!headers.includes('会場') || !headers.includes('レース')){ showToast('対応フォーマットではありません'); return; }
+  const idx = h=>headers.indexOf(h);
+  const rows = lines.slice(1).map(l=>{
+    const cols = l.split(',').map(c=>c.trim().replace(/"/g,''));
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=cols[i]||'');
+    return obj;
+  });
+  const venue = rows[0]['会場']||'不明';
+  const date  = rows[0]['日付']||'';
+  const races = {};
+  rows.forEach(r=>{
+    const rno = parseInt(r['レース'])||0;
+    if(!races[rno]) races[rno]={arek:54.7,time:r['締切時刻']||'',boats:[]};
+    const name = r['選手名']?(r['選手名'].replace(/\d+$/, '').trim()):('艇'+r['艇番']);
+    races[rno].boats.push({
+      boat:parseInt(r['艇番'])||0,
+      name, grade:r['級別']||'B1',
+      win_rate:parseFloat(r['全国勝率'])||0,
+      local_rate:parseFloat(r['当地勝率'])||0,
+      motor2:parseFloat(r['M2率'])||0,
+      boat2:parseFloat(r['B2率'])||0,
+      results:r['今節成績']||'',
+      hayami:parseFloat(r['早見'])||null,
+      score:0.1, dq:'fallback', prob:0.1667,
+    });
+  });
+  // basic scoring
+  const COURSE_BASE={1:0.47,2:0.15,3:0.155,4:0.133,5:0.074,6:0.014};
+  const GRADE={A1:1.0,A2:0.82,B1:0.65,B2:0.50};
+  Object.values(races).forEach(rd=>{
+    rd.boats.forEach(bt=>{
+      let sc=(COURSE_BASE[bt.boat]||0.08)+(GRADE[bt.grade]||0.65-0.65)*0.1+(bt.motor2-30)/100*0.12+(bt.win_rate/6);
+      sc=Math.max(0.01,sc);
+      bt.score=sc;
+    });
+    const tot=rd.boats.reduce((s,b)=>s+b.score,0);
+    rd.boats.forEach(bt=>bt.prob=bt.score/tot);
+    rd.boats.sort((a,b)=>b.prob-a.prob);
+  });
+  DATA={venue,date,inn_data:MASTER.inn_data,races};
+  selectedRace=parseInt(Object.keys(races)[0])||1;
+  buildVenueBar();
+  buildRaceGrid();
+  selectRace(selectedRace);
+  document.getElementById('upload-area').style.display='none';
+  showToast(`${venue} ${date} — ${Object.keys(races).length}レース読み込み完了`);
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+const fileInput=document.getElementById('file-input');
+fileInput.addEventListener('change',e=>{
+  const f=e.target.files[0];
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{ handleCSV(ev.target.result); } catch(err){ showToast('読み込みエラー: '+err.message); }
+  };
+  reader.readAsText(f,'UTF-8');
+  reader.onerror=()=>{
+    const r2=new FileReader();
+    r2.onload=ev2=>{ try{ handleCSV(ev2.target.result); } catch(err){ showToast('読み込みエラー'); } };
+    r2.readAsText(f,'Shift_JIS');
+  };
+});
+
+const ua=document.getElementById('upload-area');
+ua.addEventListener('dragover',e=>{ e.preventDefault(); ua.classList.add('drag'); });
+ua.addEventListener('dragleave',()=>ua.classList.remove('drag'));
+ua.addEventListener('drop',e=>{
+  e.preventDefault(); ua.classList.remove('drag');
+  const f=e.dataTransfer.files[0];
+  if(!f) return;
+  fileInput.files=e.dataTransfer.files;
+  const ev={target:{files:[f]}}; fileInput.dispatchEvent(new Event('change'));
+});
+
+// ── INIT with embedded data ──
+buildVenueBar();
+buildRaceGrid();
+selectRace(selectedRace);
+document.getElementById('upload-area').style.display='none';
+</script>
+</body>
+</html>
