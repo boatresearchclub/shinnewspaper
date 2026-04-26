@@ -425,72 +425,19 @@ html { scroll-behavior: smooth; }
 }
 
 /* ── テン展示テーブル ── */
-.tenji-section {
-  margin-top: 1rem;
-  border-top: 1px solid var(--border);
-  padding-top: 0.875rem;
-}
-.tenji-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--text3);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.tenji-badge {
-  font-size: 10px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 4px;
-  padding: 1px 5px;
-  letter-spacing: 0;
-}
-.tenji-badge.waiting {
-  background: var(--text3);
-}
-.tenji-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-  font-family: var(--mono);
-}
-.tenji-table th {
-  text-align: center;
-  color: var(--text3);
-  font-weight: 500;
-  font-size: 0.72rem;
-  padding: 3px 6px;
-  border-bottom: 1px solid var(--border);
-}
-.tenji-table td {
-  text-align: center;
-  padding: 5px 6px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-}
-.tenji-table td:nth-child(2) {
-  text-align: left;
-  font-family: 'Noto Sans JP', sans-serif;
-  font-size: 0.8rem;
-}
+.tenji-section { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.875rem; }
+.tenji-title { font-size: 0.78rem; font-weight: 700; color: var(--text3); letter-spacing: .08em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+.tenji-badge { font-size: 10px; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 5px; }
+.tenji-badge.waiting { background: var(--text3); }
+.tenji-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: var(--mono); }
+.tenji-table th { text-align: center; color: var(--text3); font-weight: 500; font-size: 0.72rem; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.tenji-table td { text-align: center; padding: 5px 6px; border-bottom: 1px solid var(--border); color: var(--text); }
+.tenji-table td:nth-child(2) { text-align: left; font-family: 'Noto Sans JP', sans-serif; font-size: 0.8rem; }
 .tenji-table tr:last-child td { border-bottom: none; }
 .tenji-table tr:hover td { background: var(--bg3); }
 .tenji-best { color: var(--red); font-weight: 700; }
 .tenji-rank1 { color: var(--accent); font-weight: 700; }
-.tenji-waiting {
-  text-align: center;
-  color: var(--text3);
-  font-size: 0.8rem;
-  padding: 0.75rem 0;
-}
-.tenji-tilt {
-  font-size: 0.72rem;
-  color: var(--text3);
-}
+.tenji-waiting { text-align: center; color: var(--text3); font-size: 0.8rem; padding: 0.75rem 0; }
 
 </style>
 </head>
@@ -670,230 +617,25 @@ function selectRace(rno){
   else renderDetail(rno); // 全レース一覧下の詳細も更新
 }
 
-// ── テン展示キャッシュ ──
-const _tenjiCache = {};  // key: "venue_date_race" → data or null
-
-function tenjiKey(venue, date, race){
-  return `${venue}_${date}_${race}`;
-}
-
-function buildTenjiSection(rno, boats){
-  const venue = DATA.venue;
-  const date  = DATA.date;
-  // venue→スラッグ変換
-  const SLUG = {
-    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
-    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
-    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
-    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
-    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
-    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
-  };
-  const slug = SLUG[venue] || venue;
-  const key  = tenjiKey(slug, date, rno);
-  const cached = _tenjiCache[key];
-
-  if(cached === undefined){
-    // 未取得 → ローディング表示してfetch
-    setTimeout(()=> fetchTenji(slug, date, rno, boats), 0);
-    return `<div class="tenji-section">
-      <div class="tenji-title">オリジナル展示 <span class="tenji-badge waiting">取得中...</span></div>
-      <div class="tenji-waiting">⏳ 取得中...</div>
-    </div>`;
-  }
-  if(cached === null){
-    return `<div class="tenji-section">
-      <div class="tenji-title">オリジナル展示 <span class="tenji-badge waiting">未取得</span></div>
-      <div class="tenji-waiting">展示データなし（締め切り前 or 取得待ち）</div>
-    </div>`;
-  }
-
-  // データあり → テーブル描画
-  // 最良値（最小）を強調
-  const lap1vals    = boats.map(b=> cached[b.boat]?.lap1).filter(v=>v!=null);
-  const mawarivals  = boats.map(b=> cached[b.boat]?.mawari).filter(v=>v!=null);
-  const chokuvals   = boats.map(b=> cached[b.boat]?.chokusen).filter(v=>v!=null);
-  const tenjivals   = boats.map(b=> cached[b.boat]?.tenji).filter(v=>v!=null);
-  const bestLap1    = lap1vals.length   ? Math.min(...lap1vals)   : null;
-  const bestMawari  = mawarivals.length ? Math.min(...mawarivals) : null;
-  const bestChoku   = chokuvals.length  ? Math.min(...chokuvals)  : null;
-  const bestTenji   = tenjivals.length  ? Math.min(...tenjivals)  : null;
-
-  const fetched = cached["__fetched_at"] || "";
-  const rows = boats.map(bt => {
-    const bn = bt.boat;
-    const t  = cached[bn];
-    if(!t) return `<tr><td>${bn}</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
-    const f = (v, best) => v==null ? '—' : `<span class="${v===best?'tenji-best':''}">${v.toFixed(2)}</span>`;
-    const rankCls = t.tenji_rank===1 ? 'tenji-rank1' : '';
-    const tilt = t.tilt != null ? `<span class="tenji-tilt">${t.tilt>0?'+':''}${t.tilt}</span>` : '';
-    return `<tr>
-      <td><span class="boat-circle b${bn}" style="width:22px;height:22px;font-size:11px;line-height:22px">${bn}</span></td>
-      <td>${bt.name}</td>
-      <td>${f(t.lap1, bestLap1)}</td>
-      <td>${f(t.mawari, bestMawari)}</td>
-      <td>${f(t.chokusen, bestChoku)}</td>
-      <td><span class="${rankCls}">${f(t.tenji, bestTenji)}</span></td>
-      <td>${tilt}</td>
-    </tr>`;
-  }).join('');
-
-  return `<div class="tenji-section">
-    <div class="tenji-title">オリジナル展示 <span class="tenji-badge">取得済み ${fetched}</span></div>
-    <table class="tenji-table">
-      <thead><tr>
-        <th>枠</th><th style="text-align:left">選手</th>
-        <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>`;
-}
-
-async function fetchTenji(slug, date, rno, boats){
-  const key = tenjiKey(slug, date, rno);
-  try {
-    let json;
-    if(IS_SERVER){
-      // ローカルサーバー経由
-      const res = await fetch(`/api/tenji?venue=${slug}&date=${date}&race=${rno}`);
-      json = await res.json();
-      if(json.ok){
-        const d = json.data;
-        d["__fetched_at"] = json.fetched_at ? json.fetched_at.slice(11,16) : "";
-        _tenjiCache[key] = d;
-      } else {
-        _tenjiCache[key] = null;
-      }
-    } else {
-      // GitHub Pages: JSONファイルを直接fetch
-      const dateNodash = date.replace(/-/g,'');
-      const rnoStr = String(rno).padStart(2,'0');
-      const fname = `tenji_data/tenji_${slug}_${dateNodash}_R${rnoStr}.json`;
-      const res = await fetch(fname);
-      if(res.ok){
-        const rows = await res.json();
-        const d = {};
-        rows.forEach(r => { d[String(r.frame)] = r; });
-        d["__fetched_at"] = rows[0]?.fetched_at?.slice(11,16) || "";
-        _tenjiCache[key] = d;
-      } else {
-        _tenjiCache[key] = null;
-      }
-    }
-  } catch(e){
-    _tenjiCache[key] = null;
-  }
-  // 表示中のレースなら再描画
-  if(rno === selectedRace){
-    renderDetail(rno);
-  }
-}
-
-// 起動時・会場切替時に全レース分を一括プリフェッチ
-async function prefetchAllTenji(){
-  if(!DATA) return;
-  const SLUG = {
-    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
-    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
-    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
-    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
-    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
-    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
-  };
-  const slug = SLUG[DATA.venue] || DATA.venue;
-  const date = DATA.date;
-  try {
-    if(IS_SERVER){
-      // ローカルサーバー経由で一括取得
-      const res  = await fetch(`/api/tenji_all?venue=${slug}&date=${date}`);
-      const json = await res.json();
-      if(json.ok && json.races){
-        for(const [rno, byFrame] of Object.entries(json.races)){
-          const key = tenjiKey(slug, date, parseInt(rno));
-          byFrame["__fetched_at"] = "";
-          const first = Object.values(byFrame).find(v=> v && v.fetched_at);
-          if(first) byFrame["__fetched_at"] = first.fetched_at.slice(11,16);
-          _tenjiCache[key] = byFrame;
-        }
-      }
-    } else {
-      // GitHub Pages: 1R〜12Rを個別にfetch（存在するものだけキャッシュ）
-      const dateNodash = date.replace(/-/g,'');
-      const fetches = Array.from({length:12},(_,i)=>i+1).map(async rno=>{
-        const rnoStr = String(rno).padStart(2,'0');
-        const fname = `tenji_data/tenji_${slug}_${dateNodash}_R${rnoStr}.json`;
-        try {
-          const res = await fetch(fname);
-          if(res.ok){
-            const rows = await res.json();
-            const d = {};
-            rows.forEach(r=>{ d[String(r.frame)]=r; });
-            d["__fetched_at"] = rows[0]?.fetched_at?.slice(11,16)||"";
-            _tenjiCache[tenjiKey(slug,date,rno)] = d;
-          }
-        } catch(e){}
-      });
-      await Promise.all(fetches);
-    }
-  } catch(e){ /* silent */ }
-}
-
-// 30秒ごとにポーリング（表示中レースのみ再取得）
-let _tenjiPollTimer = null;
-function startTenjiPolling(){
-  if(_tenjiPollTimer) clearInterval(_tenjiPollTimer);
-  _tenjiPollTimer = setInterval(async ()=>{
-    if(!DATA || !selectedRace) return;
-    const SLUG = {
-      "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
-      "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
-      "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
-      "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
-      "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
-      "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
-    };
-    const slug = SLUG[DATA.venue] || DATA.venue;
-    const key  = tenjiKey(slug, DATA.date, selectedRace);
-    // 既取得のものはスキップ（取得済み=オブジェクト）
-    if(_tenjiCache[key] && _tenjiCache[key] !== null) return;
-    const rd = DATA.races[selectedRace];
-    if(rd) fetchTenji(slug, DATA.date, selectedRace, rd.boats);
-  }, 30000);
-}
-
 function renderDetail(rno){
   const rd = DATA.races[rno];
   if(!rd) return;
-
   const boats = rd.boats;
   const top = boats[0];
-
   let sc, scCls;
-  if(rd.arek < 40){
-    sc = `安定展開 — インが強い。荒れスコア${rd.arek}で逃げ展開が濃厚`;
-    scCls = 'safe';
-  } else if(rd.arek >= 65){
-    sc = `大荒れ注意 — まくり・差しが頻発。荒れスコア${rd.arek}`;
-    scCls = 'warn';
-  } else {
-    sc = `混戦 — ${top.name}(艇${top.boat})軸`;
-    scCls = 'mix';
-  }
+  if(rd.arek < 40){ sc=`安定展開 — インが強い。荒れスコア${rd.arek}で逃げ展開が濃厚`; scCls='safe'; }
+  else if(rd.arek >= 65){ sc=`大荒れ注意 — まくり・差しが頻発。荒れスコア${rd.arek}`; scCls='warn'; }
+  else { sc=`混戦 — ${top.name}(艇${top.boat})軸`; scCls='mix'; }
 
   const tenjiHtml = buildTenjiSection(rno, boats);
 
   const html = `
     <div class="detail-panel">
-      <div class="dp-header">
-        <div>
-          <div class="dp-title">${rno}R 詳細予想</div>
-          <div class="dp-meta">${DATA.venue} ${rd.time}</div>
-        </div>
-      </div>
-
+      <div class="dp-header"><div>
+        <div class="dp-title">${rno}R 詳細予想</div>
+        <div class="dp-meta">${DATA.venue} ${rd.time}</div>
+      </div></div>
       <div class="scenario-bar ${scCls}">${sc}</div>
-
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
@@ -901,10 +643,8 @@ function renderDetail(rno){
           <div>${(bt.prob*100).toFixed(1)}%</div>
         </div>
       `).join('')}
-
       ${tenjiHtml}
-    </div>
-  `;
+    </div>`;
 
   document.getElementById('inline-detail').innerHTML = html;
 }
@@ -1111,8 +851,153 @@ ua.addEventListener('drop',e=>{
   const ev={target:{files:[f]}}; fileInput.dispatchEvent(new Event('change'));
 });
 
+
+// ── CSV テキストパーサー（GitHub Pages用・クライアントサイド）──
+const VENUE_TO_SLUG = {
+  "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+  "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+  "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+  "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+  "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+  "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+};
+function venueToSlug(v){ return VENUE_TO_SLUG[v] || v; }
+
+function parseCSVText(text, fname){
+  const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+  if(lines.length < 2) return null;
+  const headers = lines[0].split(',').map(h=>h.trim());
+  const idx = h => headers.indexOf(h);
+  const rows = lines.slice(1).map(l => {
+    const cols = l.split(',');
+    const get = h => (cols[idx(h)]||'').trim();
+    return { venue: get('会場'), date: get('日付'), race: parseInt(get('レース'))||0,
+             deadline: get('締切時刻'), boat: parseInt(get('艇番'))||0,
+             name: get('選手名'), grade: get('級別'),
+             win_rate: parseFloat(get('全国勝率'))||0,
+             local_rate: parseFloat(get('当地勝率'))||0,
+             motor2: parseFloat(get('M2率'))||0,
+             boat2: parseFloat(get('B2率'))||0,
+             results: get('今節成績'),
+             hayami: parseFloat(get('早見'))||null };
+  }).filter(r => r.race > 0 && r.boat > 0);
+  if(!rows.length) return null;
+
+  const venue = rows[0].venue;
+  const date  = rows[0].date;
+  const races = {};
+  rows.forEach(r => {
+    if(!races[r.race]) races[r.race] = { time: r.deadline, arek: 54.7, boats: [] };
+    races[r.race].boats.push({
+      boat: r.boat, name: r.name, grade: r.grade,
+      win_rate: r.win_rate, local_rate: r.local_rate,
+      motor2: r.motor2, boat2: r.boat2,
+      results: r.results, hayami: r.hayami,
+      prob: 1/6, score: 0, dq: 'fallback'
+    });
+  });
+  // 簡易確率計算（コース別平均）
+  const NAT = {1:0.555,2:0.138,3:0.116,4:0.090,5:0.060,6:0.021};
+  Object.values(races).forEach(rd => {
+    const scores = rd.boats.map(b => NAT[b.boat]||0.05);
+    const total  = scores.reduce((a,b)=>a+b,0);
+    rd.boats.forEach((b,i) => { b.prob = scores[i]/total; b.score = scores[i]; });
+    rd.boats.sort((a,b) => b.prob - a.prob);
+  });
+  return { venue, date, races: Object.fromEntries(
+    Object.entries(races).sort((a,b)=>+a[0]-+b[0]).map(([k,v])=>[k,v])
+  ), inn_data: {inn_rate:0.5, arek_score:54.7, course_rates:[0,0.555,0.138,0.116,0.09,0.06,0.021], inn_2place:[0,0,0.3,0.27,0.2,0.13,0.07]} };
+}
+
+
+// ── テン展示キャッシュ ──
+const _tenjiCache = {};
+function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
+
+function buildTenjiSection(rno, boats){
+  const slug = venueToSlug(DATA.venue);
+  const date = DATA.date;
+  const key  = tenjiKey(slug, date, rno);
+  const cached = _tenjiCache[key];
+  if(cached === undefined){
+    setTimeout(()=> fetchTenji(slug, date, rno, boats), 0);
+    return `<div class="tenji-section"><div class="tenji-title">オリジナル展示 <span class="tenji-badge waiting">取得中...</span></div><div class="tenji-waiting">⏳ 取得中...</div></div>`;
+  }
+  if(!cached){
+    return `<div class="tenji-section"><div class="tenji-title">オリジナル展示 <span class="tenji-badge waiting">未取得</span></div><div class="tenji-waiting">展示データなし（締め切り前 or 取得待ち）</div></div>`;
+  }
+  const vals = k => boats.map(b=>cached[b.boat]?.[k]).filter(v=>v!=null);
+  const best = k => { const v=vals(k); return v.length?Math.min(...v):null; };
+  const bL=best('lap1'),bM=best('mawari'),bC=best('chokusen'),bT=best('tenji');
+  const fetched = cached["__fetched_at"]||"";
+  const trows = boats.map(bt=>{
+    const bn=bt.boat; const t=cached[bn];
+    if(!t) return `<tr><td>${bn}</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
+    const f=(v,b)=>v==null?'—':`<span class="${v===b?'tenji-best':''}">${v.toFixed(2)}</span>`;
+    const rc=t.tenji_rank===1?'tenji-rank1':'';
+    const tilt=t.tilt!=null?`<span style="font-size:.72rem;color:var(--text3)">${t.tilt>0?'+':''}${t.tilt}</span>`:'';
+    return `<tr><td><span class="boat-circle b${bn}" style="width:22px;height:22px;font-size:11px;line-height:22px">${bn}</span></td><td>${bt.name}</td><td>${f(t.lap1,bL)}</td><td>${f(t.mawari,bM)}</td><td>${f(t.chokusen,bC)}</td><td><span class="${rc}">${f(t.tenji,bT)}</span></td><td>${tilt}</td></tr>`;
+  }).join('');
+  return `<div class="tenji-section"><div class="tenji-title">オリジナル展示 <span class="tenji-badge">取得済み ${fetched}</span></div><table class="tenji-table"><thead><tr><th>枠</th><th style="text-align:left">選手</th><th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th></tr></thead><tbody>${trows}</tbody></table></div>`;
+}
+
+async function fetchTenji(slug, date, rno, boats){
+  const key = tenjiKey(slug, date, rno);
+  try {
+    if(IS_SERVER){
+      const res = await fetch(`/api/tenji?venue=${slug}&date=${date}&race=${rno}`);
+      const json = await res.json();
+      if(json.ok){ const d=json.data; d["__fetched_at"]=json.fetched_at?.slice(11,16)||""; _tenjiCache[key]=d; }
+      else _tenjiCache[key]=null;
+    } else {
+      const dateNodash=date.replace(/-/g,'');
+      const rnoStr=String(rno).padStart(2,'0');
+      const res = await fetch(`tenji_data/tenji_${slug}_${dateNodash}_R${rnoStr}.json?t=${Date.now()}`);
+      if(res.ok){ const rows=await res.json(); const d={}; rows.forEach(r=>{d[String(r.frame)]=r;}); d["__fetched_at"]=rows[0]?.fetched_at?.slice(11,16)||""; _tenjiCache[key]=d; }
+      else _tenjiCache[key]=null;
+    }
+  } catch(e){ _tenjiCache[key]=null; }
+  if(rno===selectedRace) renderDetail(rno);
+}
+
+async function prefetchAllTenji(){
+  if(!DATA) return;
+  const slug=venueToSlug(DATA.venue), date=DATA.date;
+  try {
+    if(IS_SERVER){
+      const res=await fetch(`/api/tenji_all?venue=${slug}&date=${date}`);
+      const json=await res.json();
+      if(json.ok&&json.races){ Object.entries(json.races).forEach(([rno,byFrame])=>{ const first=Object.values(byFrame).find(v=>v?.fetched_at); byFrame["__fetched_at"]=first?.fetched_at?.slice(11,16)||""; _tenjiCache[tenjiKey(slug,date,+rno)]=byFrame; }); }
+    } else {
+      const dateNodash=date.replace(/-/g,'');
+      await Promise.all(Array.from({length:12},(_,i)=>i+1).map(async rno=>{
+        try{
+          const res=await fetch(`tenji_data/tenji_${slug}_${dateNodash}_R${String(rno).padStart(2,'0')}.json?t=${Date.now()}`);
+          if(res.ok){ const rows=await res.json(); const d={}; rows.forEach(r=>{d[String(r.frame)]=r;}); d["__fetched_at"]=rows[0]?.fetched_at?.slice(11,16)||""; _tenjiCache[tenjiKey(slug,date,rno)]=d; }
+        }catch(e){}
+      }));
+    }
+  } catch(e){}
+}
+
+let _tenjiPollTimer=null;
+function startTenjiPolling(){
+  if(_tenjiPollTimer) clearInterval(_tenjiPollTimer);
+  _tenjiPollTimer=setInterval(async()=>{
+    if(!DATA||!selectedRace) return;
+    const slug=venueToSlug(DATA.venue);
+    const key=tenjiKey(slug,DATA.date,selectedRace);
+    if(_tenjiCache[key]&&_tenjiCache[key]!==null) return;
+    const rd=DATA.races[selectedRace];
+    if(rd) fetchTenji(slug,DATA.date,selectedRace,rd.boats);
+  },30000);
+}
+
 // ── INIT: サーバーモード or スタンドアロンモード ──
 const IS_SERVER = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./));
+const IS_GITHUB_PAGES = location.hostname.includes('github.io');
+// GitHub Pages 用ベースURL（CSV・JSONのfetch先）
+const GH_BASE = IS_GITHUB_PAGES ? '' : '';  // 同一リポジトリなのでパスだけでOK
 
 async function loadFromServer(fileParam) {
   const url = fileParam ? `/api/load?file=${encodeURIComponent(fileParam)}` : '/api/data';
@@ -1202,8 +1087,7 @@ function applyVenueData(v, d){
   DATA = d;
   ALL_DATA[v] = d;
   selectedRace = parseInt(Object.keys(d.races)[0]) || 1;
-  // テン展示: 会場切替時にプリフェッチ
-  if(IS_SERVER){ prefetchAllTenji(); startTenjiPolling(); }
+  prefetchAllTenji(); startTenjiPolling();
 
   clearPanels();
 
@@ -1350,8 +1234,8 @@ if (IS_SERVER) {
   document.getElementById('upload-area').style.display = 'none';
   loadAllVenuesFromServer();
   fetchMasterStats();
-  // テン展示: 起動時プリフェッチ＆ポーリング開始
-  if(IS_SERVER){ prefetchAllTenji().then(()=>{ if(selectedRace) renderDetail(selectedRace); }); startTenjiPolling(); }
+  prefetchAllTenji();
+  startTenjiPolling();
   setInterval(loadAllVenuesFromServer, 60000); // 60秒ごとに更新チェック
   document.getElementById('file-selector').addEventListener('change', async function(){
     if(!this.value) return;
@@ -1364,20 +1248,70 @@ if (IS_SERVER) {
       })();
     }
   });
+} else if(IS_GITHUB_PAGES) {
+  // GitHub Pages モード: csv_output/ から当日CSVを自動取得
+  (async () => {
+    try {
+      // まずファイル一覧を取得（index.json として auto_push.py が生成）
+      const idxRes = await fetch('csv_output/index.json');
+      if(!idxRes.ok) throw new Error('index.json not found');
+      const idxJson = await idxRes.json();
+      const files = idxJson.files || [];
+      if(files.length === 0) throw new Error('no csv files');
+
+      // 全ファイルを並列fetch＆パース
+      let loadedAny = false;
+      await Promise.all(files.map(async fname => {
+        try {
+          const res = await fetch('csv_output/' + fname);
+          if(!res.ok) return;
+          const text = await res.text();
+          // CSVをパースして boat_server.py と同等の処理
+          const d = parseCSVText(text, fname);
+          if(d && d.venue){
+            ALL_DATA[d.venue] = d;
+            loadedAny = true;
+          }
+        } catch(e){}
+      }));
+
+      if(loadedAny){
+        buildVenueTabs();
+        const firstVenue = VENUE_LIST.find(v => ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
+        if(firstVenue){ switchVenue(firstVenue); }
+        document.getElementById('upload-area').style.display = 'none';
+        // テン展示もプリフェッチ
+        prefetchAllTenji();
+        startTenjiPolling();
+        // 60秒ごとに再fetch（展示データ更新を反映）
+        setInterval(async()=>{
+          try {
+            const idxR = await fetch('csv_output/index.json?t='+Date.now());
+            // テン展示の再ポーリング
+            if(DATA) fetchTenji(venueToSlug(DATA.venue), DATA.date, selectedRace, DATA.races[selectedRace]?.boats||[]);
+          } catch(e){}
+        }, 60000);
+      } else {
+        buildVenueTabs();
+      }
+    } catch(e) {
+      // index.jsonがなければ従来のスタンドアロンモード
+      const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
+      if(firstLoaded){
+        currentVenue = firstLoaded; DATA = ALL_DATA[firstLoaded];
+        buildVenueTabs(); buildVenueBar(); buildRaceGrid(); selectRace(selectedRace);
+        document.getElementById('upload-area').style.display = 'none';
+      } else { buildVenueTabs(); }
+    }
+  })();
 } else {
-  // スタンドアロンモード: MASTERデータがある会場をそのまま表示
+  // スタンドアロンモード（ローカルファイル直接）
   const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
   if(firstLoaded){
-    currentVenue = firstLoaded;
-    DATA = ALL_DATA[firstLoaded];
-    buildVenueTabs();
-    buildVenueBar();
-    buildRaceGrid();
-    selectRace(selectedRace);
+    currentVenue = firstLoaded; DATA = ALL_DATA[firstLoaded];
+    buildVenueTabs(); buildVenueBar(); buildRaceGrid(); selectRace(selectedRace);
     document.getElementById('upload-area').style.display = 'none';
-  } else {
-    buildVenueTabs();
-  }
+  } else { buildVenueTabs(); }
 }
 </script>
 </body>
