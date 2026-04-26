@@ -424,6 +424,75 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 6px 18px rgba(0, 40, 90, 0.08);
 }
 
+/* ── 案C: 2段セレクタ ── */
+.selector-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .875rem 1.125rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 6px 18px rgba(0,40,90,.08);
+}
+.selector-row { margin-bottom: .75rem; }
+.selector-row:last-child { margin-bottom: 0; }
+.venue-select {
+  width: 100%;
+  font-size: 15px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 500;
+  padding: .55rem .875rem;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236c7a94' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right .875rem center;
+  cursor: pointer;
+}
+.venue-select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* レース番号ボタン列 */
+.race-btn-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rbtn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: var(--bg);
+  color: var(--text2);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.rbtn:hover { background: var(--bg3); border-color: var(--accent); color: var(--accent2); }
+.rbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rbtn.arek-hi-btn { border-color: rgba(255,59,59,.35); }
+.rbtn.arek-lo-btn { border-color: rgba(0,184,107,.35); }
+
+/* メインパネル（番組表 ＋ 展示 ＋ 買い目） */
+.main-section { margin-bottom: 1rem; }
+.main-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
 /* ── テン展示テーブル ── */
 .tenji-section { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 0.875rem; }
 .tenji-title { font-size: 0.78rem; font-weight: 700; color: var(--text3); letter-spacing: .08em; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
@@ -455,8 +524,7 @@ html { scroll-behavior: smooth; }
 
 <main class="container">
 
-<!-- 会場タブはJS buildVenueTabs() で動的生成 -->
-<div class="tab-bar" id="venue-tabs"></div>
+  <!-- 案C: 2段セレクト型 -->
 
   <!-- SERVER STATUS BAR -->
   <div id="server-bar" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:0.625rem 1rem;margin-bottom:1rem">
@@ -480,7 +548,20 @@ html { scroll-behavior: smooth; }
     <input type="file" id="file-input" accept=".csv">
   </div>
 
-  <!-- VENUE STATS -->
+  <!-- 2段セレクタ（会場ドロップダウン ＋ レースボタン） -->
+  <div class="selector-card" id="selector-card" style="display:none">
+    <!-- 1段目: 会場ドロップダウン -->
+    <div class="selector-row">
+      <select class="venue-select" id="venue-select" onchange="switchVenue(this.value)"></select>
+    </div>
+    <!-- 2段目: レース番号ボタン -->
+    <div class="selector-row">
+      <div class="section-title" style="margin-bottom:6px">レースを選択</div>
+      <div class="race-btn-strip" id="race-btn-strip"></div>
+    </div>
+  </div>
+
+  <!-- 会場統計バー（コンパクト） -->
   <div class="venue-bar" id="venue-bar" style="display:none">
     <div class="vstat"><div class="vstat-val" id="vs-inn">—</div><div class="vstat-lbl">イン逃げ率</div></div>
     <div class="vstat"><div class="vstat-val" id="vs-arek">—</div><div class="vstat-lbl">荒れスコア</div></div>
@@ -488,33 +569,8 @@ html { scroll-behavior: smooth; }
     <div class="vstat"><div class="vstat-val" id="vs-races">12</div><div class="vstat-lbl">レース数</div></div>
   </div>
 
-  <!-- TABS -->
-  <div class="tab-bar" id="tab-bar" style="display:none">
-    <button class="tab-btn active" data-tab="races" onclick="switchTab('races')">全レース一覧</button>
-    <button class="tab-btn" data-tab="detail" onclick="switchTab('detail')">詳細予想</button>
-    <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">買い目</button>
-  </div>
-
-  <!-- RACE GRID -->
-  <div id="tab-races">
-    <div class="section-title">レース選択</div>
-    <div class="race-grid" id="race-grid"></div>
-    <div id="inline-detail"></div>
-  </div>
-
-  <!-- DETAIL -->
-  <div id="tab-detail" style="display:none">
-    <div class="detail-panel" id="detail-panel">
-      <div style="padding:2rem;text-align:center;color:var(--text3)">上のレースカードを選択してください</div>
-    </div>
-  </div>
-
-  <!-- BUY -->
-  <div id="tab-buy" style="display:none">
-    <div class="detail-panel" id="buy-panel">
-      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
-    </div>
-  </div>
+  <!-- 1画面: 番組表 ＋ 展示 ＋ 買い目 -->
+  <div id="main-panel"></div>
 
 </main>
 
@@ -574,86 +630,60 @@ function buildVenueBar(){
   document.getElementById('vs-c1').textContent = (inn.course_rates[1]*100).toFixed(1)+'%';
   document.getElementById('vs-races').textContent = Object.keys(DATA.races).length;
   document.getElementById('venue-bar').style.display='';
-  document.getElementById('tab-bar').style.display='';
   document.getElementById('header-meta').innerHTML = `<strong>${DATA.venue}</strong> — ${DATA.date}`;
 }
 
 function buildRaceGrid(){
-  const grid = document.getElementById('race-grid');
-  grid.innerHTML='';
-  Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
-    const top = rd.boats[0];
-    const div = document.createElement('div');
-    div.className = 'race-card' + (parseInt(rno)===selectedRace?' active':'');
-    div.id = `rc-${rno}`;
-    div.onclick = ()=>{ selectRace(parseInt(rno)); };
-    div.innerHTML = `
-      <div class="rc-head">
-        <span class="rc-no">${rno}R <span class="rc-time">${rd.time}</span></span>
-        <span class="arek-pill ${arekClass(rd.arek)}">${arekLabel(rd.arek)}</span>
-      </div>
-      <div class="rc-top">
-        <span class="boat-circle b${top.boat}">${top.boat}</span>
-        <span class="rc-name">${top.name}</span>
-        <span class="rc-prob">${(top.prob*100).toFixed(0)}%</span>
-      </div>
-      <div class="rc-bar"><div class="rc-fill" style="width:${(top.prob*100).toFixed(0)}%"></div></div>
-    `;
-    grid.appendChild(div);
+  buildRaceBtnStrip();
+}
+function buildRaceBtnStrip(){
+  const strip = document.getElementById('race-btn-strip');
+  if(!strip) return;
+  strip.innerHTML = '';
+  Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno, rd])=>{
+    const btn = document.createElement('button');
+    const arek = rd.arek;
+    const arekCls = arek >= 65 ? 'arek-hi-btn' : arek < 45 ? 'arek-lo-btn' : '';
+    btn.className = `rbtn ${arekCls}` + (parseInt(rno)===selectedRace?' active':'');
+    btn.id = `rbtn-${rno}`;
+    btn.textContent = rno;
+    btn.title = `${rno}R ${rd.time} — ${arekLabel(arek)}`;
+    btn.onclick = ()=>{ selectRace(parseInt(rno)); };
+    strip.appendChild(btn);
   });
 }
 
 function selectRace(rno){
   selectedRace = rno;
 
-  document.querySelectorAll('.race-card').forEach(c=>c.classList.remove('active'));
-  const card = document.getElementById(`rc-${rno}`);
-  if(card) card.classList.add('active');
+  // ボタンのアクティブ状態更新
+  document.querySelectorAll('.rbtn').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById(`rbtn-${rno}`);
+  if(btn) btn.classList.add('active');
 
-  // アクティブタブに応じて再描画
-  const tabName = currentTabName();
-  if(tabName === 'detail') renderDetail(rno);
-  else if(tabName === 'buy') renderBuy(rno);
-  else renderDetail(rno); // 全レース一覧下の詳細も更新
+  renderMainPanel(rno);
 }
 
-function renderDetail(rno){
+// 旧 renderDetail / renderBuy / switchTab は renderMainPanel に統合
+function renderDetail(rno){ renderMainPanel(rno); }
+function renderBuy(rno){ renderMainPanel(rno); }
+function switchTab(name){}
+function currentTabName(){ return 'races'; }
+
+// ── メインパネル: 番組表 ＋ 展示 ＋ 買い目を1画面で描画 ──
+function renderMainPanel(rno){
   const rd = DATA.races[rno];
-  if(!rd) return;
+  if(!rd){ document.getElementById('main-panel').innerHTML=''; return; }
   const boats = rd.boats;
-  const top = boats[0];
+  const [t,s,h,f] = [boats[0].boat, boats[1]?.boat||boats[0].boat, boats[2]?.boat||boats[0].boat, (boats[3]||boats[2]||boats[0]).boat];
+
+  // シナリオ
   let sc, scCls;
   if(rd.arek < 40){ sc=`安定展開 — インが強い。荒れスコア${rd.arek}で逃げ展開が濃厚`; scCls='safe'; }
   else if(rd.arek >= 65){ sc=`大荒れ注意 — まくり・差しが頻発。荒れスコア${rd.arek}`; scCls='warn'; }
-  else { sc=`混戦 — ${top.name}(艇${top.boat})軸`; scCls='mix'; }
+  else { sc=`混戦 — ${boats[0].name}(艇${boats[0].boat})軸`; scCls='mix'; }
 
-  const tenjiHtml = buildTenjiSection(rno, boats);
-
-  const html = `
-    <div class="detail-panel">
-      <div class="dp-header"><div>
-        <div class="dp-title">${rno}R 詳細予想</div>
-        <div class="dp-meta">${DATA.venue} ${rd.time}</div>
-      </div></div>
-      <div class="scenario-bar ${scCls}">${sc}</div>
-      ${boats.map((bt,i)=>`
-        <div class="bt-row${i===0?' top1':''}">
-          <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
-          <div>${bt.name}</div>
-          <div>${(bt.prob*100).toFixed(1)}%</div>
-        </div>
-      `).join('')}
-      ${tenjiHtml}
-    </div>`;
-
-  document.getElementById('inline-detail').innerHTML = html;
-}
-
-function renderBuy(rno){
-  const rd = DATA.races[rno];
-  if(!rd) return;
-  const boats = rd.boats;
-  const [t,s,h,f] = [boats[0].boat,boats[1].boat,boats[2].boat,(boats[3]||boats[2]).boat];
+  // 買い目
   const buy3 = [
     {c:`${t}−${s}−${h}`,l:'本命',lc:'bl-honmei',w:3},
     {c:`${t}−${h}−${s}`,l:'対抗',lc:'bl-taikou',w:2},
@@ -665,48 +695,74 @@ function renderBuy(rno){
     {c:`${t}−${h}`,l:'対抗',lc:'bl-taikou',w:2},
     {c:`${s}−${t}`,l:'逆転',lc:'bl-gyaku',w:1},
   ];
-  document.getElementById('buy-panel').innerHTML = `
-    <div class="dp-header">
-      <div>
-        <div class="dp-title">${rno}R 買い目</div>
-        <div class="dp-meta">本命: 艇${t} ${boats[0].name}</div>
+
+  // 展示HTML（非同期で後から差し替え）
+  const tenjiHtml = buildTenjiSection(rno, boats);
+
+  document.getElementById('main-panel').innerHTML = `
+    <div class="detail-panel main-section">
+      <div class="dp-header">
+        <div>
+          <div class="dp-title">${DATA.venue} ${rno}R <span style="font-size:.78rem;font-weight:400;color:var(--text3)">${rd.time}</span></div>
+          <div class="dp-meta" style="margin-top:2px">${arekLabel(rd.arek)} — 荒れスコア ${rd.arek}</div>
+        </div>
+        <span class="arek-pill ${arekClass(rd.arek)}" style="font-size:12px">${arekLabel(rd.arek)}</span>
       </div>
+      <div class="scenario-bar ${scCls}">${sc}</div>
+
+      <!-- 番組表 -->
+      <div class="bt-head">
+        <div>枠</div><div>選手</div><div>級</div>
+        <div>全国勝率</div><div>当地勝率</div><div>今節</div>
+        <div style="grid-column:7/9">勝率</div>
+      </div>
+      ${boats.map((bt,i)=>`
+        <div class="bt-row${i===0?' top1':''}">
+          <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
+          <div>${bt.name}</div>
+          <div>${gradeBadge(bt.grade)}</div>
+          <div class="bt-col-wr">${bt.win_rate.toFixed(2)}</div>
+          <div class="bt-col-lr">${bt.local_rate>0?bt.local_rate.toFixed(2):'—'}</div>
+          <div class="bt-col-form"><div class="form-dots">${formDots(bt.results||'')}</div></div>
+          <div class="bt-col-prob prob-cell" style="grid-column:7/9">
+            <div class="prob-bar-wrap"><div class="prob-bar-fill" style="width:${(bt.prob*100).toFixed(0)}%"></div></div>
+            <span class="prob-num">${(bt.prob*100).toFixed(1)}%</span>
+          </div>
+        </div>
+      `).join('')}
+
+      <!-- 展示タイム -->
+      <div id="tenji-container-${rno}">${tenjiHtml}</div>
     </div>
-    <div class="buy-grid">
-      <div class="buy-card">
-        <div class="buy-card-title">3連単</div>
-        ${buy3.map(r=>`<div class="buy-row">
-          <span class="buy-label ${r.lc}">${r.l}</span>
-          <span class="buy-combo">${r.c}</span>
-          ${weightDots(r.w)}
-        </div>`).join('')}
+
+    <!-- 買い目 -->
+    <div class="detail-panel main-section">
+      <div class="dp-header">
+        <div>
+          <div class="dp-title">${rno}R 買い目</div>
+          <div class="dp-meta">本命: 艇${t} ${boats[0].name}</div>
+        </div>
       </div>
-      <div class="buy-card">
-        <div class="buy-card-title">2連単</div>
-        ${buy2.map(r=>`<div class="buy-row">
-          <span class="buy-label ${r.lc}">${r.l}</span>
-          <span class="buy-combo">${r.c}</span>
-          ${weightDots(r.w)}
-        </div>`).join('')}
+      <div class="buy-grid">
+        <div class="buy-card">
+          <div class="buy-card-title">3連単</div>
+          ${buy3.map(r=>`<div class="buy-row">
+            <span class="buy-label ${r.lc}">${r.l}</span>
+            <span class="buy-combo">${r.c}</span>
+            ${weightDots(r.w)}
+          </div>`).join('')}
+        </div>
+        <div class="buy-card">
+          <div class="buy-card-title">2連単</div>
+          ${buy2.map(r=>`<div class="buy-row">
+            <span class="buy-label ${r.lc}">${r.l}</span>
+            <span class="buy-combo">${r.c}</span>
+            ${weightDots(r.w)}
+          </div>`).join('')}
+        </div>
       </div>
     </div>
   `;
-}
-
-function switchTab(name){
-  ['races','detail','buy'].forEach(t=>{
-    document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
-  });
-  document.querySelectorAll('.tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.dataset.tab === name);
-  });
-  if(name==='detail') renderDetail(selectedRace);
-  if(name==='buy') renderBuy(selectedRace);
-}
-
-function currentTabName(){
-  const b = document.querySelector('.tab-btn.active');
-  return b ? (b.dataset.tab || 'races') : 'races';
 }
 
 // ── FILE UPLOAD ──
@@ -957,7 +1013,12 @@ async function fetchTenji(slug, date, rno, boats){
       else _tenjiCache[key]=null;
     }
   } catch(e){ _tenjiCache[key]=null; }
-  if(rno===selectedRace) renderDetail(rno);
+  if(rno===selectedRace){
+    // 展示コンテナだけ差し替え（既に描画済みなら部分更新）
+    const tc = document.getElementById(`tenji-container-${rno}`);
+    if(tc){ tc.innerHTML = buildTenjiSection(rno, DATA.races[rno]?.boats||[]); }
+    else { renderMainPanel(rno); }
+  }
 }
 
 async function prefetchAllTenji(){
@@ -1048,37 +1109,29 @@ function venueFromFilename(fname){
   return m ? m[1].trim() : null;
 }
 
-// 会場タブを構築（全24会場 / ロード済みは強調・未ロードはグレー）
+// 会場セレクトを構築（ロード済み会場のみ or 全24会場）
 function buildVenueTabs(){
-  const tabs = document.getElementById('venue-tabs');
-  tabs.innerHTML = '';
-  VENUE_LIST.forEach(v=>{
-    const btn = document.createElement('button');
-    btn.className = 'vtab';
-    btn.textContent = v;
-    btn.dataset.venue = v;
-    const isLoaded = !!ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY;
-    if(isLoaded) btn.classList.add('loaded');
-    if(!isLoaded && IS_SERVER) btn.disabled = true;
-    if(v === currentVenue) btn.classList.add('active');
-    btn.onclick = ()=>{ if(!btn.disabled) switchVenue(v); };
-    tabs.appendChild(btn);
+  buildVenueSelect();
+}
+function buildVenueSelect(){
+  const sel = document.getElementById('venue-select');
+  if(!sel) return;
+  sel.innerHTML = '';
+  const loaded = VENUE_LIST.filter(v => ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
+  const list = loaded.length > 0 ? loaded : VENUE_LIST;
+  list.forEach(v=>{
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    if(v === currentVenue) opt.selected = true;
+    sel.appendChild(opt);
   });
 }
 
 // パネルをクリアしてタブをリセット（共通処理）
 function clearPanels(){
-  document.getElementById('inline-detail').innerHTML = '';
-  const dp = document.getElementById('detail-panel');
-  if(dp) dp.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">上のレースカードを選択してください</div>';
-  const bp = document.getElementById('buy-panel');
-  if(bp) bp.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>';
-  ['races','detail','buy'].forEach(t=>{
-    document.getElementById(`tab-${t}`).style.display = t==='races'?'':'none';
-  });
-  document.querySelectorAll('.tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.dataset.tab === 'races');
-  });
+  const mp = document.getElementById('main-panel');
+  if(mp) mp.innerHTML = '';
 }
 
 // 会場データをセットして画面を描画
@@ -1091,15 +1144,15 @@ function applyVenueData(v, d){
 
   clearPanels();
 
-  document.querySelectorAll('#venue-tabs .vtab').forEach(btn=>{
-    btn.classList.toggle('active', btn.dataset.venue === v);
-    if(btn.dataset.venue === v){ btn.classList.add('loaded'); btn.disabled = false; }
-  });
+  // セレクタカードを表示・会場ドロップダウンを更新
+  document.getElementById('selector-card').style.display = '';
+  buildVenueSelect();
+  const sel = document.getElementById('venue-select');
+  if(sel) sel.value = v;
 
   document.getElementById('venue-bar').style.display = '';
-  document.getElementById('tab-bar').style.display = '';
   buildVenueBar();
-  buildRaceGrid();
+  buildRaceBtnStrip();
   selectRace(selectedRace);
   document.getElementById('header-meta').innerHTML = `<strong>${d.venue || v}</strong> — ${d.date || ''}`;
 }
@@ -1298,9 +1351,8 @@ if (IS_SERVER) {
       // index.jsonがなければ従来のスタンドアロンモード
       const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
       if(firstLoaded){
-        currentVenue = firstLoaded; DATA = ALL_DATA[firstLoaded];
-        buildVenueTabs(); buildVenueBar(); buildRaceGrid(); selectRace(selectedRace);
         document.getElementById('upload-area').style.display = 'none';
+        applyVenueData(firstLoaded, ALL_DATA[firstLoaded]);
       } else { buildVenueTabs(); }
     }
   })();
@@ -1308,9 +1360,8 @@ if (IS_SERVER) {
   // スタンドアロンモード（ローカルファイル直接）
   const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
   if(firstLoaded){
-    currentVenue = firstLoaded; DATA = ALL_DATA[firstLoaded];
-    buildVenueTabs(); buildVenueBar(); buildRaceGrid(); selectRace(selectedRace);
     document.getElementById('upload-area').style.display = 'none';
+    applyVenueData(firstLoaded, ALL_DATA[firstLoaded]);
   } else { buildVenueTabs(); }
 }
 </script>
