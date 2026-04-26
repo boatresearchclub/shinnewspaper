@@ -949,7 +949,9 @@ async function handleCSV(text){
   rows.forEach(r=>{
     const rno = parseInt(r['レース'])||0;
     if(!races[rno]) races[rno]={arek:54.7,time:r['締切時刻']||'',boats:[]};
-    const name = r['選手名']?(r['選手名'].replace(/\d+$/, '').trim()):('艇'+r['艇番']);
+    const rawName = r['選手名']?(r['選手名'].replace(/\d+$/, '').trim()):('艇'+r['艇番']);
+    const regNo = String(r['登番']||'').trim();
+    const name = (regNo && PLAYER_ID_MAP[regNo]) ? PLAYER_ID_MAP[regNo] : rawName;
     races[rno].boats.push({
       boat:parseInt(r['艇番'])||0,
       name, grade:r['級別']||'B1',
@@ -1074,6 +1076,15 @@ ua.addEventListener('drop',e=>{
 
 // ── INIT: サーバーモード or スタンドアロンモード ──
 const IS_SERVER = (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./));
+
+// player_id_map: 登録番号→正式名（スタンドアロンモードで使用）
+let PLAYER_ID_MAP = {};
+(async ()=>{
+  try {
+    const res = await fetch('player_id_map.json');
+    if(res.ok) PLAYER_ID_MAP = await res.json();
+  } catch(e) {}
+})();
 
 async function loadFromServer(fileParam) {
   const url = fileParam ? `/api/load?file=${encodeURIComponent(fileParam)}` : '/api/data';
