@@ -784,7 +784,10 @@ async function handleCSV(text){
   rows.forEach(r=>{
     const rno = parseInt(r['レース'])||0;
     if(!races[rno]) races[rno]={arek:54.7,time:r['締切時刻']||'',boats:[]};
-    const name = r['選手名']?(r['選手名'].replace(/\d+$/, '').trim()):('艇'+r['艇番']);
+    // 登番（登録番号）で正式名を解決。4文字省略問題を解消する。
+    const rawName = r['選手名'] ? r['選手名'].replace(/\d+$/, '').trim() : '';
+    const regNo   = r['登番'] || r['登録番号'] || '';
+    const name    = rawName ? resolvePlayerName(rawName, regNo) : ('艇' + r['艇番']);
     races[rno].boats.push({
       boat:parseInt(r['艇番'])||0,
       name, grade:r['級別']||'B1',
@@ -1059,6 +1062,34 @@ const IS_SERVER = (location.hostname === 'localhost' || location.hostname === '1
 const IS_GITHUB_PAGES = location.hostname.includes('github.io');
 // GitHub Pages 用ベースURL（CSV・JSONのfetch先）
 const GH_BASE = IS_GITHUB_PAGES ? '' : '';  // 同一リポジトリなのでパスだけでOK
+
+// ── 登録番号 → 正式選手名 マップ ──────────────────────────────────
+// player_id_map.json を非同期ロード（マスタ更新時に build_master_json.py で再生成）
+// スタンドアロン・GitHub Pages モードでの省略名解決に使用する
+// サーバーモードでは boat_server.py 側で解決済みのため参照しない
+let PLAYER_ID_MAP = {};
+(async () => {
+  try {
+    const res = await fetch('player_id_map.json');
+    if (res.ok) PLAYER_ID_MAP = await res.json();
+  } catch(e) { /* ファイルがない場合は省略名のまま */ }
+})();
+
+/**
+ * CSV の選手名（最大4文字省略）と登録番号から正式名を解決する。
+ * 優先順位:
+ *   1. 登録番号（登番列）で PLAYER_ID_MAP を引く → 最も確実
+ *   2. 省略名で正式名への前方一致を試みる（補助）
+ *   3. 解決不能 → 省略名のまま使用
+ */
+function resolvePlayerName(rawName, regNo) {
+  const reg = String(regNo || '').trim();
+  if (reg && PLAYER_ID_MAP[reg]) return PLAYER_ID_MAP[reg];
+  const normalized = (rawName || '').trim();
+  const match = Object.values(PLAYER_ID_MAP).find(n => n.startsWith(normalized));
+  if (match) return match;
+  return normalized;
+}
 
 async function loadFromServer(fileParam) {
   const url = fileParam ? `/api/load?file=${encodeURIComponent(fileParam)}` : '/api/data';
