@@ -1079,12 +1079,12 @@ const IS_SERVER = (location.hostname === 'localhost' || location.hostname === '1
 
 // player_id_map: 登録番号→正式名（スタンドアロンモードで使用）
 let PLAYER_ID_MAP = {};
-(async ()=>{
+async function loadPlayerIdMap(){
   try {
     const res = await fetch('player_id_map.json');
     if(res.ok) PLAYER_ID_MAP = await res.json();
   } catch(e) {}
-})();
+}
 
 async function loadFromServer(fileParam) {
   const url = fileParam ? `/api/load?file=${encodeURIComponent(fileParam)}` : '/api/data';
@@ -1317,40 +1317,45 @@ async function loadAllVenuesFromServer(){
 // buildVenueTabs を初期表示
 buildVenueTabs();
 
-if (IS_SERVER) {
-  document.getElementById('server-bar').style.display = 'flex';
-  document.getElementById('upload-area').style.display = 'none';
-  loadAllVenuesFromServer();
-  fetchMasterStats();
-  // テン展示: 起動時プリフェッチ＆ポーリング開始
-  if(IS_SERVER){ prefetchAllTenji().then(()=>{ if(selectedRace) renderDetail(selectedRace); }); startTenjiPolling(); }
-  setInterval(loadAllVenuesFromServer, 60000); // 60秒ごとに更新チェック
-  document.getElementById('file-selector').addEventListener('change', async function(){
-    if(!this.value) return;
-    const vname = venueFromFilename(this.value);
-    if(vname){
-      await (async()=>{
-        const r = await fetch(`/api/load?file=${encodeURIComponent(this.value)}`);
-        const j = await r.json();
-        if(j.ok && j.data){ ALL_DATA[vname] = j.data; buildVenueTabs(); switchVenue(vname); }
-      })();
-    }
-  });
-} else {
-  // スタンドアロンモード: MASTERデータがある会場をそのまま表示
-  const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
-  if(firstLoaded){
-    currentVenue = firstLoaded;
-    DATA = ALL_DATA[firstLoaded];
-    buildVenueTabs();
-    buildVenueBar();
-    buildRaceGrid();
-    selectRace(selectedRace);
+// player_id_map を先に読み込んでから初期化（タイミング問題を解消）
+(async () => {
+  await loadPlayerIdMap();
+
+  if (IS_SERVER) {
+    document.getElementById('server-bar').style.display = 'flex';
     document.getElementById('upload-area').style.display = 'none';
+    loadAllVenuesFromServer();
+    fetchMasterStats();
+    // テン展示: 起動時プリフェッチ＆ポーリング開始
+    if(IS_SERVER){ prefetchAllTenji().then(()=>{ if(selectedRace) renderDetail(selectedRace); }); startTenjiPolling(); }
+    setInterval(loadAllVenuesFromServer, 60000); // 60秒ごとに更新チェック
+    document.getElementById('file-selector').addEventListener('change', async function(){
+      if(!this.value) return;
+      const vname = venueFromFilename(this.value);
+      if(vname){
+        await (async()=>{
+          const r = await fetch(`/api/load?file=${encodeURIComponent(this.value)}`);
+          const j = await r.json();
+          if(j.ok && j.data){ ALL_DATA[vname] = j.data; buildVenueTabs(); switchVenue(vname); }
+        })();
+      }
+    });
   } else {
-    buildVenueTabs();
+    // スタンドアロンモード: MASTERデータがある会場をそのまま表示
+    const firstLoaded = VENUE_LIST.find(v=>ALL_DATA[v] && ALL_DATA[v] !== MASTER_EMPTY);
+    if(firstLoaded){
+      currentVenue = firstLoaded;
+      DATA = ALL_DATA[firstLoaded];
+      buildVenueTabs();
+      buildVenueBar();
+      buildRaceGrid();
+      selectRace(selectedRace);
+      document.getElementById('upload-area').style.display = 'none';
+    } else {
+      buildVenueTabs();
+    }
   }
-}
+})();
 </script>
 </body>
 </html>
