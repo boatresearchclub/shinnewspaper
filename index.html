@@ -589,9 +589,70 @@ html { scroll-behavior: smooth; }
   color: var(--text3);
 }
 
+
+/* ── Pull-to-Refresh ── */
+#ptr-indicator {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  height: 0;
+  overflow: hidden;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 9999;
+  transition: height 0.15s ease;
+  pointer-events: none;
+}
+#ptr-indicator.pulling { height: 40px; }
+#ptr-indicator.refreshing { height: 40px; }
+#ptr-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  display: none;
+}
+#ptr-indicator.refreshing #ptr-spinner { display: block; animation: ptr-spin 0.7s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+
+/* ── 更新ボタン ── */
+#refresh-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 18px;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: transform 0.2s, background 0.2s;
+}
+#refresh-btn:active { transform: scale(0.9); }
+#refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-28 13:36:35 --></head>
+<!-- auto_push_updated:2026-04-28 13:42:28 --></head>
 <body>
+
+<!-- Pull-to-Refresh indicator -->
+<div id="ptr-indicator">
+  <div id="ptr-spinner"></div>
+  <span id="ptr-label">↓ 引っ張って更新</span>
+</div>
+
+<!-- 更新ボタン（スマホ右下） -->
+<button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
 
 <header class="site-header">
   <div class="logo">
@@ -1566,6 +1627,110 @@ buildVenueTabs();
       buildVenueTabs();
     }
   }
+
+  // ファイルモードのリロード後: sessionStorageで状態を復元
+  const _rv = sessionStorage.getItem('refresh_venue');
+  const _rr = parseInt(sessionStorage.getItem('refresh_race') || '');
+  const _rt = sessionStorage.getItem('refresh_tab');
+  if(_rv || _rr || _rt) {
+    sessionStorage.removeItem('refresh_venue');
+    sessionStorage.removeItem('refresh_race');
+    sessionStorage.removeItem('refresh_tab');
+    if(_rv && ALL_DATA[_rv] && ALL_DATA[_rv] !== MASTER_EMPTY) applyVenueData(_rv, ALL_DATA[_rv]);
+    if(_rr && DATA && DATA.races && DATA.races[_rr]) selectRace(_rr);
+    if(_rt) switchTab(_rt);
+  }
+})();
+
+// ── 更新処理（タブ・会場・レースを維持） ──────────────────────────
+async function doRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  if(btn) { btn.classList.add('spinning'); }
+
+  const savedVenue = currentVenue;
+  const savedRace  = selectedRace;
+  const savedTab   = currentTabName();
+
+  try {
+    if(IS_SERVER) {
+      await loadAllVenuesFromServer();
+    } else {
+      // ファイルモードはリロードでタブ状態を保存してから
+      sessionStorage.setItem('refresh_venue', savedVenue || '');
+      sessionStorage.setItem('refresh_race',  String(savedRace || ''));
+      sessionStorage.setItem('refresh_tab',   savedTab || '');
+      location.reload();
+      return;
+    }
+
+    // 会場を復元
+    if(savedVenue && ALL_DATA[savedVenue] && ALL_DATA[savedVenue] !== MASTER_EMPTY) {
+      applyVenueData(savedVenue, ALL_DATA[savedVenue]);
+    }
+
+    // レースを復元
+    if(savedRace && DATA && DATA.races && DATA.races[savedRace]) {
+      selectRace(savedRace);
+    }
+
+    // タブを復元
+    if(savedTab) switchTab(savedTab);
+
+    showToast('更新しました');
+  } catch(e) {
+    showToast('更新に失敗しました');
+  } finally {
+    if(btn) { btn.classList.remove('spinning'); }
+  }
+}
+
+// ── Pull-to-Refresh ────────────────────────────────────────────────
+(function() {
+  const THRESHOLD = 65; // px — この距離引っ張ったら更新
+  let startY = 0;
+  let pulling = false;
+  let refreshing = false;
+
+  const indicator = document.getElementById('ptr-indicator');
+  const label     = document.getElementById('ptr-label');
+
+  function canPull() {
+    return window.scrollY === 0 && !refreshing;
+  }
+
+  document.addEventListener('touchstart', e => {
+    if(!canPull()) return;
+    startY = e.touches[0].clientY;
+    pulling = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    if(!canPull()) return;
+    const dist = e.touches[0].clientY - startY;
+    if(dist <= 0) return;
+    pulling = true;
+    const pct = Math.min(dist / THRESHOLD, 1);
+    indicator.classList.toggle('pulling', true);
+    label.textContent = pct >= 1 ? '✓ 離して更新' : '↓ 引っ張って更新';
+  }, { passive: true });
+
+  document.addEventListener('touchend', async () => {
+    if(!pulling) return;
+    const dist_enough = label.textContent.includes('離して');
+    indicator.classList.remove('pulling');
+    pulling = false;
+    if(!dist_enough) return;
+
+    refreshing = true;
+    indicator.classList.add('refreshing');
+    label.textContent = '更新中...';
+
+    await doRefresh();
+
+    indicator.classList.remove('refreshing');
+    label.textContent = '↓ 引っ張って更新';
+    refreshing = false;
+  });
 })();
 </script>
 </body>
