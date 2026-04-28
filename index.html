@@ -579,13 +579,16 @@ html { scroll-behavior: smooth; }
   font-size: 0.8rem;
   padding: 0.75rem 0;
 }
+.tenji-delta-plus  { color: #22c55e; font-size: 11px; font-weight: 600; }
+.tenji-delta-minus { color: #ef4444; font-size: 11px; font-weight: 600; }
+.tenji-delta-none  { color: var(--text3); font-size: 11px; }
 .tenji-tilt {
   font-size: 0.72rem;
   color: var(--text3);
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 12:13:15 --></head>
+<!-- auto_push_updated:2026-04-28 13:22:13 --></head>
 <body>
 
 <header class="site-header">
@@ -849,6 +852,102 @@ function buildTenjiSection(rno, boats){
   </div>`;
 }
 
+// ── 展示タイム補正関数群 ──────────────────────────────────────────
+function calcTenjiDelta(boats, tenjiData) {
+  if (!tenjiData) return null;
+  // 6艇分のtenjiタイムを取得
+  const times = boats.map(b => tenjiData[b.boat]?.tenji ?? null);
+  if (times.some(v => v == null)) return null; // 1艇でも欠けたらnull
+
+  // 平均・標準偏差
+  const n = times.length;
+  const avg = times.reduce((a, b) => a + b, 0) / n;
+  const variance = times.reduce((a, b) => a + (b - avg) ** 2, 0) / n;
+  const std = Math.sqrt(variance);
+  if (std === 0) return null;
+
+  // 偏差値 → 補正係数
+  const coefs = times.map(t => {
+    const hensa = 50 + ((avg - t) / std) * 10; // 小さいほど速い→逆転
+    if (hensa >= 60) return 1.15;
+    if (hensa >= 55) return 1.08;
+    if (hensa >= 45) return 1.00;
+    if (hensa >= 40) return 0.93;
+    return 0.85;
+  });
+
+  // 補正後prob計算（正規化）
+  const rawScores = boats.map((b, i) => b.prob * coefs[i]);
+  const total = rawScores.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  const newProbs = rawScores.map(s => s / total);
+
+  // deltaマップ {boat_no: delta_float}
+  const deltaMap = {};
+  boats.forEach((b, i) => {
+    deltaMap[b.boat] = newProbs[i] - b.prob;
+  });
+  return deltaMap;
+}
+
+function renderTenjiDelta(rno, deltaMap) {
+  if (!deltaMap) return;
+  const panel = document.getElementById('inline-detail');
+  if (!panel) return;
+  const rows = panel.querySelectorAll('.bt-row');
+  rows.forEach(row => {
+    const circleEl = row.querySelector('.boat-circle');
+    if (!circleEl) return;
+    const boatNo = parseInt(circleEl.textContent);
+    if (isNaN(boatNo)) return;
+    const delta = deltaMap[boatNo];
+    if (delta == null) return;
+
+    // prob表示div（3番目のdiv）を探す
+    const divs = row.querySelectorAll(':scope > div');
+    const probDiv = divs[2];
+    if (!probDiv) return;
+
+    // 既存のdeltaスパンを除去
+    probDiv.querySelectorAll('.tenji-delta-plus,.tenji-delta-minus').forEach(el => el.remove());
+
+    const d = delta * 100;
+    if (Math.abs(d) < 0.3) return;
+    const span = document.createElement('span');
+    if (d > 0) {
+      span.className = 'tenji-delta-plus';
+      span.textContent = ` +${d.toFixed(1)}%`;
+    } else {
+      span.className = 'tenji-delta-minus';
+      span.textContent = ` ${d.toFixed(1)}%`;
+    }
+    probDiv.appendChild(span);
+  });
+}
+
+function updateTenjiDelta(venue, date, rno) {
+  if (!DATA || !DATA.races[rno]) return;
+  const SLUG = {
+    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+  };
+  const slug = SLUG[DATA.venue] || DATA.venue || '';
+  const key = tenjiKey(slug, date || DATA.date, rno);
+  const tenjiData = _tenjiCache[key];
+  if (!tenjiData) return;
+  const boats = DATA.races[rno].boats;
+  const deltaMap = calcTenjiDelta(boats, tenjiData);
+  if (!deltaMap) return;
+  // boatオブジェクトにtenji_deltaを保存
+  boats.forEach(b => { b.tenji_delta = deltaMap[b.boat]; });
+  renderTenjiDelta(rno, deltaMap);
+}
+// ─────────────────────────────────────────────────────────────────
+
 async function fetchTenji(slug, date, rno, boats){
   const key = tenjiKey(slug, date, rno);
   try {
@@ -954,7 +1053,13 @@ function renderDetail(rno){
         <div class="bt-row${i===0?' top1':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
           <div>${bt.name}</div>
-          <div>${(bt.prob*100).toFixed(1)}%</div>
+          <div>${(bt.prob*100).toFixed(1)}%${bt.tenji_delta != null ? (() => {
+            const d = bt.tenji_delta * 100;
+            if(Math.abs(d) < 0.3) return '';
+            return d > 0
+              ? ` <span class="tenji-delta-plus">+${d.toFixed(1)}%</span>`
+              : ` <span class="tenji-delta-minus">${d.toFixed(1)}%</span>`;
+          })() : ''}</div>
         </div>
       `).join('')}
 
@@ -963,6 +1068,11 @@ function renderDetail(rno){
   `;
 
   document.getElementById('inline-detail').innerHTML = html;
+
+  // 展示タイム補正デルタを反映
+  if (DATA && DATA.date) {
+    updateTenjiDelta(DATA.venue, DATA.date, rno);
+  }
 }
 
 function renderBuy(rno){
