@@ -524,7 +524,7 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 11:03:34 --></head>
+<!-- auto_push_updated:2026-04-28 11:05:17 --></head>
 <body>
 
 <header class="site-header">
@@ -644,12 +644,7 @@ function weightDots(w, max=3){
 }
 
 function buildVenueBar(){
-  const inn = DATA.inn_data;
-  document.getElementById('vs-inn').textContent = (inn.inn_rate*100).toFixed(1)+'%';
-  document.getElementById('vs-arek').textContent = inn.arek_score.toFixed(1);
-  document.getElementById('vs-c1').textContent = (inn.course_rates[1]*100).toFixed(1)+'%';
-  document.getElementById('vs-races').textContent = Object.keys(DATA.races).length;
-  // venue-bar は非表示のまま
+  // venue-bar は非表示のため vs-* には書き込まない
   document.getElementById('tab-bar').style.display='';
   document.getElementById('header-meta').innerHTML = `<strong>${DATA.venue}</strong> — ${DATA.date}`;
 }
