@@ -247,6 +247,24 @@ body {
 
 /* ── BOAT TABLE ── */
 .boat-table { width: 100%; }
+/* シンプル詳細用ヘッダ */
+.bt-head-simple {
+  display: grid;
+  grid-template-columns: 44px 1fr 54px 62px;
+  gap: 6px;
+  padding: .4rem 1.25rem;
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  letter-spacing: .08em;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+/* detail-panel 内の bt-row は4列 */
+.detail-panel .bt-row {
+  grid-template-columns: 44px 1fr 54px 62px;
+}
+.bt-winrate { font-family: var(--mono); font-size: 12px; color: var(--text2); }
 .bt-head {
   display: grid;
   grid-template-columns: 36px 1fr 42px 54px 54px 54px 50px 72px;
@@ -524,7 +542,7 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 11:15:31 --></head>
+<!-- auto_push_updated:2026-04-28 11:45:37 --></head>
 <body>
 
 <header class="site-header">
@@ -567,6 +585,12 @@ html { scroll-behavior: smooth; }
   <!-- VENUE STATS (非表示) -->
   <div id="venue-bar" style="display:none">
     <span id="vs-inn"></span><span id="vs-arek"></span><span id="vs-c1"></span><span id="vs-races"></span>
+  </div>
+
+  <!-- RACE LABEL BAR (venue + race number, always visible while tabs shown) -->
+  <div id="race-label-bar" style="display:none;align-items:center;gap:10px;padding:6px 0 4px;font-size:14px;font-weight:700;color:var(--text)">
+    <span id="race-label-venue"></span>
+    <span id="race-label-rno" style="color:var(--accent2)"></span>
   </div>
 
   <!-- TABS -->
@@ -671,6 +695,16 @@ function selectRace(rno){
   document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
   const btn = document.getElementById(`rc-${rno}`);
   if(btn) btn.classList.add('active');
+
+  // race-label-bar を更新
+  const labelBar = document.getElementById('race-label-bar');
+  const labelVenue = document.getElementById('race-label-venue');
+  const labelRno = document.getElementById('race-label-rno');
+  if(labelBar && DATA){
+    labelVenue.textContent = DATA.venue || currentVenue || '';
+    labelRno.textContent = `${rno}R`;
+    labelBar.style.display = 'flex';
+  }
 
   // アクティブタブに応じて再描画
   const tabName = currentTabName();
@@ -867,19 +901,15 @@ function renderDetail(rno){
 
   const html = `
     <div class="detail-panel">
-      <div class="dp-header">
-        <div>
-          <div class="dp-title">${rno}R 詳細予想</div>
-          <div class="dp-meta">${DATA.venue} ${rd.time}</div>
-        </div>
+      <div class="bt-head-simple">
+        <span>枠</span><span>選手名</span><span>勝率</span><span>予想率</span>
       </div>
-
-      <div class="scenario-bar ${scCls}">${sc}</div>
 
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
           <div>${bt.name}</div>
+          <div class="bt-winrate">${bt.win_rate != null ? bt.win_rate.toFixed(2) : '—'}</div>
           <div>${(bt.prob*100).toFixed(1)}%</div>
         </div>
       `).join('')}
@@ -909,12 +939,6 @@ function renderBuy(rno){
     {c:`${s}−${t}`,l:'逆転',lc:'bl-gyaku',w:1},
   ];
   document.getElementById('buy-panel').innerHTML = `
-    <div class="dp-header">
-      <div>
-        <div class="dp-title">${rno}R 買い目</div>
-        <div class="dp-meta">本命: 艇${t} ${boats[0].name}</div>
-      </div>
-    </div>
     <div class="buy-grid">
       <div class="buy-card">
         <div class="buy-card-title">3連単</div>
