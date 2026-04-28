@@ -589,6 +589,75 @@ html { scroll-behavior: smooth; }
   color: var(--text3);
 }
 
+/* ── 選手コメント ── */
+.comment-section {
+  margin-top: 0;
+  border-top: 1px solid var(--border);
+  padding: 0.875rem 0.75rem 0.5rem;
+}
+.comment-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text3);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comment-badge {
+  font-size: 10px;
+  background: var(--green);
+  color: #fff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  letter-spacing: 0;
+}
+.comment-badge.waiting { background: var(--text3); }
+.comment-badge.error   { background: var(--orange); }
+.comment-row {
+  display: grid;
+  grid-template-columns: 28px 5.5em 1fr;
+  gap: 6px 8px;
+  align-items: baseline;
+  font-size: 0.82rem;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.comment-row:last-child { border-bottom: none; }
+.comment-name {
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+}
+.comment-text {
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.comment-empty {
+  color: var(--text3);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+.comment-keyword {
+  display: inline-block;
+  background: var(--orange2);
+  color: var(--orange);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 0 4px;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.comment-keyword.good  { background: var(--green2); color: var(--green); }
+.comment-keyword.bad   { background: var(--red2);   color: var(--red);   }
+
 
 /* ── Pull-to-Refresh ── */
 #ptr-indicator {
@@ -642,7 +711,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 00:39:43 --></head>
+<!-- auto_push_updated:2026-04-29 08:17:34 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -708,6 +777,7 @@ html { scroll-behavior: smooth; }
     <button class="tab-btn active" data-tab="races" onclick="switchTab('races')">出走表</button>
     <button class="tab-btn" data-tab="detail" onclick="switchTab('detail')">詳細予想</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">買い目</button>
+    <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手コメント</button>
   </div>
 
   <!-- RACE BAR (会場直下の横並びレース一覧) -->
@@ -726,6 +796,13 @@ html { scroll-behavior: smooth; }
   <div id="tab-buy" style="display:none">
     <div class="detail-panel" id="buy-panel">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
+    </div>
+  </div>
+
+  <!-- COMMENT -->
+  <div id="tab-comment" style="display:none">
+    <div class="detail-panel" id="comment-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとコメントが表示されます</div>
     </div>
   </div>
 
@@ -821,6 +898,7 @@ function selectRace(rno){
   const tabName = currentTabName();
   if(tabName === 'detail') renderDetail(rno);
   else if(tabName === 'buy') renderBuy(rno);
+  else if(tabName === 'comment') renderComment(rno);
   else renderDetail(rno); // 出走表下の詳細も更新
 }
 
@@ -1090,6 +1168,110 @@ function startTenjiPolling(){
   }, 30000);
 }
 
+// ── 選手コメント ──────────────────────────────────────────────────
+const _commentCache = {};  // key: "slug_date_race" → {1:{name,comment}, ...} | null
+
+// キーワードハイライト（良い情報・悪い情報）
+const COMMENT_KEYWORDS_GOOD = ['調子いい','足がいい','足は良','仕上がって','自信','乗れてる','感触いい','良さそう','行ける','自信あり'];
+const COMMENT_KEYWORDS_BAD  = ['エンジンに力','力がない','届かない','失敗','苦しい','厳しい','遅い','差ない','出し切れ','整備'];
+
+function commentKey(venue, date, race){
+  return `${venue}_${date}_${race}`;
+}
+
+function highlightComment(text){
+  if(!text) return '<span class="comment-empty">コメントなし</span>';
+  let t = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  COMMENT_KEYWORDS_GOOD.forEach(kw=>{
+    t = t.replaceAll(kw, `<span class="comment-keyword good">${kw}</span>`);
+  });
+  COMMENT_KEYWORDS_BAD.forEach(kw=>{
+    t = t.replaceAll(kw, `<span class="comment-keyword bad">${kw}</span>`);
+  });
+  return t;
+}
+
+function buildCommentSection(rno, boats){
+  const SLUG = {
+    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+  };
+  const slug = SLUG[DATA.venue] || DATA.venue;
+  const key  = commentKey(slug, DATA.date, rno);
+
+  // boatオブジェクトにcommentが直接含まれている場合（CSV埋め込み）
+  const hasInline = boats.some(b => b.comment);
+  if(hasInline){
+    const rows = boats.map(bt => `
+      <div class="comment-row">
+        <span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px">${bt.boat}</span>
+        <span class="comment-name">${bt.name}</span>
+        <span class="comment-text">${highlightComment(bt.comment||'')}</span>
+      </div>`).join('');
+    return `<div class="comment-section">
+      <div class="comment-title">選手コメント <span class="comment-badge">CSV</span></div>
+      ${rows}
+    </div>`;
+  }
+
+  // サーバーモードでなければ非表示
+  if(!IS_SERVER) return '';
+
+  const cached = _commentCache[key];
+  if(cached === undefined){
+    setTimeout(()=> fetchComment(slug, DATA.date, rno, boats), 0);
+    return `<div class="comment-section">
+      <div class="comment-title">選手コメント <span class="comment-badge waiting">取得中...</span></div>
+      <div class="tenji-waiting">⏳ 取得中...</div>
+    </div>`;
+  }
+  if(cached === null){
+    return `<div class="comment-section">
+      <div class="comment-title">選手コメント <span class="comment-badge error">未取得</span></div>
+      <div class="tenji-waiting">コメントデータなし</div>
+    </div>`;
+  }
+
+  const rows = boats.map(bt => {
+    const entry = cached[bt.boat] || {};
+    return `<div class="comment-row">
+      <span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px">${bt.boat}</span>
+      <span class="comment-name">${bt.name}</span>
+      <span class="comment-text">${highlightComment(entry.comment||'')}</span>
+    </div>`;
+  }).join('');
+
+  const fetched = cached['__fetched_at'] || '';
+  return `<div class="comment-section">
+    <div class="comment-title">選手コメント <span class="comment-badge">取得済み${fetched?(' '+fetched):''}</span></div>
+    ${rows}
+  </div>`;
+}
+
+async function fetchComment(slug, date, rno, boats){
+  const key = commentKey(slug, date, rno);
+  try {
+    const res  = await fetch(`/api/comments?venue=${slug}&date=${date}&race=${rno}`);
+    const json = await res.json();
+    if(json.ok && json.data){
+      const d = json.data;
+      d['__fetched_at'] = json.fetched_at ? json.fetched_at.slice(11,16) : '';
+      _commentCache[key] = d;
+    } else {
+      _commentCache[key] = null;
+    }
+  } catch(e){
+    _commentCache[key] = null;
+  }
+  if(rno === selectedRace) renderDetail(rno);
+}
+
+// ─────────────────────────────────────────────────────────────────
+
 function renderDetail(rno){
   const rd = DATA.races[rno];
   if(!rd) return;
@@ -1110,7 +1292,7 @@ function renderDetail(rno){
     scCls = 'mix';
   }
 
-  const tenjiHtml = buildTenjiSection(rno, boats);
+  const tenjiHtml   = buildTenjiSection(rno, boats);
 
   const html = `
     <div class="detail-panel">
@@ -1186,8 +1368,16 @@ function renderBuy(rno){
   `;
 }
 
+function renderComment(rno){
+  const rd = DATA.races[rno];
+  if(!rd) return;
+  const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
+  const html = `<div class="detail-panel">${buildCommentSection(rno, boats)}</div>`;
+  document.getElementById('comment-panel').innerHTML = html;
+}
+
 function switchTab(name){
-  ['races','detail','buy'].forEach(t=>{
+  ['races','detail','buy','comment'].forEach(t=>{
     document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b=>{
@@ -1195,6 +1385,7 @@ function switchTab(name){
   });
   if(name==='detail') renderDetail(selectedRace);
   if(name==='buy') renderBuy(selectedRace);
+  if(name==='comment') renderComment(selectedRace);
 }
 
 function currentTabName(){
@@ -1432,7 +1623,9 @@ function clearPanels(){
   if(dp) dp.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">上のレースカードを選択してください</div>';
   const bp = document.getElementById('buy-panel');
   if(bp) bp.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>';
-  ['races','detail','buy'].forEach(t=>{
+  const cp = document.getElementById('comment-panel');
+  if(cp) cp.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとコメントが表示されます</div>';
+  ['races','detail','buy','comment'].forEach(t=>{
     document.getElementById(`tab-${t}`).style.display = t==='races'?'':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b=>{
