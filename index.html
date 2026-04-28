@@ -524,7 +524,7 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 11:10:37 --></head>
+<!-- auto_push_updated:2026-04-28 11:15:31 --></head>
 <body>
 
 <header class="site-header">
@@ -683,9 +683,13 @@ function selectRace(rno){
 const _tenjiCache = {};  // key: "venue_date_race" → data or null
 
 // auto_push で埋め込まれた TENJI_DATA を _tenjiCache に事前ロード
+// TENJI_DATA のキー形式: "heiwajima_20260428_2"
+// _tenjiCache のキー形式: "heiwajima_2026-04-28_2"
 (function(){
   for(const [key, val] of Object.entries(TENJI_DATA)){
-    _tenjiCache[key] = val;
+    // 日付部分（8桁数字）をダッシュ付きに変換
+    const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
+    _tenjiCache[normalized] = val;
   }
 })();
 
