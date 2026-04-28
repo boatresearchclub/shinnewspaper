@@ -524,7 +524,7 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 11:05:17 --></head>
+<!-- auto_push_updated:2026-04-28 11:10:37 --></head>
 <body>
 
 <header class="site-header">
@@ -681,6 +681,13 @@ function selectRace(rno){
 
 // ── テン展示キャッシュ ──
 const _tenjiCache = {};  // key: "venue_date_race" → data or null
+
+// auto_push で埋め込まれた TENJI_DATA を _tenjiCache に事前ロード
+(function(){
+  for(const [key, val] of Object.entries(TENJI_DATA)){
+    _tenjiCache[key] = val;
+  }
+})();
 
 function tenjiKey(venue, date, race){
   return `${venue}_${date}_${race}`;
