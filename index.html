@@ -250,7 +250,7 @@ body {
 /* シンプル詳細用ヘッダ */
 .bt-head-simple {
   display: grid;
-  grid-template-columns: 44px 1fr 54px 62px;
+  grid-template-columns: 44px 1fr 72px;
   gap: 6px;
   padding: .4rem 1.25rem;
   font-size: 11px;
@@ -260,9 +260,9 @@ body {
   border-bottom: 1px solid var(--border);
   background: var(--bg3);
 }
-/* detail-panel 内の bt-row は4列 */
+/* detail-panel 内の bt-row は3列 */
 .detail-panel .bt-row {
-  grid-template-columns: 44px 1fr 54px 62px;
+  grid-template-columns: 44px 1fr 72px;
 }
 .bt-winrate { font-family: var(--mono); font-size: 12px; color: var(--text2); }
 .bt-head {
@@ -405,6 +405,40 @@ body {
 .tab-btn:hover { color: var(--text2); }
 .tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent); }
 
+/* ── STICKY NAV (venue + race bar) ── */
+.sticky-nav {
+  position: sticky;
+  top: 52px; /* below site-header */
+  z-index: 90;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,40,90,0.06);
+}
+.sticky-nav-venue {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+.sticky-nav-venue::-webkit-scrollbar { display: none; }
+.sticky-nav-race {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  display: none; /* shown after data load */
+}
+.sticky-nav-race.visible {
+  display: block;
+}
+.sticky-nav-race::-webkit-scrollbar { display: none; }
+.sticky-nav-race-inner {
+  display: flex;
+  gap: 4px;
+  padding: 5px 10px;
+  min-width: max-content;
+}
+
 /* ── VENUE TABS ── */
 #venue-tabs {
   overflow-x: auto;
@@ -434,6 +468,15 @@ body {
 .vtab.active { color: var(--accent2) !important; border-bottom-color: var(--accent); }
 .vtab:disabled { color: var(--border2); cursor: default; opacity: 0.35; }
 .vtab.loading { color: var(--gold); }
+
+/* Compact race buttons inside sticky nav */
+.sticky-nav .race-btn {
+  padding: 4px 8px;
+  min-width: 48px;
+  gap: 1px;
+}
+.sticky-nav .race-btn-no { font-size: 12px; }
+.sticky-nav .race-btn-time { font-size: 9px; }
 
 /* ── RESPONSIVE TABLE ── */
 @media (max-width: 640px) {
@@ -542,7 +585,7 @@ html { scroll-behavior: smooth; }
 }
 
 </style>
-<!-- auto_push_updated:2026-04-28 11:45:37 --></head>
+<!-- auto_push_updated:2026-04-28 12:13:15 --></head>
 <body>
 
 <header class="site-header">
@@ -555,12 +598,19 @@ html { scroll-behavior: smooth; }
   </div>
 </header>
 
+<!-- ── STICKY NAV: 会場タブ + レースバー ── -->
+<div class="sticky-nav" id="sticky-nav">
+  <div class="sticky-nav-venue tab-bar">
+    <div id="venue-tabs" style="display:flex"></div>
+  </div>
+  <div class="sticky-nav-race" id="sticky-race-wrap">
+    <div class="sticky-nav-race-inner" id="race-bar"></div>
+  </div>
+</div>
+
 <main class="container">
 
-<!-- 会場タブはJS buildVenueTabs() で動的生成 -->
-<div class="tab-bar" id="venue-tabs"></div>
-
-  <!-- SERVER STATUS BAR -->
+<!-- SERVER STATUS BAR -->
   <div id="server-bar" style="display:none;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:0.625rem 1rem;margin-bottom:1rem">
     <div style="display:flex;align-items:center;gap:10px;min-width:0">
       <span style="font-size:14px">🖥️</span>
@@ -587,12 +637,6 @@ html { scroll-behavior: smooth; }
     <span id="vs-inn"></span><span id="vs-arek"></span><span id="vs-c1"></span><span id="vs-races"></span>
   </div>
 
-  <!-- RACE LABEL BAR (venue + race number, always visible while tabs shown) -->
-  <div id="race-label-bar" style="display:none;align-items:center;gap:10px;padding:6px 0 4px;font-size:14px;font-weight:700;color:var(--text)">
-    <span id="race-label-venue"></span>
-    <span id="race-label-rno" style="color:var(--accent2)"></span>
-  </div>
-
   <!-- TABS -->
   <div class="tab-bar" id="tab-bar" style="display:none">
     <button class="tab-btn active" data-tab="races" onclick="switchTab('races')">全レース一覧</button>
@@ -602,9 +646,6 @@ html { scroll-behavior: smooth; }
 
   <!-- RACE BAR (会場直下の横並びレース一覧) -->
   <div id="tab-races">
-    <div id="race-bar-wrap" style="display:none;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:1rem">
-      <div id="race-bar" style="display:flex;gap:6px;min-width:max-content;padding:2px 0 6px"></div>
-    </div>
     <div id="inline-detail"></div>
   </div>
 
@@ -675,7 +716,7 @@ function buildVenueBar(){
 
 function buildRaceBar(){
   const bar = document.getElementById('race-bar');
-  const wrap = document.getElementById('race-bar-wrap');
+  const wrap = document.getElementById('sticky-race-wrap');
   if(!bar || !wrap) return;
   bar.innerHTML = '';
   Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
@@ -686,7 +727,7 @@ function buildRaceBar(){
     btn.onclick = ()=>{ selectRace(parseInt(rno)); };
     bar.appendChild(btn);
   });
-  wrap.style.display = '';
+  wrap.classList.add('visible');
 }
 
 function selectRace(rno){
@@ -694,9 +735,13 @@ function selectRace(rno){
 
   document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
   const btn = document.getElementById(`rc-${rno}`);
-  if(btn) btn.classList.add('active');
+  if(btn){
+    btn.classList.add('active');
+    // スクロールしてアクティブボタンを見えるようにする
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
 
-  // race-label-bar を更新
+  // race-label-bar を更新（存在する場合）
   const labelBar = document.getElementById('race-label-bar');
   const labelVenue = document.getElementById('race-label-venue');
   const labelRno = document.getElementById('race-label-rno');
@@ -902,14 +947,13 @@ function renderDetail(rno){
   const html = `
     <div class="detail-panel">
       <div class="bt-head-simple">
-        <span>枠</span><span>選手名</span><span>勝率</span><span>予想率</span>
+        <span>枠</span><span>選手名</span><span>想定1着率</span>
       </div>
 
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
           <div>${bt.name}</div>
-          <div class="bt-winrate">${bt.win_rate != null ? bt.win_rate.toFixed(2) : '—'}</div>
           <div>${(bt.prob*100).toFixed(1)}%</div>
         </div>
       `).join('')}
