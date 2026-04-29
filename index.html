@@ -210,6 +210,12 @@ body {
 .race-btn:hover { border-color: var(--border2); background: var(--bg3); }
 .race-btn.active { border-color: var(--accent); background: var(--bg3); }
 .race-btn.active::before { background: var(--accent); }
+.race-btn.past {
+  opacity: 0.38;
+  filter: grayscale(0.4);
+  pointer-events: auto; /* クリックは引き続き可能 */
+}
+.race-btn.past .race-btn-no { color: var(--text3); }
 .race-btn-no { font-size: 13px; font-weight: 700; color: var(--text); }
 .race-btn-time { font-size: 10px; color: var(--text3); }
 
@@ -711,7 +717,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 08:36:41 --></head>
+<!-- auto_push_updated:2026-04-29 09:18:09 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -857,6 +863,15 @@ function buildVenueBar(){
   document.getElementById('header-meta').innerHTML = `<strong>${DATA.venue}</strong> — ${DATA.date}`;
 }
 
+function isRacePast(timeStr){
+  if(!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr.trim())) return false;
+  const now = new Date();
+  const [h, m] = timeStr.trim().split(':').map(Number);
+  const raceMin = h * 60 + m;
+  const nowMin  = now.getHours() * 60 + now.getMinutes();
+  return nowMin > raceMin;
+}
+
 function buildRaceBar(){
   const bar = document.getElementById('race-bar');
   const wrap = document.getElementById('sticky-race-wrap');
@@ -864,7 +879,8 @@ function buildRaceBar(){
   bar.innerHTML = '';
   Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
     const btn = document.createElement('button');
-    btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'');
+    const past = isRacePast(rd.time);
+    btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'') + (past?' past':'');
     btn.id = `rc-${rno}`;
     btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>`;
     btn.onclick = ()=>{ selectRace(parseInt(rno)); };
