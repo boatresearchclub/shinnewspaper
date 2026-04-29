@@ -216,6 +216,12 @@ body {
   pointer-events: auto; /* クリックは引き続き可能 */
 }
 .race-btn.past .race-btn-no { color: var(--text3); }
+.race-btn-insuf {
+  font-size: 9px;
+  color: var(--orange);
+  line-height: 1;
+  margin-top: 1px;
+}
 .race-btn-no { font-size: 13px; font-weight: 700; color: var(--text); }
 .race-btn-time { font-size: 10px; color: var(--text3); }
 
@@ -318,6 +324,27 @@ body {
 .dq-venue_raw { background: rgba(61,214,140,.08); color: #70d4a0; }
 .dq-course { background: rgba(245,200,66,.12); color: var(--gold); }
 .dq-fallback { background: var(--bg4); color: var(--text3); }
+/* ── コースデータ不足 警告行 ── */
+.bt-row.insufficient-row {
+  background: rgba(255, 122, 0, 0.04);
+}
+.bt-row.insufficient-row:hover {
+  background: rgba(255, 122, 0, 0.08);
+}
+.insufficient-warn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--orange);
+  margin-top: 2px;
+  line-height: 1.3;
+}
+.insufficient-warn::before {
+  content: '⚠';
+  font-size: 11px;
+  flex-shrink: 0;
+}
 .prob-cell { display: flex; align-items: center; gap: 7px; }
 .prob-bar-wrap { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; min-width: 30px; }
 .prob-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
@@ -717,7 +744,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 10:03:06 --></head>
+<!-- auto_push_updated:2026-04-29 10:06:21 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -880,9 +907,10 @@ function buildRaceBar(){
   Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
     const btn = document.createElement('button');
     const past = isRacePast(rd.time);
+    const hasInsufficient = rd.boats && rd.boats.some(b => b.dq === 'insufficient');
     btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'') + (past?' past':'');
     btn.id = `rc-${rno}`;
-    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>`;
+    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>${hasInsufficient ? '<span class="race-btn-insuf" title="コースデータ不足の選手がいます">⚠</span>' : ''}`;
     btn.onclick = ()=>{ selectRace(parseInt(rno)); };
     bar.appendChild(btn);
   });
@@ -1317,9 +1345,12 @@ function renderDetail(rno){
       </div>
 
       ${boats.map((bt,i)=>`
-        <div class="bt-row${i===0?' top1':''}">
+        <div class="bt-row${i===0?' top1':''}${bt.dq==='insufficient'?' insufficient-row':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
-          <div>${bt.name}</div>
+          <div>
+            <div>${bt.name}</div>
+            ${bt.dq==='insufficient' ? `<span class="insufficient-warn">コースデータ不足 — 想定1着率の精度が低いです</span>` : ''}
+          </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
             <span>${(bt.prob*100).toFixed(1)}%</span>
             ${bt.tenji_delta != null ? (() => {
