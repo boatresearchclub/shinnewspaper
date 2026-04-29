@@ -739,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 14:33:37 --></head>
+<!-- auto_push_updated:2026-04-29 14:38:12 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1483,7 +1483,7 @@ function renderBuy(rno){
       // 会場の決まり手傾向を取得（会場データ優先、なければ全国）
       const kimariMap = (vk[venue] || vk['_全国'] || {});
       // 決まり手ごとにループ
-      const kimariTypes = ['逃げ', 'まくり', '差し', 'まくり差し', '抵抗'];
+      const kimariTypes = ['逃げ', 'まくり', '差し', 'まくり差し', '抜き'];
       kimariTypes.forEach(kimari => {
         const kimariWeight = kimariMap[kimari] || 0;
         if (kimariWeight <= 0) return;
