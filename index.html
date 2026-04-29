@@ -739,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 15:06:16 --></head>
+<!-- auto_push_updated:2026-04-29 15:25:55 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1549,9 +1549,17 @@ function renderBuy(rno){
   const P3a = place3Ranked[0] || C;
   const P3b = place3Ranked[1] || (Df !== P3a ? Df : ranked[ranked.length - 1]);
 
-  // ── 3連単10点生成 ──
-  // place2Ranked / place3Ranked から上位を使いスコア順に組む
-  // 重複を避けながら最大10点まで出力
+  // ── 1着軸の決定：僅差（5%以内）なら2頭立て ──
+  // A=展開後1位, B=展開後2位
+  const probDiff = A.tenkai_prob - B.tenkai_prob;
+  const isDualAxis = probDiff <= 0.05; // 5%以内なら2頭軸
+
+  // 各軸ごとの2着・3着候補（軸艇を除いた残存スコア順）
+  function place2For(axisBoat) {
+    return ranked
+      .filter(bt => bt.boat !== axisBoat)
+      .sort((x, y) => (place2Scores[y.boat] || y.tenkai_prob) - (place2Scores[x.boat] || x.tenkai_prob));
+  }
 
   const buy3 = [];
   const buy3seen = new Set();
@@ -1565,52 +1573,76 @@ function renderBuy(rno){
     buy3.push({ c:`${first}−${second}−${third}`, l:label, lc, w });
   }
 
-  // 上位4艇のboat番号（2着・3着候補プール）
-  const p2pool = place2Ranked.map(b => b.boat);   // 1着Aを除いた2着候補順
   const allBoats = ranked.map(b => b.boat);
 
-  // ① A軸 × P2a固定 × 残り全部（本命ライン）
-  tryAdd3(A.boat, P2a.boat, P3a.boat, '本命', 'bl-honmei', 3);
-  tryAdd3(A.boat, P2a.boat, P3b.boat, '本命', 'bl-honmei', 3);
-  // P2a以外の3着候補も
-  allBoats.filter(b => b !== A.boat && b !== P2a.boat).forEach(b => {
-    tryAdd3(A.boat, P2a.boat, b, '本命', 'bl-honmei', 2);
-  });
+  if (!isDualAxis) {
+    // ── 通常：A軸1頭 ──
+    // A軸の2着候補順
+    const p2A = place2For(A.boat);
+    const P2a_ = p2A[0] || B;
+    const P2b_ = p2A[1] || C;
 
-  // ② A軸 × P2b固定（対抗ライン）
-  tryAdd3(A.boat, P2b.boat, P3a.boat, '対抗', 'bl-taikou', 2);
-  tryAdd3(A.boat, P2b.boat, P3b.boat, '対抗', 'bl-taikou', 2);
-  allBoats.filter(b => b !== A.boat && b !== P2b.boat).forEach(b => {
-    tryAdd3(A.boat, P2b.boat, b, '対抗', 'bl-taikou', 1);
-  });
+    // A−P2a−全（本命3着流し）
+    allBoats.filter(b => b !== A.boat && b !== P2a_.boat).forEach(b => {
+      tryAdd3(A.boat, P2a_.boat, b, '本命', 'bl-honmei', 3);
+    });
+    // A−P2b−全（対抗3着流し）
+    allBoats.filter(b => b !== A.boat && b !== P2b_.boat).forEach(b => {
+      tryAdd3(A.boat, P2b_.boat, b, '対抗', 'bl-taikou', 2);
+    });
+    // 逆転
+    if (arek >= 45) {
+      allBoats.filter(b => b !== P2a_.boat && b !== A.boat).forEach(b => {
+        tryAdd3(P2a_.boat, A.boat, b, '逆転', 'bl-gyaku', 1);
+      });
+    }
 
-  // ③ arek>=45: 2着軸をP2aに逆転させる目
-  if (arek >= 45) {
-    tryAdd3(P2a.boat, A.boat, P3a.boat, '逆転', 'bl-gyaku', 1);
-    tryAdd3(P2a.boat, A.boat, P3b.boat, '逆転', 'bl-gyaku', 1);
+  } else {
+    // ── 僅差：A頭とB頭の2頭立て ──
+    // 点数配分：A軸6点、B軸4点（合計10点）
+    const p2A = place2For(A.boat);
+    const p2B = place2For(B.boat);
+    const P2a_ = p2A[0] || C;
+    const P2b_ = p2A[1] || C;
+    const P2Ba = p2B[0] || A;
+    const P2Bb = p2B[1] || C;
+
+    // A軸：本命2着固定−3着全（5点）
+    allBoats.filter(b => b !== A.boat && b !== P2a_.boat).forEach(b => {
+      tryAdd3(A.boat, P2a_.boat, b, '本命', 'bl-honmei', 3);
+    });
+    // A軸：対抗2着−上位3着（1点）
+    tryAdd3(A.boat, P2b_.boat, P2a_.boat, '対抗', 'bl-taikou', 2);
+
+    // B軸：本命2着固定−3着全（4点）
+    allBoats.filter(b => b !== B.boat && b !== P2Ba.boat).forEach(b => {
+      tryAdd3(B.boat, P2Ba.boat, b, 'B軸', 'bl-gyaku', 2);
+    });
+    // B軸：対抗（1点補填）
+    tryAdd3(B.boat, P2Bb.boat, P2Ba.boat, 'B軸', 'bl-gyaku', 1);
   }
 
-  // ④ arek>=60: 大荒れ穴目
-  if (arek >= 60) {
-    tryAdd3(P2a.boat, P2b.boat, A.boat, '大穴', 'bl-gyaku', 1);
-    tryAdd3(P2b.boat, A.boat, P3a.boat, '大穴', 'bl-gyaku', 1);
-  }
-
-  // 10点に満たない場合は残りのA軸組み合わせで埋める
+  // 残り点数を A軸の順列で補填（参考なし）
   allBoats.filter(b => b !== A.boat).forEach(second => {
     allBoats.filter(b => b !== A.boat && b !== second).forEach(third => {
-      tryAdd3(A.boat, second, third, '参考', 'bl-ana', 0);
+      if (buy3.length >= 10) return;
+      tryAdd3(A.boat, second, third, '補填', 'bl-ana', 0);
     });
   });
 
   // ── 2連単（3点） ──
   const buy2 = [];
-  buy2.push({ c:`${A.boat}−${P2a.boat}`, l:'本命', lc:'bl-honmei', w:3 });
-  buy2.push({ c:`${A.boat}−${P2b.boat}`, l:'対抗', lc:'bl-taikou', w:2 });
-  if (arek >= 45) {
-    buy2.push({ c:`${P2a.boat}−${A.boat}`, l:'逆転', lc:'bl-gyaku', w:1 });
+  buy2.push({ c:`${A.boat}−${B.boat}`, l:'本命', lc:'bl-honmei', w:3 });
+  if (isDualAxis) {
+    buy2.push({ c:`${B.boat}−${A.boat}`, l:'B軸', lc:'bl-gyaku', w:2 });
+    buy2.push({ c:`${A.boat}−${C.boat}`, l:'対抗', lc:'bl-taikou', w:1 });
   } else {
-    buy2.push({ c:`${A.boat}−${P3a.boat}`, l:'穴', lc:'bl-ana', w:1 });
+    buy2.push({ c:`${A.boat}−${C.boat}`, l:'対抗', lc:'bl-taikou', w:2 });
+    if (arek >= 45) {
+      buy2.push({ c:`${B.boat}−${A.boat}`, l:'逆転', lc:'bl-gyaku', w:1 });
+    } else {
+      buy2.push({ c:`${A.boat}−${P2a.boat}`, l:'穴', lc:'bl-ana', w:1 });
+    }
   }
 
   // ── 展開確率ミニテーブル ──
@@ -1646,6 +1678,9 @@ function renderBuy(rno){
   const masterNote = hasTenkaiData
     ? `<span style="color:var(--green);font-size:11px">📊 展開残存マスタ反映済</span>`
     : `<span style="color:var(--text3);font-size:11px">📊 残存マスタなし（通常ロジック）</span>`;
+  const dualNote = isDualAxis
+    ? `<span style="color:var(--orange);font-size:11px;font-weight:700">⚡ 僅差2頭軸（${A.boat}号・${B.boat}号 差${(probDiff*100).toFixed(1)}%）</span>`
+    : '';
 
   document.getElementById('buy-panel').innerHTML = `
     <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1655,7 +1690,7 @@ function renderBuy(rno){
       <span style="font-size:12px;color:var(--text2)">${modeDesc}</span>
     </div>
     <div style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
-      ${tenkaiNote} ${masterNote}
+      ${tenkaiNote} ${masterNote} ${dualNote}
     </div>
 
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
