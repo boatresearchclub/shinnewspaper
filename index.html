@@ -740,7 +740,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 22:43:57 --></head>
+<!-- auto_push_updated:2026-04-29 22:52:14 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1361,7 +1361,7 @@ function renderDetail(rno){
 
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
-          <div class="waku-num waku-${i+1}">${i+1}</div>
+          <span class="boat-circle b${i+1}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${i+1}</span>
           <div>${bt.name}</div>
           <div class="bt-grade">${bt.grade ?? '-'}</div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
