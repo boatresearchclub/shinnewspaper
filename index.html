@@ -739,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 10:26:26 --></head>
+<!-- auto_push_updated:2026-04-29 10:54:11 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1339,7 +1339,7 @@ function renderDetail(rno){
     const circles = insuffBoats.map(bt =>
       `<span class="boat-circle b${bt.boat}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>`
     ).join('');
-    return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースの想定1着率精度が低いです</div>`;
+    return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足<br>このレースは想定1着率精度が低いです</div>`;
   })() : '';
 
   const html = `
