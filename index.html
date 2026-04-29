@@ -325,25 +325,20 @@ body {
 .dq-course { background: rgba(245,200,66,.12); color: var(--gold); }
 .dq-fallback { background: var(--bg4); color: var(--text3); }
 /* ── コースデータ不足 警告行 ── */
-.bt-row.insufficient-row {
-  background: rgba(255, 122, 0, 0.04);
-}
-.bt-row.insufficient-row:hover {
-  background: rgba(255, 122, 0, 0.08);
-}
-.insufficient-warn {
+.insufficient-banner {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  gap: 7px;
+  padding: .55rem 1.25rem;
+  background: rgba(255, 122, 0, 0.08);
+  border-bottom: 1px solid rgba(255, 122, 0, 0.18);
+  font-size: 12px;
   color: var(--orange);
-  margin-top: 2px;
-  line-height: 1.3;
+  line-height: 1.4;
 }
-.insufficient-warn::before {
-  content: '⚠';
-  font-size: 11px;
-  flex-shrink: 0;
+.insufficient-banner .insuf-boats {
+  font-weight: 700;
+  letter-spacing: .04em;
 }
 .prob-cell { display: flex; align-items: center; gap: 7px; }
 .prob-bar-wrap { flex: 1; height: 4px; background: var(--bg4); border-radius: 2px; min-width: 30px; }
@@ -744,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 10:16:31 --></head>
+<!-- auto_push_updated:2026-04-29 10:21:18 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1338,19 +1333,26 @@ function renderDetail(rno){
 
   const tenjiHtml   = buildTenjiSection(rno, boats);
 
+  // データ不足の艇番リストを作成
+  const insuffBoats = boats.filter(bt => bt.dq === 'insufficient');
+  const insuffBanner = insuffBoats.length > 0 ? (() => {
+    const circles = insuffBoats.map(bt =>
+      `<span class="boat-circle b${bt.boat}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>`
+    ).join('');
+    return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースの想定1着率精度が低いです</div>`;
+  })() : '';
+
   const html = `
     <div class="detail-panel">
+      ${insuffBanner}
       <div class="bt-head-simple">
         <span>枠</span><span>選手名</span><span>想定1着率</span>
       </div>
 
       ${boats.map((bt,i)=>`
-        <div class="bt-row${i===0?' top1':''}${bt.dq==='insufficient'?' insufficient-row':''}">
+        <div class="bt-row${i===0?' top1':''}">
           <div><span class="boat-circle b${bt.boat}">${bt.boat}</span></div>
-          <div>
-            <div>${bt.name}</div>
-            ${bt.dq==='insufficient' ? `<span class="insufficient-warn">コースデータ不足 — 想定1着率の精度が低いです</span>` : ''}
-          </div>
+          <div>${bt.name}</div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
             <span>${(bt.prob*100).toFixed(1)}%</span>
             ${bt.tenji_delta != null ? (() => {
