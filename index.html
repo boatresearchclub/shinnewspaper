@@ -739,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 12:33:03 --></head>
+<!-- auto_push_updated:2026-04-29 12:38:17 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -953,13 +953,6 @@ const _tenjiCache = {};  // key: "venue_date_race" → data or null
     // 日付部分（8桁数字）をダッシュ付きに変換
     const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
     _tenjiCache[normalized] = val;
-  }
-})();
-// COMMENT_DATA を _commentCache に事前ロード
-(function(){
-  for(const [key, val] of Object.entries(COMMENT_DATA)){
-    const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
-    _commentCache[normalized] = val;
   }
 })();
 
@@ -1217,6 +1210,14 @@ function startTenjiPolling(){
 
 // ── 選手コメント ──────────────────────────────────────────────────
 const _commentCache = {};  // key: "slug_date_race" → {1:{name,comment}, ...} | null
+
+// COMMENT_DATA を _commentCache に事前ロード
+(function(){
+  for(const [key, val] of Object.entries(COMMENT_DATA)){
+    const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
+    _commentCache[normalized] = val;
+  }
+})();
 
 // キーワードハイライト（良い情報・悪い情報）
 const COMMENT_KEYWORDS_GOOD = ['調子いい','足がいい','足は良','仕上がって','自信','乗れてる','感触いい','良さそう','行ける','自信あり'];
