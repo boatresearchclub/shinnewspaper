@@ -739,7 +739,7 @@ html { scroll-behavior: smooth; }
 #refresh-btn:active { transform: scale(0.9); }
 #refresh-btn.spinning { animation: ptr-spin 0.7s linear infinite; background: var(--accent2); }
 </style>
-<!-- auto_push_updated:2026-04-29 14:11:13 --></head>
+<!-- auto_push_updated:2026-04-29 14:33:37 --></head>
 <body>
 
 <!-- Pull-to-Refresh indicator -->
@@ -1390,32 +1390,28 @@ function renderDetail(rno){
 // ── 展開推定エンジン ────────────────────────────────────────────────
 // コース別の展開係数（逃げ・まくり・差しの期待値）
 // arekスコアで「展開モード」を切り替える
-const TENKAI_COEF = {
-  // [逃げ寄り, 中間, 荒れ寄り] の3段階で補正値を変える
-  // boat番号(=コース) → [safe係数, normal係数, arek係数]
-  1: [1.40, 1.20, 0.85],
-  2: [0.85, 0.95, 1.05],
-  3: [0.80, 0.95, 1.10],
-  4: [0.70, 0.90, 1.15],
-  5: [0.65, 0.85, 1.10],
-  6: [0.60, 0.80, 1.05],
-};
+// TENKAI_COEF は廃止。展示前はprobそのまま、展示後のみtenji_deltaを反映。
+// 展示前にコース固定係数をかけると「展示情報なし」なのに補正がかかってしまう問題を修正。
 
 function calcTenkaiProbs(boats, arek) {
-  // arekスコアで展開モード決定
-  // safe: <40, normal: 40-60, arek: >60
-  const modeIdx = arek < 40 ? 0 : arek > 60 ? 2 : 1;
+  // 展示データが1艇でもあるか判定
+  const hasTenji = boats.some(bt => bt.tenji_delta != null);
 
-  // 展開補正後スコア = prob × コース補正
+  if (!hasTenji) {
+    // 展示前: prob をそのまま tenkai_prob にコピー（補正なし）
+    return [...boats]
+      .map(b => ({ ...b, tenkai_prob: b.prob }))
+      .sort((a, b) => b.tenkai_prob - a.tenkai_prob);
+  }
+
+  // 展示後: tenji_delta のみ反映（±50%クランプ）
   const scored = boats.map(bt => {
-    const coef = (TENKAI_COEF[bt.boat] || [1,1,1])[modeIdx];
-    // テン展示補正が入っていれば追加で反映（±50%まで）
     const tenjiBoost = bt.tenji_delta != null
       ? Math.max(-0.5, Math.min(0.5, bt.tenji_delta * 3))
       : 0;
     return {
       ...bt,
-      tenkai_score: bt.prob * coef * (1 + tenjiBoost),
+      tenkai_score: bt.prob * (1 + tenjiBoost),
     };
   });
 
@@ -1442,14 +1438,15 @@ function renderBuy(rno){
   if(!rd) return;
 
   const arek = rd.arek ?? 54.7;
-  const rawBoats = rd.boats; // 確率降順
+  const rawBoats = rd.boats;
 
-  // 展開推定確率を計算
+  // 展開推定確率を計算（展示前は補正なし、展示後のみtenji_delta反映）
   const ranked = calcTenkaiProbs(rawBoats, arek);
+  const hasTenji = rawBoats.some(bt => bt.tenji_delta != null);
 
-  // 上位4艇
-  const [A, B, C, D] = ranked; // A=本命, B=対抗, C=穴筆頭, D=大穴
-  const Df = D || C; // 4番手がいない場合は3番手で代替
+  // 上位艇
+  const [A, B, C, D] = ranked;
+  const Df = D || C;
 
   // 展開モード
   const mode = tenkaiLabel(arek);
@@ -1465,42 +1462,156 @@ function renderBuy(rno){
     }
   })();
 
-  // ── 3連単買い目生成 ──
+  // ── tenkai_remaining / winner_course_order から2・3着候補を算出 ──
+  // 会場の決まり手傾向から1着コースを推定し、残存マスタを参照する
+  let place2Scores = {}; // boat番号 → 2着スコア
+  let place3Scores = {}; // boat番号 → 3着スコア
+
+  if (MASTER_EXT) {
+    const venue = DATA.venue || '';
+    const vk = MASTER_EXT.venue_kimari;
+    const tr = MASTER_EXT.tenkai_remaining;
+    const wco = MASTER_EXT.winner_course_order;
+
+    // 1着コース候補（上位2艇）を確率加重で評価
+    const winCandidates = ranked.slice(0, 3); // 1着候補上位3艇
+
+    winCandidates.forEach(winBoat => {
+      const winCourseStr = String(winBoat.boat);
+      const winProb = winBoat.tenkai_prob;
+
+      // 会場の決まり手傾向を取得（会場データ優先、なければ全国）
+      const kimariMap = (vk[venue] || vk['_全国'] || {});
+      // 決まり手ごとにループ
+      const kimariTypes = ['逃げ', 'まくり', '差し', 'まくり差し', '抵抗'];
+      kimariTypes.forEach(kimari => {
+        const kimariWeight = kimariMap[kimari] || 0;
+        if (kimariWeight <= 0) return;
+
+        // 展開別残存マスタから各艇の2・3着率を取得
+        const trVenue = (tr[venue] || {})[kimari] || {};
+        const trNat   = (tr['_全国'] || {})[kimari] || {};
+        const trByWin = trVenue[winCourseStr] || trNat[winCourseStr] || {};
+
+        ranked.forEach(bt => {
+          if (bt.boat === winBoat.boat) return; // 1着候補は除く
+          const courseStr = String(bt.boat);
+          const entry = trByWin[courseStr];
+          if (!entry) return;
+
+          // tenkai_remaining の2着率を基本スコアとして使用
+          let p2 = entry.place2 || 0;
+          let p3 = entry.place3 || 0;
+
+          // winner_course_order による選手個別補正
+          if (wco[bt.name] && wco[bt.name][courseStr] && wco[bt.name][courseStr][winCourseStr]) {
+            const wcoEntry = wco[bt.name][courseStr][winCourseStr];
+            // MASTERの2着率と統計の2着率を加重平均（trust=信頼度）
+            const trust = wcoEntry.trust || 0;
+            if (trust > 0 && wcoEntry.place2 != null) {
+              p2 = p2 * (1 - trust) + wcoEntry.place2 * trust;
+            }
+          }
+
+          // 1着確率 × 決まり手確率 × 残存率 でスコア加算
+          const weight = winProb * kimariWeight;
+          place2Scores[bt.boat] = (place2Scores[bt.boat] || 0) + p2 * weight;
+          place3Scores[bt.boat] = (place3Scores[bt.boat] || 0) + p3 * weight;
+        });
+      });
+    });
+  }
+
+  // place2Scores が有効かチェック
+  const hasTenkaiData = Object.keys(place2Scores).length >= 2;
+
+  // 2着推奨順（スコアが高い順、1着本命を除く）
+  const place2Ranked = ranked
+    .filter(bt => bt.boat !== A.boat)
+    .sort((x, y) => {
+      if (hasTenkaiData) {
+        return (place2Scores[y.boat] || 0) - (place2Scores[x.boat] || 0);
+      }
+      return y.tenkai_prob - x.tenkai_prob;
+    });
+  const P2a = place2Ranked[0] || B;
+  const P2b = place2Ranked[1] || C;
+
+  // 3着推奨順（1着・2着を除く）
+  const place3Ranked = ranked
+    .filter(bt => bt.boat !== A.boat && bt.boat !== P2a.boat)
+    .sort((x, y) => {
+      if (hasTenkaiData) {
+        return (place3Scores[y.boat] || 0) - (place3Scores[x.boat] || 0);
+      }
+      return y.tenkai_prob - x.tenkai_prob;
+    });
+  const P3a = place3Ranked[0] || C;
+  const P3b = place3Ranked[1] || (Df !== P3a ? Df : ranked[ranked.length - 1]);
+
+  // ── 3連単10点生成 ──
+  // place2Ranked / place3Ranked から上位を使いスコア順に組む
+  // 重複を避けながら最大10点まで出力
+
   const buy3 = [];
+  const buy3seen = new Set();
 
-  // 本命軸（1着固定）
-  buy3.push({ c:`${A.boat}−${B.boat}−${C.boat}`, l:'本命', lc:'bl-honmei', w:3 });
-  buy3.push({ c:`${A.boat}−${C.boat}−${B.boat}`, l:'対抗', lc:'bl-taikou', w:2 });
-
-  // arek中〜高: 2着に差しが入る
-  if (arek >= 45) {
-    buy3.push({ c:`${B.boat}−${A.boat}−${C.boat}`, l:'逆転', lc:'bl-gyaku', w:1 });
-  } else {
-    buy3.push({ c:`${A.boat}−${B.boat}−${Df.boat}`, l:'穴', lc:'bl-ana', w:1 });
+  function tryAdd3(first, second, third, label, lc, w) {
+    const key = `${first}-${second}-${third}`;
+    if (first === second || second === third || first === third) return;
+    if (buy3seen.has(key)) return;
+    if (buy3.length >= 10) return;
+    buy3seen.add(key);
+    buy3.push({ c:`${first}−${second}−${third}`, l:label, lc, w });
   }
 
-  // 大荒れ時のみ穴目を追加
+  // 上位4艇のboat番号（2着・3着候補プール）
+  const p2pool = place2Ranked.map(b => b.boat);   // 1着Aを除いた2着候補順
+  const allBoats = ranked.map(b => b.boat);
+
+  // ① A軸 × P2a固定 × 残り全部（本命ライン）
+  tryAdd3(A.boat, P2a.boat, P3a.boat, '本命', 'bl-honmei', 3);
+  tryAdd3(A.boat, P2a.boat, P3b.boat, '本命', 'bl-honmei', 3);
+  // P2a以外の3着候補も
+  allBoats.filter(b => b !== A.boat && b !== P2a.boat).forEach(b => {
+    tryAdd3(A.boat, P2a.boat, b, '本命', 'bl-honmei', 2);
+  });
+
+  // ② A軸 × P2b固定（対抗ライン）
+  tryAdd3(A.boat, P2b.boat, P3a.boat, '対抗', 'bl-taikou', 2);
+  tryAdd3(A.boat, P2b.boat, P3b.boat, '対抗', 'bl-taikou', 2);
+  allBoats.filter(b => b !== A.boat && b !== P2b.boat).forEach(b => {
+    tryAdd3(A.boat, P2b.boat, b, '対抗', 'bl-taikou', 1);
+  });
+
+  // ③ arek>=45: 2着軸をP2aに逆転させる目
+  if (arek >= 45) {
+    tryAdd3(P2a.boat, A.boat, P3a.boat, '逆転', 'bl-gyaku', 1);
+    tryAdd3(P2a.boat, A.boat, P3b.boat, '逆転', 'bl-gyaku', 1);
+  }
+
+  // ④ arek>=60: 大荒れ穴目
   if (arek >= 60) {
-    buy3.push({ c:`${C.boat}−${A.boat}−${B.boat}`, l:'大穴', lc:'bl-gyaku', w:1 });
-  } else {
-    buy3.push({ c:`${A.boat}−${C.boat}−${Df.boat}`, l:'穴', lc:'bl-ana', w:1 });
+    tryAdd3(P2a.boat, P2b.boat, A.boat, '大穴', 'bl-gyaku', 1);
+    tryAdd3(P2b.boat, A.boat, P3a.boat, '大穴', 'bl-gyaku', 1);
   }
 
-  // ── 2連単買い目生成 ──
+  // 10点に満たない場合は残りのA軸組み合わせで埋める
+  allBoats.filter(b => b !== A.boat).forEach(second => {
+    allBoats.filter(b => b !== A.boat && b !== second).forEach(third => {
+      tryAdd3(A.boat, second, third, '参考', 'bl-ana', 0);
+    });
+  });
+
+  // ── 2連単（3点） ──
   const buy2 = [];
-  buy2.push({ c:`${A.boat}−${B.boat}`, l:'本命', lc:'bl-honmei', w:3 });
-  buy2.push({ c:`${A.boat}−${C.boat}`, l:'対抗', lc:'bl-taikou', w:2 });
+  buy2.push({ c:`${A.boat}−${P2a.boat}`, l:'本命', lc:'bl-honmei', w:3 });
+  buy2.push({ c:`${A.boat}−${P2b.boat}`, l:'対抗', lc:'bl-taikou', w:2 });
   if (arek >= 45) {
-    buy2.push({ c:`${B.boat}−${A.boat}`, l:'逆転', lc:'bl-gyaku', w:1 });
+    buy2.push({ c:`${P2a.boat}−${A.boat}`, l:'逆転', lc:'bl-gyaku', w:1 });
   } else {
-    buy2.push({ c:`${A.boat}−${Df.boat}`, l:'穴', lc:'bl-ana', w:1 });
+    buy2.push({ c:`${A.boat}−${P3a.boat}`, l:'穴', lc:'bl-ana', w:1 });
   }
-
-  // ── 拡連複（確実性重視）──
-  const wide = [];
-  wide.push({ c: combo2(A.boat, B.boat), l:'◎軸', lc:'bl-honmei', w:3 });
-  wide.push({ c: combo2(A.boat, C.boat), l:'○軸', lc:'bl-taikou', w:2 });
-  wide.push({ c: combo2(B.boat, C.boat), l:'▲', lc:'bl-ana', w:1 });
 
   // ── 展開確率ミニテーブル ──
   const probRows = ranked.map((bt, i) => {
@@ -1509,11 +1620,15 @@ function renderBuy(rno){
     const pct = (bt.tenkai_prob * 100).toFixed(1);
     const rawPct = (bt.prob * 100).toFixed(1);
     const diff = bt.tenkai_prob - bt.prob;
-    const diffStr = Math.abs(diff * 100) < 0.5
-      ? ''
+    const diffStr = !hasTenji || Math.abs(diff * 100) < 0.5
+      ? '<span style="font-size:10px;color:var(--text3)">—</span>'
       : diff > 0
         ? `<span class="tenji-delta-plus">+${(diff*100).toFixed(1)}%</span>`
         : `<span class="tenji-delta-minus">${(diff*100).toFixed(1)}%</span>`;
+    // place2スコア表示（MASTERデータあり時）
+    const p2score = hasTenkaiData && place2Scores[bt.boat] != null
+      ? `<span style="font-size:10px;color:var(--green);font-family:var(--mono)">${(place2Scores[bt.boat]*100).toFixed(1)}%</span>`
+      : '';
     return `<tr>
       <td style="text-align:center;padding:4px 8px">${medal}</td>
       <td style="padding:4px 4px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
@@ -1521,8 +1636,16 @@ function renderBuy(rno){
       <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
       <td style="padding:4px 4px;text-align:center;font-size:0.82rem">${diffStr}</td>
       <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
+      ${hasTenkaiData ? `<td style="padding:4px 8px;text-align:right">${p2score}</td>` : ''}
     </tr>`;
   }).join('');
+
+  const tenkaiNote = hasTenji
+    ? `<span style="color:var(--accent);font-size:11px">🎯 展示反映済</span>`
+    : `<span style="color:var(--text3);font-size:11px">⏳ 展示前 — 基本確率で表示</span>`;
+  const masterNote = hasTenkaiData
+    ? `<span style="color:var(--green);font-size:11px">📊 展開残存マスタ反映済</span>`
+    : `<span style="color:var(--text3);font-size:11px">📊 残存マスタなし（通常ロジック）</span>`;
 
   document.getElementById('buy-panel').innerHTML = `
     <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1531,9 +1654,14 @@ function renderBuy(rno){
       </span>
       <span style="font-size:12px;color:var(--text2)">${modeDesc}</span>
     </div>
+    <div style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+      ${tenkaiNote} ${masterNote}
+    </div>
 
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">展開推定後 着順確率</div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">
+        展開推定後 着順確率${hasTenkaiData ? ' <span style="font-size:10px;color:var(--green);font-weight:400">/ 2着残存スコア</span>' : ''}
+      </div>
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px"></th>
@@ -1542,31 +1670,30 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px;text-align:right">基本</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px;text-align:right">展開後</th>
+          ${hasTenkaiData ? '<th style="font-size:10px;color:var(--green);font-weight:500;padding:3px 8px;text-align:right">2着残存</th>' : ''}
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
     </div>
 
     <div class="buy-grid" style="border-top:none">
-      <div class="buy-card">
-        <div class="buy-card-title">3連単</div>
-        ${buy3.map(r=>`<div class="buy-row">
-          <span class="buy-label ${r.lc}">${r.l}</span>
-          <span class="buy-combo">${r.c}</span>
-          ${weightDots(r.w)}
-        </div>`).join('')}
+      <div class="buy-card" style="grid-column:1/-1">
+        <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>3連単 <span style="font-weight:400;color:var(--text3);font-size:10px">${buy3.length}点</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+          ${buy3.map(r=>`<div class="buy-row">
+            <span class="buy-label ${r.lc}">${r.l}</span>
+            <span class="buy-combo">${r.c}</span>
+            ${r.w > 0 ? weightDots(r.w) : ''}
+          </div>`).join('')}
+        </div>
       </div>
       <div class="buy-card">
         <div class="buy-card-title">2連単</div>
         ${buy2.map(r=>`<div class="buy-row">
           <span class="buy-label ${r.lc}">${r.l}</span>
           <span class="buy-combo">${r.c}</span>
-          ${weightDots(r.w)}
-        </div>`).join('')}
-        <div class="buy-card-title" style="margin-top:12px">拡連複</div>
-        ${wide.map(r=>`<div class="buy-row">
-          <span class="buy-label ${r.lc}">${r.l}</span>
-          <span class="buy-combo" style="font-size:14px">${r.c}</span>
           ${weightDots(r.w)}
         </div>`).join('')}
       </div>
@@ -1698,6 +1825,22 @@ async function reloadMaster(){
     showToast('マスタ更新エラー');
     if(el) el.textContent = '';
   }
+}
+
+// ── 展開推定マスタ（tenkai_remaining / winner_course_order / venue_kimari）──
+let MASTER_EXT = null;
+
+async function fetchMasterExt(){
+  try {
+    const res = await fetch('/api/master_data');
+    if(!res.ok) return;
+    const j = await res.json();
+    MASTER_EXT = {
+      tenkai_remaining:    j.tenkai_remaining    || {},
+      winner_course_order: j.winner_course_order || {},
+      venue_kimari:        j.venue_kimari        || {},
+    };
+  } catch(e){}
 }
 
 async function fetchMasterStats(){
@@ -1997,6 +2140,7 @@ buildVenueTabs();
     document.getElementById('upload-area').style.display = 'none';
     loadAllVenuesFromServer();
     fetchMasterStats();
+    fetchMasterExt();
     // テン展示: 起動時プリフェッチ＆ポーリング開始
     if(IS_SERVER){ prefetchAllTenji().then(()=>{ if(selectedRace) renderDetail(selectedRace); }); startTenjiPolling(); }
     setInterval(loadAllVenuesFromServer, 60000); // 60秒ごとに更新チェック
