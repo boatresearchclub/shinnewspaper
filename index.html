@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 13:41:46 --></head>
+<!-- auto_push_updated:2026-04-30 13:48:40 --></head>
 <body>
 
 <header class="site-header">
@@ -628,14 +628,12 @@ function calcTenkaiProbs(boats, arek){
     const wc = String(winner.boat);
 
     if(kimari === '逃げ'){
-      // 1コース自身の逃げ率 × (1 - 差され率 - 捲られ率 - 捲り差され率) で強さを評価
-      const nigeRate  = getPersonalKimari(winner.name, '1', '逃げ');
-      const sasareRate = getPersonal被Kimari(boat1.name, '差され')    ?? 0;
-      const makurareRate = getPersonal被Kimari(boat1.name, '捲られ') ?? 0;
-      const makurisasareRate = getPersonal被Kimari(boat1.name, '捲り差され') ?? 0;
-      const kuzureRate = sasareRate + makurareRate + makurisasareRate;
-      // 逃げ率が高く崩れ率が低いほど係数UP（崩れ率は逆数で効く）
-      return nigeRate * Math.max(0.1, 1.0 - kuzureRate);
+      // 逃げ展開は1コース選手の逃げ率のみで評価する。
+      // ※被kimari（差され率等）は winner === boat1 の同一人物参照になるため使用しない。
+      //   kuzureRate = 差され率+捲られ率+捲り差され率 は合計が1.0を超えやすく、
+      //   1.0 - kuzureRate が負になって係数が極小→スコアがほぼ0になるバグの原因。
+      const nigeRate = getPersonalKimari(winner.name, '1', '逃げ');
+      return nigeRate > 0 ? nigeRate : 1.0;
     }
 
     if(kimari === '差し'){
