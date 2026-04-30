@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 13:48:40 --></head>
+<!-- auto_push_updated:2026-04-30 13:58:40 --></head>
 <body>
 
 <header class="site-header">
@@ -665,42 +665,59 @@ function calcTenkaiProbs(boats, arek){
   const boat1 = boats.find(b => b.boat === 1) || null;
 
   const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
-  const scores = {};
-  boats.forEach(b => { scores[b.boat] = 0; });
+
+  // ── 各艇の決まり手適性スコアを prob に乗算する係数を算出 ──
+  //
+  // 設計方針:
+  //   tenkai_prob ∝ prob × Σ(kimariProb × normalizedCoef)
+  //
+  //   prob（基本強さ）を起点に、決まり手適性で上下補正する。
+  //   外コース勢が弱ければ1コース艇の prob がそのまま反映され、
+  //   外コース勢に適性があればその分だけ相対的に上がる。
+  //
+  // normalizedCoef は有効艇の平均を1.0基準に正規化しているため、
+  // 全艇の補正係数の平均は常に1.0付近に揃い、prob の合計スケールを保持する。
+
+  // まず各艇の「決まり手加重適性係数」を計算
+  const kimariCoefSum = {};
+  boats.forEach(b => { kimariCoefSum[b.boat] = 0; });
 
   for(const kimari of kimariTypes){
     const kimariProb = vKimari[kimari];
     if(!kimariProb || kimariProb <= 0) continue;
 
-    // ── 相対評価補正係数を各艇に付与 ──
-    // 有効艇ごとに rawScore = prob × relativeCoef を計算し、正規化の分母に使う
+    // 有効艇の relCoef を取得
     const relCoefs = {};
-    let totalWeightedProb = 0;
     for(const b of boats){
       if(!isValidFirst(b, kimari)){ relCoefs[b.boat] = 0; continue; }
-      const raw = calcRelativeCoef(b, kimari, boat1);
-      relCoefs[b.boat] = raw;
-      totalWeightedProb += b.prob * raw;
+      relCoefs[b.boat] = calcRelativeCoef(b, kimari, boat1);
     }
-    if(totalWeightedProb <= 0) continue;
 
-    // ── 相対補正係数を全体平均で正規化して上下限クリップ ──
-    // 平均係数を1.0基準に揃えることで合計probが崩れないようにする
-    const validBoats  = boats.filter(b => isValidFirst(b, kimari));
-    const avgCoef     = validBoats.length > 0
-      ? validBoats.reduce((s, b) => s + relCoefs[b.boat], 0) / validBoats.length
-      : 1.0;
+    // 有効艇の平均 relCoef（1.0基準に正規化するため）
+    const validBoats = boats.filter(b => isValidFirst(b, kimari));
+    if(validBoats.length === 0) continue;
+    const avgCoef = validBoats.reduce((s, b) => s + relCoefs[b.boat], 0) / validBoats.length;
+    if(avgCoef <= 0) continue;
 
-    for(const winner of boats){
-      if(!isValidFirst(winner, kimari)) continue;
-      const normalizedCoef = avgCoef > 0
-        ? Math.min(RELATIVE_MAX, Math.max(RELATIVE_MIN, relCoefs[winner.boat] / avgCoef))
-        : 1.0;
-      scores[winner.boat] += kimariProb * (winner.prob * normalizedCoef / totalWeightedProb);
+    for(const b of boats){
+      if(!isValidFirst(b, kimari)) continue;
+      // 平均を1.0基準に正規化してクリップ
+      const normalizedCoef = Math.min(RELATIVE_MAX, Math.max(RELATIVE_MIN, relCoefs[b.boat] / avgCoef));
+      // 決まり手比率で重み付けして加算（合計 ≈ 1.0 になる）
+      kimariCoefSum[b.boat] += kimariProb * normalizedCoef;
+    }
+    // 有効外の艇（ハード除外）は平均的な係数として kimariProb を加算
+    // → 「その展開では勝てないが存在は無視しない」扱い
+    for(const b of boats){
+      if(isValidFirst(b, kimari)) continue;
+      kimariCoefSum[b.boat] += kimariProb * RELATIVE_MIN;
     }
   }
 
-  // 正規化して tenkai_prob へ
+  // prob × 決まり手適性係数 → 正規化
+  const scores = {};
+  boats.forEach(b => { scores[b.boat] = b.prob * (kimariCoefSum[b.boat] || RELATIVE_MIN); });
+
   const total = Object.values(scores).reduce((a,b)=>a+b, 0) || 1;
   return [...boats]
     .map(b => ({...b, tenkai_prob: scores[b.boat] / total}))
