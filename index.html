@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 15:02:55 --></head>
+<!-- auto_push_updated:2026-04-30 15:05:35 --></head>
 <body>
 
 <header class="site-header">
@@ -1318,16 +1318,18 @@ function buildVenueTabs(){
       selectedRace = findCurrentRace(DATA.races);
       document.getElementById('header-meta').innerHTML = `<strong>${v}</strong> — ${DATA.date||''}`;
       document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.venue===v));
-      // フライングデータをサーバーから取得（サーバーモード時のみ）
-      if(typeof IS_SERVER !== 'undefined' && IS_SERVER){
+      // フライング取得完了後にrenderDetail（非同期タイミング問題を解消）
+      if(IS_SERVER){
         const dateStr = (DATA.date||'').replace(/-/g,'');
         fetch(`/api/flying?venue=${encodeURIComponent(v)}&date=${dateStr}`)
           .then(r=>r.json())
           .then(res=>{ if(res.ok && res.data) FLYING_DATA = Object.assign(FLYING_DATA, res.data); })
-          .catch(()=>{});
+          .catch(()=>{})
+          .finally(()=>{ buildRaceBar(); selectRace(selectedRace); });
+      } else {
+        buildRaceBar();
+        selectRace(selectedRace);
       }
-      buildRaceBar();
-      selectRace(selectedRace);
     };
     tabs.appendChild(btn);
   });
@@ -1446,14 +1448,6 @@ function showToast(msg){
       currentVenue = restoreVenue;
       DATA         = ALL_DATA[restoreVenue];
       selectedRace = restoreRace;
-      // フライングデータを取得（サーバーモード時のみ）
-      if(typeof IS_SERVER !== 'undefined' && IS_SERVER){
-        const dateStr = (DATA.date||'').replace(/-/g,'');
-        fetch(`/api/flying?venue=${encodeURIComponent(restoreVenue)}&date=${dateStr}`)
-          .then(r=>r.json())
-          .then(res=>{ if(res.ok && res.data) FLYING_DATA = Object.assign(FLYING_DATA, res.data); })
-          .catch(()=>{});
-      }
     } else {
       currentVenue = '';
       DATA         = null;
@@ -1482,21 +1476,36 @@ function showToast(msg){
         document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
         const raceBtn = document.getElementById(`rc-${restoreRace}`);
         if(raceBtn){ raceBtn.classList.add('active'); raceBtn.scrollIntoView({behavior:'auto',block:'nearest',inline:'center'}); }
-
-        // タブ名に応じて正しいrenderを呼ぶ（currentTabName()に依存しない）
-        if(safeTab === 'detail')        renderDetail(restoreRace);
-        else if(safeTab === 'detail2')  renderBuy(restoreRace);
-        else if(safeTab === 'buy')      renderBuy(restoreRace);
-        else if(safeTab === 'comment')  renderComment(restoreRace);
-        else                            renderDetail(restoreRace);
       }
 
-      // スクロール位置を復元（描画完了後に実行）
-      if(restoreScrollY > 0){
-        requestAnimationFrame(()=>{
-          requestAnimationFrame(()=>{ window.scrollTo(0, restoreScrollY); });
-        });
+      // フライング取得完了後にrender（非同期タイミング問題を解消）
+      const doRender = () => {
+        if(restoreRace){
+          if(safeTab === 'detail')        renderDetail(restoreRace);
+          else if(safeTab === 'detail2')  renderBuy(restoreRace);
+          else if(safeTab === 'buy')      renderBuy(restoreRace);
+          else if(safeTab === 'comment')  renderComment(restoreRace);
+          else                            renderDetail(restoreRace);
+        }
+        // スクロール位置を復元
+        if(restoreScrollY > 0){
+          requestAnimationFrame(()=>{
+            requestAnimationFrame(()=>{ window.scrollTo(0, restoreScrollY); });
+          });
+        }
+      };
+
+      if(IS_SERVER){
+        const dateStr = (DATA.date||'').replace(/-/g,'');
+        fetch(`/api/flying?venue=${encodeURIComponent(restoreVenue)}&date=${dateStr}`)
+          .then(r=>r.json())
+          .then(res=>{ if(res.ok && res.data) FLYING_DATA = Object.assign(FLYING_DATA, res.data); })
+          .catch(()=>{})
+          .finally(()=>{ doRender(); });
+      } else {
+        doRender();
       }
+
     } else {
       document.getElementById('race-bar').innerHTML = '';
       document.getElementById('inline-detail').innerHTML =
