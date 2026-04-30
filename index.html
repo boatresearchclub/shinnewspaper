@@ -167,13 +167,41 @@ body {
 .scenario-bar.warn { background: rgba(255,90,90,.07); border-left: 3px solid var(--red); }
 .scenario-bar.mix  { background: rgba(79,124,255,.07); border-left: 3px solid var(--accent); }
 
+
+/* 過去レース（締め切り済み）*/
+.race-btn.past { opacity: 0.38; filter: grayscale(0.4); }
+.race-btn.past .race-btn-no { color: var(--text3); }
+
+/* 更新ボタン */
+#refresh-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 18px;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  transition: transform 0.2s, background 0.2s;
+}
+#refresh-btn:active { transform: scale(0.9); }
+@keyframes spin { to { transform: rotate(360deg); } }
+#refresh-btn.spinning { animation: spin 0.7s linear infinite; background: var(--accent2); }
+
 /* TOAST */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: .625rem 1.25rem; font-size: 13px; transition: transform .3s ease; z-index: 200; pointer-events: none; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:16:12 --></head>
+<!-- auto_push_updated:2026-04-30 09:22:15 --></head>
 <body>
 
 <header class="site-header">
@@ -233,6 +261,7 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
+<button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
 
 <script>
 // ============================================================
@@ -579,17 +608,35 @@ function buildVenueTabs(){
 }
 
 // ── レース選択バー ──
+function isRacePast(timeStr){
+  if(!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr.trim())) return false;
+  const now = new Date();
+  const [h, m] = timeStr.trim().split(':').map(Number);
+  const raceMin = h * 60 + m;
+  const nowMin  = now.getHours() * 60 + now.getMinutes();
+  return nowMin > raceMin;
+}
+
 function buildRaceBar(){
   const bar = document.getElementById('race-bar');
   bar.innerHTML = '';
   Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
     const btn = document.createElement('button');
-    btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'');
+    const past = isRacePast(rd.time);
+    const hasInsuf = rd.boats && rd.boats.some(b=>b.dq==='insufficient');
+    btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'') + (past?' past':'');
     btn.id = `rc-${rno}`;
-    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>`;
+    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>${hasInsuf?'<span style="font-size:9px;color:var(--orange)">⚠</span>':''}`;
     btn.onclick = ()=>{ selectRace(parseInt(rno)); };
     bar.appendChild(btn);
   });
+}
+
+function doRefresh(){
+  const btn = document.getElementById('refresh-btn');
+  if(btn) btn.classList.add('spinning');
+  // サンプルモードはリロード
+  setTimeout(()=>{ location.reload(); }, 300);
 }
 
 function selectRace(rno){
