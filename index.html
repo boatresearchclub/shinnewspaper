@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 16:00:46 --></head>
+<!-- auto_push_updated:2026-04-30 16:06:30 --></head>
 <body>
 
 <header class="site-header">
@@ -834,9 +834,13 @@ function calcPlace2Probs(boats, ranked){
   const tpMap = {};
   ranked.forEach(b => { tpMap[b.boat] = b.tenkai_prob; });
 
-  // inn_2place を取得（オブジェクト形式: {"2": 0.324, ...}）
-  const inn2Place = (DATA.inn_data || {}).inn_2place || {};
-  const hasInn2   = Object.keys(inn2Place).length > 0;
+  // inn_2place: inn_data に直接入っていれば使用、なければ venue_stats から取得
+  const inn2Place = (() => {
+    const v = (DATA.inn_data || {}).inn_2place;
+    if(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
+    return MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place || {};
+  })();
+  const hasInn2 = Object.keys(inn2Place).length > 0;
 
   // venue_kimari があれば逃げ展開確率を取得
   const vKimari = MASTER_EXT?.venue_kimari?.[DATA.venue] || null;
@@ -914,8 +918,12 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   const vKimari = MASTER_EXT.venue_kimari[venue];
   if(!vKimari) return '';
 
-  // inn_2place（オブジェクト形式: {"2": 0.324, ...}）
-  const inn2Place = (DATA.inn_data || {}).inn_2place || {};
+  // inn_2place: inn_data に直接入っていれば使用、なければ venue_stats から取得
+  const inn2Place = (() => {
+    const v = (DATA.inn_data || {}).inn_2place;
+    if(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
+    return MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place || {};
+  })();
 
   const KIMARI_HARD_EXCLUDE = {
     '逃げ':       new Set(['2','3','4','5','6']),
@@ -1249,11 +1257,17 @@ function renderBuy(rno){
 
   // ── 会場平均率テーブル ──
   // コース1着率: inn_data.course_rates（会場平均）
-  // 1－◯ 2着率: inn_data.inn_2place（会場別イン逃げ時2着率。マスタで算出済み）
-  //   → データなしの場合は「—」表記（全国平均や他データへのフォールバックなし）
+  // 1－◯ 2着率: inn_data.inn_2place → なければ MASTER_EXT.venue_stats[venue].inn_2place にフォールバック
   const innData   = DATA.inn_data || {};
-  const cRates    = innData.course_rates || [];         // index=コース番号 (1-6)
-  const inn2Place = innData.inn_2place   || {};         // 会場別イン逃げ時2着率（オブジェクト: {"2": 0.324, ...}）
+  const cRates    = innData.course_rates || [];
+
+  // inn_2place: inn_data に直接入っていれば使用、なければ venue_stats から取得
+  const inn2Place = (() => {
+    const fromInnData = innData.inn_2place;
+    if(fromInnData && typeof fromInnData === 'object' && !Array.isArray(fromInnData) && Object.keys(fromInnData).length > 0)
+      return fromInnData;
+    return MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place || {};
+  })();
 
   // コース番号ラベル（進入コース）
   const courseLabels = ['1','2','3','4','5','6'];
