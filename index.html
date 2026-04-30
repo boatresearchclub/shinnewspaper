@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 15:12:57 --></head>
+<!-- auto_push_updated:2026-04-30 15:26:45 --></head>
 <body>
 
 <header class="site-header">
@@ -559,6 +559,9 @@ function renderDetail(rno){
 // MASTER_EXT あり → 決まり手別有効コース制約（ハード除外＋個人適性）＋
 //                   1コースの被kimari × 攻め手の kimari による相対評価補正を適用
 //
+// 【修正A】個人kimari係数にruns信頼度重みを付与（runs<50は中立値1.0に引き寄せ）
+// 【修正C】1コースの被kimari率でvKimariを動的補正（差され率→差し展開UP等）
+//
 // 恵まれ（転覆等による繰り上がり）は予測不可のため除外。
 //
 function calcTenkaiProbs(boats, arek){
@@ -683,7 +686,67 @@ function calcTenkaiProbs(boats, arek){
   // 1コース艇を特定
   const boat1 = boats.find(b => b.boat === 1) || null;
 
-  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
+  // ── 修正C: 1コース選手の被kimari率でvKimariを動的補正 ──
+  //
+  // 1コース選手の「差され率・捲られ率・捲り差され率」が高いほど
+  // 対応する展開の事前確率を底上げする。
+  //
+  // 例: 差され率0.30（高い）→ 差し展開の確率を最大+50%補正
+  //     捲られ率0.05（低い）→ まくり展開はほぼそのまま
+  //
+  // 補正強度は hiKimariStrength で制御（0.0=補正なし、1.0=最大補正）
+  // 被kimariデータがない場合は vKimari をそのまま使用。
+  //
+  const hiKimariStrength = 1.5; // 被kimari率1.0で最大1.5倍まで補正
+  let adjustedVKimari = { ...vKimari };
+
+  if(boat1){
+    const hiKimari = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.['被kimari'];
+    const boat1Runs = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.runs ?? 0;
+    // runs < 20 はデータ不足なので補正しない
+    if(hiKimari && boat1Runs >= 20){
+      // 被kimari率をどれだけ信頼するか（50走で信頼度1.0）
+      const hiTrust = Math.min(boat1Runs / 50, 1.0);
+
+      const sasareRate     = (hiKimari['差され']     ?? null);
+      const makurareRate   = (hiKimari['捲られ']     ?? null);
+      const makurisasareRate = (hiKimari['捲り差され'] ?? null);
+
+      if(sasareRate !== null){
+        // 差し: 被差され率が高いほど差し展開確率を上げる
+        adjustedVKimari['差し'] = (vKimari['差し'] || 0)
+          * (1 + hiTrust * sasareRate * hiKimariStrength);
+      }
+      if(makurareRate !== null){
+        // まくり: 被捲られ率が高いほどまくり展開確率を上げる
+        adjustedVKimari['まくり'] = (vKimari['まくり'] || 0)
+          * (1 + hiTrust * makurareRate * hiKimariStrength);
+      }
+      if(makurisasareRate !== null){
+        // まくり差し: 被捲り差され率が高いほどまくり差し展開確率を上げる
+        adjustedVKimari['まくり差し'] = (vKimari['まくり差し'] || 0)
+          * (1 + hiTrust * makurisasareRate * hiKimariStrength);
+      }
+      // 逃げ: 被kimariの合計が高いほど逃げ展開確率を下げる
+      const totalHiRate = (sasareRate ?? 0) + (makurareRate ?? 0) + (makurisasareRate ?? 0);
+      const nigeRate = getPersonalKimari(boat1.name, '1', '逃げ');
+      if(nigeRate > 0){
+        // 逃げ率が高く被kimari合計が低いほど逃げ展開を維持
+        const nigeBoost = nigeRate / Math.max(nigeRate + totalHiRate, 0.01);
+        adjustedVKimari['逃げ'] = (vKimari['逃げ'] || 0) * (0.5 + 0.5 * nigeBoost * 2);
+      }
+
+      // 再正規化（合計を1.0に揃える）
+      const adjTotal = Object.values(adjustedVKimari).reduce((s, v) => s + v, 0);
+      if(adjTotal > 0){
+        for(const k of Object.keys(adjustedVKimari)){
+          adjustedVKimari[k] = adjustedVKimari[k] / adjTotal;
+        }
+      }
+    }
+  }
+
+  const kimariTypes = Object.keys(adjustedVKimari).filter(k => adjustedVKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
 
   // ── 各艇の決まり手適性スコアを prob に乗算する係数を算出 ──
   //
@@ -702,14 +765,23 @@ function calcTenkaiProbs(boats, arek){
   boats.forEach(b => { kimariCoefSum[b.boat] = 0; });
 
   for(const kimari of kimariTypes){
-    const kimariProb = vKimari[kimari];
+    const kimariProb = adjustedVKimari[kimari];  // 修正C: adjustedVKimariを使用
     if(!kimariProb || kimariProb <= 0) continue;
 
     // 有効艇の relCoef を取得
     const relCoefs = {};
     for(const b of boats){
       if(!isValidFirst(b, kimari)){ relCoefs[b.boat] = 0; continue; }
-      relCoefs[b.boat] = calcRelativeCoef(b, kimari, boat1);
+      const rawCoef = calcRelativeCoef(b, kimari, boat1);
+      // ── 修正A: runs数に応じて個人適性の信頼度を調整 ──
+      // runs不足の選手は係数を中立値(1.0)に引き寄せる。
+      // 50走で信頼度1.0（個人適性をフル反映）
+      // 20走で信頼度0.4（会場平均寄り）
+      // 20走未満は reliable=false のためここには来ないが念のため0に近づける
+      const kimariRuns = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.runs ?? 0;
+      const personalTrust = Math.min(kimariRuns / 50, 1.0);
+      // 信頼度が低いほど中立値(1.0)に引き戻す
+      relCoefs[b.boat] = rawCoef * personalTrust + 1.0 * (1 - personalTrust);
     }
 
     // 有効艇の平均 relCoef（1.0基準に正規化するため）
@@ -917,7 +989,41 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   }
 
   const kimariLabel = { '逃げ':'逃げ', '差し':'差し', 'まくり':'まくり', 'まくり差し':'まくり差し', '抜き':'抜き' };
-  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
+
+  // ── 修正C（シナリオ表示側）: 1コース被kimariでvKimariを補正 ──
+  // calcTenkaiProbs と同じロジックを適用して表示確率を一致させる
+  const boat1Scenario = rawBoats.find(b => b.boat === 1) || null;
+  let scenarioVKimari = { ...vKimari };
+  if(boat1Scenario){
+    const hiKimari = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.['被kimari'];
+    const boat1Runs = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.runs ?? 0;
+    if(hiKimari && boat1Runs >= 20){
+      const hiTrust = Math.min(boat1Runs / 50, 1.0);
+      const hiStr   = 1.5;
+      const sasareRate       = hiKimari['差され']     ?? null;
+      const makurareRate     = hiKimari['捲られ']     ?? null;
+      const makurisasareRate = hiKimari['捲り差され'] ?? null;
+      if(sasareRate !== null)
+        scenarioVKimari['差し'] = (vKimari['差し'] || 0) * (1 + hiTrust * sasareRate * hiStr);
+      if(makurareRate !== null)
+        scenarioVKimari['まくり'] = (vKimari['まくり'] || 0) * (1 + hiTrust * makurareRate * hiStr);
+      if(makurisasareRate !== null)
+        scenarioVKimari['まくり差し'] = (vKimari['まくり差し'] || 0) * (1 + hiTrust * makurisasareRate * hiStr);
+      const totalHiRate = (sasareRate ?? 0) + (makurareRate ?? 0) + (makurisasareRate ?? 0);
+      const nigeRate = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.kimari?.['逃げ'] ?? 0;
+      if(nigeRate > 0){
+        const nigeBoost = nigeRate / Math.max(nigeRate + totalHiRate, 0.01);
+        scenarioVKimari['逃げ'] = (vKimari['逃げ'] || 0) * (0.5 + 0.5 * nigeBoost * 2);
+      }
+      const adjTotal = Object.values(scenarioVKimari).reduce((s, v) => s + v, 0);
+      if(adjTotal > 0){
+        for(const k of Object.keys(scenarioVKimari))
+          scenarioVKimari[k] = scenarioVKimari[k] / adjTotal;
+      }
+    }
+  }
+
+  const kimariTypes = Object.keys(scenarioVKimari).filter(k => scenarioVKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
 
   // 1着率上位3艇
   const top3 = ranked2.slice(0, 3);
@@ -927,16 +1033,15 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   const scenarioProb = {};
   for(const winner of top3){
     scenarioProb[winner.boat] = {};
-    // 有効な決まり手の venue_kimari 比率合計を算出
+    // 有効な決まり手の scenarioVKimari 比率合計を算出
     const validKimariTotal = kimariTypes
       .filter(k => isValidFirst(winner, k))
-      .reduce((s, k) => s + (vKimari[k] || 0), 0);
+      .reduce((s, k) => s + (scenarioVKimari[k] || 0), 0);
     if(validKimariTotal <= 0) continue;
-    // tenkai_prob を有効決まり手の比率で按分
-    // 例: 1コース(逃げ50%+抜き5%=有効55%) → 逃げ = tenkai_prob × 50/55
+    // tenkai_prob を有効決まり手の比率で按分（修正C: scenarioVKimari使用）
     for(const kimari of kimariTypes){
       if(!isValidFirst(winner, kimari)) continue;
-      scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (vKimari[kimari] / validKimariTotal);
+      scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (scenarioVKimari[kimari] / validKimariTotal);
     }
   }
 
