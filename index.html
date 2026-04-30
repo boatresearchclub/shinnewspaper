@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 13:38:15 --></head>
+<!-- auto_push_updated:2026-04-30 13:41:46 --></head>
 <body>
 
 <header class="site-header">
@@ -633,9 +633,9 @@ function calcTenkaiProbs(boats, arek){
       const sasareRate = getPersonal被Kimari(boat1.name, '差され')    ?? 0;
       const makurareRate = getPersonal被Kimari(boat1.name, '捲られ') ?? 0;
       const makurisasareRate = getPersonal被Kimari(boat1.name, '捲り差され') ?? 0;
-      const崩れ率 = sasareRate + makurareRate + makurisasareRate;
+      const kuzureRate = sasareRate + makurareRate + makurisasareRate;
       // 逃げ率が高く崩れ率が低いほど係数UP（崩れ率は逆数で効く）
-      return nigeRate * Math.max(0.1, 1.0 - 崩れ率);
+      return nigeRate * Math.max(0.1, 1.0 - kuzureRate);
     }
 
     if(kimari === '差し'){
