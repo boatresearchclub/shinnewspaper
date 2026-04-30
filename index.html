@@ -197,7 +197,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 11:19:38 --></head>
+<!-- auto_push_updated:2026-04-30 11:25:59 --></head>
 <body>
 
 <header class="site-header">
@@ -206,9 +206,7 @@ body {
     <span>Boat Research Club</span>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="header-meta" id="header-meta">
-      <strong>鳴門</strong> — 2026-04-29
-    </div>
+    <div class="header-meta" id="header-meta"></div>
     <button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
   </div>
 </header>
@@ -277,8 +275,8 @@ const PLAYER_ID_MAP = {};
 // アプリロジック（本番index.htmlと同じ）
 // ============================================================
 let DATA = null;
-let selectedRace = 1;
-let currentVenue = '鳴門';
+let selectedRace = 0;
+let currentVenue = '';
 
 function arekClass(v){ return v < 45 ? 'arek-lo' : v < 65 ? 'arek-md' : 'arek-hi'; }
 function arekLabel(v){ return v < 45 ? '安定' : v < 65 ? '中荒れ' : '大荒れ'; }
@@ -499,9 +497,90 @@ function renderDetail(rno){
   document.getElementById('inline-detail').innerHTML = html;
 }
 
-// ── 展開推定 ──
+// ── 展開推定（残存マスタ対応）──
+//
+// MASTER_EXT が存在する場合:
+//   1. venue_kimari で「どの決まり手が何%起こるか」の事前確率を取得
+//   2. 各決まり手×各1着コースの組み合わせについて、
+//      tenkai_remaining から「その展開で各コースが2着に来る率」を引く
+//   3. winner_course_order（選手個別補正）があればさらに精度を上げる
+//   4. 統合して各艇の tenkai_prob（展開推定後1着率）を算出
+//
+// MASTER_EXT が null の場合は従来通り prob をそのまま使う
+//
 function calcTenkaiProbs(boats, arek){
-  return [...boats].map(b=>({...b, tenkai_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+  // ── MASTER_EXT なし: 従来ロジック ──
+  if(!MASTER_EXT || !MASTER_EXT.venue_kimari || !MASTER_EXT.tenkai_remaining){
+    return [...boats].map(b=>({...b, tenkai_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+  }
+
+  const venue = DATA.venue;
+  const vKimari = MASTER_EXT.venue_kimari[venue];
+
+  // venue_kimari が取れない会場は従来ロジックで
+  if(!vKimari){
+    return [...boats].map(b=>({...b, tenkai_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+  }
+
+  // 会場別 tenkai_remaining → なければ全国フォールバック
+  const tRemain = MASTER_EXT.tenkai_remaining[venue] || MASTER_EXT.tenkai_remaining['_全国'] || {};
+  const wOrder  = MASTER_EXT.winner_course_order || {};
+
+  // 決まり手の種類（venue_kimariに存在するもの）
+  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0);
+
+  // 各艇の補正スコアを累積
+  const scores = {};
+  boats.forEach(b => { scores[b.boat] = 0; });
+
+  // 全決まり手 × 全1着候補コース の組み合わせをループ
+  // 各艇の prob をコース1着確率の事前推定として使う
+  for(const kimari of kimariTypes){
+    const kimariProb = vKimari[kimari]; // この決まり手が起こる確率
+    if(!kimariProb || kimariProb <= 0) continue;
+
+    // 決まり手ごとに有効な1着コースは物理的制約がある
+    // 逃げ=1コースのみ、差し/まくり/抜き=2-6、まくり差し=3-6
+    const validFirst = {
+      '逃げ':       ['1'],
+      '差し':       ['2','3','4','5','6'],
+      'まくり':     ['2','3','4','5','6'],
+      'まくり差し': ['3','4','5','6'],
+      '抜き':       ['2','3','4','5','6'],
+      '恵まれ':     ['1','2','3','4','5','6'],
+    }[kimari] || ['1','2','3','4','5','6'];
+
+    // この決まり手でコースCが1着になる確率 ∝ prob[C] × (Cが有効コースか)
+    const totalValidProb = boats.reduce((sum, b) =>
+      sum + (validFirst.includes(String(b.boat)) ? b.prob : 0), 0);
+    if(totalValidProb <= 0) continue;
+
+    for(const winner of boats){
+      const wc = String(winner.boat);
+      if(!validFirst.includes(wc)) continue;
+
+      // この決まり手でwcが1着になる確率
+      const winProb = kimariProb * (winner.prob / totalValidProb);
+
+      // winProb を1着候補コースのスコアとして積算
+      scores[winner.boat] += winProb;
+    }
+  }
+
+  // スコアを正規化して tenkai_prob へ
+  const total = Object.values(scores).reduce((a,b)=>a+b, 0) || 1;
+  return [...boats]
+    .map(b => ({...b, tenkai_prob: scores[b.boat] / total}))
+    .sort((a,b) => b.tenkai_prob - a.tenkai_prob);
+}
+
+// 残存マスタが有効かどうか判定
+function hasMasterExt(){
+  return !!(MASTER_EXT &&
+    MASTER_EXT.venue_kimari &&
+    Object.keys(MASTER_EXT.venue_kimari).length > 0 &&
+    MASTER_EXT.tenkai_remaining &&
+    Object.keys(MASTER_EXT.tenkai_remaining).length > 0);
 }
 function tenkaiLabel(arek){
   if(arek < 40) return { label:'逃げ展開', cls:'safe', icon:'🏃' };
@@ -518,6 +597,7 @@ function renderBuy(rno){
   const rawBoats = rd.boats;
   const ranked = calcTenkaiProbs(rawBoats, arek);
   const hasTenji = false;
+  const useMaster = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
   const [A, B, C, D] = ranked;
   const Df = D || C;
   const mode = tenkaiLabel(arek);
@@ -528,7 +608,7 @@ function renderBuy(rno){
       : `${A.name}（${A.boat}号）中心だが${B.name}（${B.boat}号）との競り合いも。`;
 
   const place2Scores = {};
-  const hasTenkaiData = false;
+  const hasTenkaiData = useMaster;
 
   const place2Ranked = ranked.filter(bt=>bt.boat!==A.boat).sort((x,y)=>y.tenkai_prob-x.tenkai_prob);
   const P2a = place2Ranked[0]||B;
@@ -589,12 +669,27 @@ function renderBuy(rno){
     const medal=medals[i]||'';
     const pct=(bt.tenkai_prob*100).toFixed(1);
     const rawPct=(bt.prob*100).toFixed(1);
+    // 残存マスタによる補正量を表示
+    let corrCell;
+    if(useMaster){
+      const diff = bt.tenkai_prob - bt.prob;
+      const absDiff = Math.abs(diff);
+      if(absDiff < 0.001){
+        corrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
+      } else {
+        const sign = diff > 0 ? '+' : '';
+        const color = diff > 0 ? 'var(--green)' : 'var(--red)';
+        corrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
+      }
+    } else {
+      corrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
+    }
     return `<tr>
       <td style="text-align:center;padding:4px 8px">${medal}</td>
       <td style="padding:4px 4px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
       <td style="padding:4px 6px;font-size:0.82rem">${bt.name}</td>
       <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
-      <td style="padding:4px 4px;text-align:center;font-size:0.82rem"><span style="font-size:10px;color:var(--text3)">—</span></td>
+      <td style="padding:4px 4px;text-align:center;font-size:0.82rem">${corrCell}</td>
       <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
     </tr>`;
   }).join('');
@@ -612,7 +707,10 @@ function renderBuy(rno){
     </div>
     <div style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
       <span style="color:var(--text3);font-size:11px">⏳ 展示前 — 基本確率で表示</span>
-      <span style="color:var(--text3);font-size:11px">📊 残存マスタなし（通常ロジック）</span>
+      ${useMaster
+        ? `<span style="color:var(--green);font-size:11px;font-weight:600">📊 残存マスタ反映（venue_kimari×tenkai_remaining）</span>`
+        : `<span style="color:var(--text3);font-size:11px">📊 残存マスタなし（通常ロジック）</span>`
+      }
       ${dualNote}
     </div>
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
@@ -761,21 +859,27 @@ function doRefresh(){
   if(btn) btn.classList.add('spinning');
 
   // 現在の状態を保存してリロード後に復元
-  sessionStorage.setItem('refresh_venue', currentVenue || '');
-  sessionStorage.setItem('refresh_race',  String(selectedRace || ''));
-  sessionStorage.setItem('refresh_tab',   currentTabName() || 'detail');
-  setTimeout(()=>{ location.reload(); }, 300);
+  sessionStorage.setItem('refresh_venue',   currentVenue || 'NONE');
+  sessionStorage.setItem('refresh_race',    String(selectedRace || '0'));
+  sessionStorage.setItem('refresh_tab',     currentTabName() || 'detail');
+  sessionStorage.setItem('refresh_scrollY', String(window.scrollY || 0));
+  sessionStorage.setItem('refresh_flag',    '1');
+
+  // location.reload() でリロード（sessionStorage は同一オリジンで保持される）
+  setTimeout(()=>{ location.reload(true); }, 150);
 }
 
 function selectRace(rno){
+  if(!DATA) return;
   selectedRace = rno;
   document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
   const btn = document.getElementById(`rc-${rno}`);
   if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
   const tabName = currentTabName();
-  if(tabName==='detail') renderDetail(rno);
-  else if(tabName==='buy') renderBuy(rno);
-  else if(tabName==='comment') renderComment(rno);
+  if(tabName==='detail')        renderDetail(rno);
+  else if(tabName==='detail2')  renderBuy(rno);
+  else if(tabName==='buy')      renderBuy(rno);
+  else if(tabName==='comment')  renderComment(rno);
   else renderDetail(rno);
 }
 
@@ -788,12 +892,99 @@ function showToast(msg){
 }
 
 // ── 初期化 ──
-DATA = ALL_DATA['鳴門'];
-currentVenue = '鳴門';
-selectedRace = findCurrentRace(DATA.races);
-buildVenueTabs();
-buildRaceBar();
-renderDetail(selectedRace);
+(function(){
+  const isRefresh    = sessionStorage.getItem('refresh_flag') === '1';
+  const restoreVenue = sessionStorage.getItem('refresh_venue') || '';
+  const restoreRace  = parseInt(sessionStorage.getItem('refresh_race') || '0') || 0;
+  const restoreTab   = sessionStorage.getItem('refresh_tab') || 'detail';
+  const restoreScrollY = parseInt(sessionStorage.getItem('refresh_scrollY') || '0') || 0;
+
+  // ★ デバッグ: 復元前の値をコンソールに出力
+  console.log('[INIT] isRefresh:', isRefresh);
+  console.log('[INIT] restoreVenue:', restoreVenue);
+  console.log('[INIT] restoreRace:', restoreRace);
+  console.log('[INIT] restoreTab:', restoreTab);
+  console.log('[INIT] ALL_DATA keys:', Object.keys(ALL_DATA));
+  console.log('[INIT] ALL_DATA[restoreVenue]:', ALL_DATA[restoreVenue]);
+
+  // 復元キーは使い捨て（次回通常起動と区別するため即座にクリア）
+  sessionStorage.removeItem('refresh_flag');
+  sessionStorage.removeItem('refresh_venue');
+  sessionStorage.removeItem('refresh_race');
+  sessionStorage.removeItem('refresh_tab');
+  sessionStorage.removeItem('refresh_scrollY');
+
+  if(isRefresh){
+    // ── 更新ボタン後: 会場・レース・タブを完全復元 ──
+    // ALL_DATA[venue] は null（データなし）か object（データあり）かの2択。
+    // undefined はキー自体が存在しない（無効な会場名）なので復元不可とする。
+    const hasVenue = restoreVenue && restoreVenue !== 'NONE'
+                     && Object.prototype.hasOwnProperty.call(ALL_DATA, restoreVenue)
+                     && ALL_DATA[restoreVenue] !== null;
+
+    if(hasVenue){
+      currentVenue = restoreVenue;
+      DATA         = ALL_DATA[restoreVenue];
+      selectedRace = restoreRace;
+    } else {
+      currentVenue = '';
+      DATA         = null;
+      selectedRace = 0;
+    }
+
+    buildVenueTabs();
+    buildRaceBar();
+
+    if(hasVenue){
+      document.getElementById('header-meta').innerHTML = `<strong>${restoreVenue}</strong> — ${DATA.date||''}`;
+
+      // タブUIを先に切り替える
+      const TAB_NAMES = ['detail','detail2','buy','comment'];
+      const safeTab = TAB_NAMES.includes(restoreTab) ? restoreTab : 'detail';
+      TAB_NAMES.forEach(t=>{
+        document.getElementById(`tab-${t}`).style.display = t === safeTab ? '' : 'none';
+      });
+      document.querySelectorAll('.tab-btn').forEach(b=>{
+        b.classList.toggle('active', b.dataset.tab === safeTab);
+      });
+
+      // レースバーを構築してアクティブ表示
+      if(restoreRace){
+        selectedRace = restoreRace;
+        document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
+        const raceBtn = document.getElementById(`rc-${restoreRace}`);
+        if(raceBtn){ raceBtn.classList.add('active'); raceBtn.scrollIntoView({behavior:'auto',block:'nearest',inline:'center'}); }
+
+        // タブ名に応じて正しいrenderを呼ぶ（currentTabName()に依存しない）
+        if(safeTab === 'detail')        renderDetail(restoreRace);
+        else if(safeTab === 'detail2')  renderBuy(restoreRace);
+        else if(safeTab === 'buy')      renderBuy(restoreRace);
+        else if(safeTab === 'comment')  renderComment(restoreRace);
+        else                            renderDetail(restoreRace);
+      }
+
+      // スクロール位置を復元（描画完了後に実行）
+      if(restoreScrollY > 0){
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{ window.scrollTo(0, restoreScrollY); });
+        });
+      }
+    } else {
+      document.getElementById('race-bar').innerHTML = '';
+      document.getElementById('inline-detail').innerHTML =
+        '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
+    }
+
+  } else {
+    // ── 通常起動: 何も選択しない ──
+    currentVenue = '';
+    DATA         = null;
+    buildVenueTabs();
+    document.getElementById('race-bar').innerHTML = '';
+    document.getElementById('inline-detail').innerHTML =
+      '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
+  }
+})();
 </script>
 </body>
 </html>
