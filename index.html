@@ -197,7 +197,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:42:31 --></head>
+<!-- auto_push_updated:2026-04-30 09:48:08 --></head>
 <body>
 
 <header class="site-header">
@@ -612,7 +612,7 @@ function renderBuy(rno){
     </div>
     <div style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
       <span style="color:var(--text3);font-size:11px">⏳ 展示前 — 基本確率で表示</span>
-      <span style="color:var(--text3);font-size:11px">📊 残存マスタなし（サンプルモード）</span>
+      <span style="color:var(--text3);font-size:11px">📊 残存マスタなし（通常ロジック）</span>
       ${dualNote}
     </div>
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
@@ -705,7 +705,7 @@ function buildVenueTabs(){
       if(!ALL_DATA[v]) return;
       currentVenue = v;
       DATA = ALL_DATA[v];
-      selectedRace = parseInt(Object.keys(DATA.races)[0]) || 1;
+      selectedRace = findCurrentRace(DATA.races);
       document.getElementById('header-meta').innerHTML = `<strong>${v}</strong> — ${DATA.date||''}`;
       document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.venue===v));
       buildRaceBar();
@@ -716,6 +716,22 @@ function buildVenueTabs(){
 }
 
 // ── レース選択バー ──
+
+// 現在時刻に最も近い「これから／直近」のレースを返す
+function findCurrentRace(races){
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const entries = Object.entries(races).sort((a,b)=>+a[0]-+b[0]);
+
+  // 未来のレースがあれば最初のものを返す
+  for(const [rno, rd] of entries){
+    if(!rd.time || !/^\d{1,2}:\d{2}$/.test(rd.time.trim())) continue;
+    const [h, m] = rd.time.trim().split(':').map(Number);
+    if(h * 60 + m >= nowMin) return parseInt(rno);
+  }
+  // 全部過去なら最後のレースを返す
+  return parseInt(entries[entries.length - 1][0]) || 1;
+}
 function isRacePast(timeStr){
   if(!timeStr || !/^\d{1,2}:\d{2}$/.test(timeStr.trim())) return false;
   const now = new Date();
@@ -770,7 +786,7 @@ function showToast(msg){
 // ── 初期化 ──
 DATA = ALL_DATA['鳴門'];
 currentVenue = '鳴門';
-selectedRace = 1;
+selectedRace = findCurrentRace(DATA.races);
 buildVenueTabs();
 buildRaceBar();
 renderDetail(selectedRace);
