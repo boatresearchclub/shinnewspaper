@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 14:21:41 --></head>
+<!-- auto_push_updated:2026-04-30 14:34:28 --></head>
 <body>
 
 <header class="site-header">
@@ -908,14 +908,12 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   const scenarioProb = {};
   for(const winner of top3){
     scenarioProb[winner.boat] = {};
-    const wc = String(winner.boat);
-    // 有効な決まり手ごとに: kimariProb × (winner.tenkai_prob / 有効艇のtenkai_prob合計)
+    // この艇がこの決まり手で勝つ確率 = kimariProb × winner.tenkai_prob
+    // （tenkai_prob は既に全展開込みの1着率なので、決まり手比率をそのまま掛ける）
     for(const kimari of kimariTypes){
       if(!isValidFirst(winner, kimari)) continue;
       const kimariProb = vKimari[kimari];
-      const totalTP = ranked2.reduce((s,b) => s + (isValidFirst(b,kimari) ? b.tenkai_prob : 0), 0);
-      if(totalTP <= 0) continue;
-      scenarioProb[winner.boat][kimari] = kimariProb * (winner.tenkai_prob / totalTP);
+      scenarioProb[winner.boat][kimari] = kimariProb * winner.tenkai_prob;
     }
   }
 
