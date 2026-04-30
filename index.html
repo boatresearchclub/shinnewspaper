@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 14:06:35 --></head>
+<!-- auto_push_updated:2026-04-30 14:21:41 --></head>
 <body>
 
 <header class="site-header">
@@ -513,7 +513,7 @@ function renderDetail(rno){
     <div class="detail-panel">
       ${insuffBanner}
       <div class="bt-head-simple">
-        <span>枠</span><span>選手名</span><span>級</span><span>基準1着率</span>
+        <span>枠</span><span>選手名</span><span>級</span><span>想定1着率</span>
       </div>
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
@@ -867,6 +867,132 @@ function tenkaiLabel(arek){
 }
 function combo2(a,b){ return `${Math.min(a,b)}＝${Math.max(a,b)}`; }
 
+// ── 展開シナリオセクション生成 ──
+//
+// 1着率上位3艇 × 各決まり手の発生確率 × 条件付き2着率 を展開シナリオとして表示。
+// 各1着候補について「この艇がこの決まり手で勝つ展開」ごとに2着率を列挙する。
+//
+function buildScenarioSection(ranked2, place2Map, rawBoats){
+  if(!MASTER_EXT || !MASTER_EXT.venue_kimari) return '';
+
+  const venue   = DATA.venue;
+  const vKimari = MASTER_EXT.venue_kimari[venue];
+  if(!vKimari) return '';
+
+  const tRemain = (MASTER_EXT.tenkai_remaining || {})[venue]
+               || (MASTER_EXT.tenkai_remaining || {})['_全国']
+               || {};
+
+  const KIMARI_HARD_EXCLUDE = {
+    '逃げ':       new Set(['2','3','4','5','6']),
+    '差し':       new Set(['1']),
+    'まくり':     new Set(['1']),
+    'まくり差し': new Set(['1','2']),
+    '抜き':       new Set(),
+  };
+  function isValidFirst(boat, kimari){
+    const wc = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;
+    return !exc.has(wc);
+  }
+
+  const kimariLabel = { '逃げ':'逃げ', '差し':'差し', 'まくり':'まくり', 'まくり差し':'まくり差し', '抜き':'抜き' };
+  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
+
+  // 1着率上位3艇
+  const top3 = ranked2.slice(0, 3);
+
+  // 各1着候補について決まり手別の発生確率を計算
+  // scenarioProb[winner.boat][kimari] = この艇がこの決まり手で勝つ確率
+  const scenarioProb = {};
+  for(const winner of top3){
+    scenarioProb[winner.boat] = {};
+    const wc = String(winner.boat);
+    // 有効な決まり手ごとに: kimariProb × (winner.tenkai_prob / 有効艇のtenkai_prob合計)
+    for(const kimari of kimariTypes){
+      if(!isValidFirst(winner, kimari)) continue;
+      const kimariProb = vKimari[kimari];
+      const totalTP = ranked2.reduce((s,b) => s + (isValidFirst(b,kimari) ? b.tenkai_prob : 0), 0);
+      if(totalTP <= 0) continue;
+      scenarioProb[winner.boat][kimari] = kimariProb * (winner.tenkai_prob / totalTP);
+    }
+  }
+
+  // 各シナリオのHTML生成
+  const boatCircle = (n) =>
+    `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
+
+  const scenarioBlocks = top3.map((winner, wi) => {
+    const wc = String(winner.boat);
+    const medals = ['🥇','🥈','🥉'];
+
+    // この1着候補の決まり手別シナリオ（確率降順、1%未満は省略）
+    const scenarios = kimariTypes
+      .filter(k => scenarioProb[winner.boat]?.[k] > 0.01)
+      .sort((a,b) => (scenarioProb[winner.boat][b]||0) - (scenarioProb[winner.boat][a]||0));
+
+    if(scenarios.length === 0) return '';
+
+    const scenarioRows = scenarios.map(kimari => {
+      const prob = scenarioProb[winner.boat][kimari];
+      const kimariRemain = tRemain[kimari]?.[wc] || null;
+
+      // 2着率: 全艇（自分以外）の条件付き2着率を取得してソート
+      const place2List = rawBoats
+        .filter(b => b.boat !== winner.boat)
+        .map(b => {
+          const sc = String(b.boat);
+          let p2 = null;
+          if(kimariRemain && kimariRemain[sc] && kimariRemain[sc].place2 != null){
+            p2 = kimariRemain[sc].place2;
+          } else {
+            // フォールバック: tenkai_prob 相対値
+            const othersTotal = ranked2.filter(r=>r.boat!==winner.boat)
+                                       .reduce((s,r)=>s+r.tenkai_prob,0) || 1;
+            const bt = ranked2.find(r=>r.boat===b.boat);
+            p2 = bt ? bt.tenkai_prob / othersTotal : 0;
+          }
+          return { boat: b.boat, name: b.name, p2 };
+        })
+        .sort((a,b) => b.p2 - a.p2);
+
+      const p2Cells = place2List.map(item =>
+        `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;white-space:nowrap">
+          ${boatCircle(item.boat)}
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text)">${(item.p2*100).toFixed(0)}%</span>
+        </span>`
+      ).join('');
+
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);min-width:4.5em">${kimariLabel[kimari]}</span>
+        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--accent2);min-width:3.5em">${(prob*100).toFixed(1)}%</span>
+        <span style="font-size:10px;color:var(--text3);margin-right:4px">2着→</span>
+        <span style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">${p2Cells}</span>
+      </div>`;
+    }).join('');
+
+    if(!scenarioRows) return '';
+
+    return `<div style="margin-bottom:0.75rem">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:12px">${medals[wi]}</span>
+        ${boatCircle(winner.boat)}
+        <span style="font-size:13px;font-weight:700">${winner.name}</span>
+        <span style="font-size:12px;font-family:var(--mono);color:var(--accent2);font-weight:700">${(winner.tenkai_prob*100).toFixed(1)}%</span>
+      </div>
+      <div style="padding-left:0.5rem">${scenarioRows}</div>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  if(!scenarioBlocks) return '';
+
+  return `<div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border)">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ（1着上位3艇）</div>
+    ${scenarioBlocks}
+  </div>`;
+}
+
 // ── renderBuy ──
 function renderBuy(rno){
   const rd = DATA.races[rno];
@@ -999,7 +1125,6 @@ function renderBuy(rno){
     const medal  = medals[i]||'';
     const pct    = (bt.tenkai_prob*100).toFixed(1);
     const rawPct = (bt.prob*100).toFixed(1);
-    const p2Pct  = (bt.place2_prob*100).toFixed(1);
 
     // 相対補正列（venue_kimari による補正差分）
     // tenjiがある場合は展示補正前のtenkai_prob_preを使いたいが保持していないため
@@ -1044,7 +1169,6 @@ function renderBuy(rno){
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
       <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
-      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text2)">${p2Pct}%</td>
     </tr>`;
   }).join('');
 
@@ -1088,12 +1212,12 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">相対補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">展示補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">想定1着率</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">2着率</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
       </div>
     </div>
+    ${buildScenarioSection(ranked2, place2Map, rawBoats)}
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
         <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
