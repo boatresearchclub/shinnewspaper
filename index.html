@@ -174,26 +174,22 @@ body {
 
 /* 更新ボタン */
 #refresh-btn {
-  position: fixed;
-  bottom: 24px;
-  right: 18px;
-  width: 48px; height: 48px;
+  width: 32px; height: 32px;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  font-size: 20px;
+  background: var(--bg3);
+  color: var(--accent);
+  border: 1px solid var(--border2);
+  font-size: 16px;
   cursor: pointer;
-  box-shadow: 0 3px 12px rgba(0,0,0,0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
   transition: transform 0.2s, background 0.2s;
+  flex-shrink: 0;
 }
 #refresh-btn:active { transform: scale(0.9); }
 @keyframes spin { to { transform: rotate(360deg); } }
-#refresh-btn.spinning { animation: spin 0.7s linear infinite; background: var(--accent2); }
+#refresh-btn.spinning { animation: spin 0.7s linear infinite; color: var(--accent2); }
 
 /* TOAST */
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(60px); background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); padding: .625rem 1.25rem; font-size: 13px; transition: transform .3s ease; z-index: 200; pointer-events: none; }
@@ -201,7 +197,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:22:15 --></head>
+<!-- auto_push_updated:2026-04-30 09:25:55 --></head>
 <body>
 
 <header class="site-header">
@@ -209,8 +205,11 @@ body {
     <div class="logo-icon">⛵</div>
     <span>Boat Research Club</span>
   </div>
-  <div class="header-meta" id="header-meta">
-    <strong>鳴門</strong> — 2026-04-29
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="header-meta" id="header-meta">
+      <strong>鳴門</strong> — 2026-04-29
+    </div>
+    <button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
   </div>
 </header>
 
@@ -261,7 +260,6 @@ body {
 </div>
 
 <div class="toast" id="toast"></div>
-<button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
 
 <script>
 // ============================================================
