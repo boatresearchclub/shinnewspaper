@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 16:08:51 --></head>
+<!-- auto_push_updated:2026-04-30 16:12:34 --></head>
 <body>
 
 <header class="site-header">
@@ -1010,9 +1010,15 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
       const prob = scenarioProb[winner.boat][kimari];
 
       // 2着率の決定:
-      //   逃げ展開(kimari==='逃げ' かつ winner.boat===1) → inn_2place を使用
-      //   それ以外 → tenkai_prob 相対値でフォールバック
+      //   逃げ展開(kimari==='逃げ' かつ winner.boat===1) → inn_2place を直接使用
+      //   それ以外 → 1着以外の艇の tenkai_prob を正規化して使用（展開ごとに差が出る）
+      //   ※ place2Map は全展開の期待値なのでシナリオ別2着には使わない
       const useInn2 = (kimari === '逃げ' && winner.boat === 1 && Object.keys(inn2Place).length > 0);
+
+      // 1着以外の艇の tenkai_prob 合計（相対値計算の分母）
+      const othersTotal = ranked2
+        .filter(r => r.boat !== winner.boat)
+        .reduce((s, r) => s + r.tenkai_prob, 0) || 1;
 
       const place2List = rawBoats
         .filter(b => b.boat !== winner.boat)
@@ -1020,16 +1026,16 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
           const sc = String(b.boat);
           let p2;
           if(useInn2){
+            // 逃げ展開: inn_2place（会場別イン逃げ時の実績2着率）を使用
             p2 = inn2Place[sc] ?? null;
             if(p2 == null){
-              const othersTotal = ranked2.filter(r => r.boat !== winner.boat)
-                                         .reduce((s,r) => s + r.tenkai_prob, 0) || 1;
+              // inn_2place にないコースは tenkai_prob 相対値
               const bt = ranked2.find(r => r.boat === b.boat);
               p2 = bt ? bt.tenkai_prob / othersTotal : 0;
             }
           } else {
-            const othersTotal = ranked2.filter(r => r.boat !== winner.boat)
-                                       .reduce((s,r) => s + r.tenkai_prob, 0) || 1;
+            // 逃げ以外: 1着候補を除いた残り艇の tenkai_prob を正規化
+            // → 展開ごとに1着艇が違うので分母が変わり、各展開で2着順が変わる
             const bt = ranked2.find(r => r.boat === b.boat);
             p2 = bt ? bt.tenkai_prob / othersTotal : 0;
           }
