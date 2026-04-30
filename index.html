@@ -197,7 +197,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:48:08 --></head>
+<!-- auto_push_updated:2026-04-30 09:56:40 --></head>
 <body>
 
 <header class="site-header">
@@ -759,7 +759,11 @@ function buildRaceBar(){
 function doRefresh(){
   const btn = document.getElementById('refresh-btn');
   if(btn) btn.classList.add('spinning');
-  // サンプルモードはリロード
+
+  // 現在の状態を保存してリロード後に復元
+  sessionStorage.setItem('refresh_venue', currentVenue || '');
+  sessionStorage.setItem('refresh_race',  String(selectedRace || ''));
+  sessionStorage.setItem('refresh_tab',   currentTabName() || 'detail');
   setTimeout(()=>{ location.reload(); }, 300);
 }
 
