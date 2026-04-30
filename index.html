@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 12:29:50 --></head>
+<!-- auto_push_updated:2026-04-30 13:03:01 --></head>
 <body>
 
 <header class="site-header">
@@ -533,11 +533,13 @@ function renderDetail(rno){
 
 // ── 展開推定（1着率のみ）──
 //
-// 【役割】venue_kimari × prob だけで各艇の1着率(tenkai_prob)を算出する。
+// 【役割】venue_kimari × prob × 個人kimari適性 で各艇の1着率(tenkai_prob)を算出する。
 // tenkai_remaining は2着・3着率計算専用なので、ここでは一切使わない。
 //
 // MASTER_EXT なし → prob をそのまま tenkai_prob にコピーして返す
-// MASTER_EXT あり → 決まり手別有効コース制約を考慮してスコアを積算し正規化
+// MASTER_EXT あり → 決まり手別有効コース制約（ハード除外＋個人適性）を考慮してスコアを積算し正規化
+//
+// 恵まれ（転覆等による繰り上がり）は予測不可のため除外。
 //
 function calcTenkaiProbs(boats, arek){
   // ── MASTER_EXT なし ──
@@ -553,17 +555,45 @@ function calcTenkaiProbs(boats, arek){
     return [...boats].map(b=>({...b, tenkai_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
   }
 
-  // 決まり手ごとの有効1着コース
-  const VALID_FIRST = {
-    '逃げ':       ['1'],
-    '差し':       ['2','3','4','5','6'],
-    'まくり':     ['2','3','4','5','6'],
-    'まくり差し': ['3','4','5','6'],
-    '抜き':       ['2','3','4','5','6'],
-    '恵まれ':     ['1','2','3','4','5','6'],
+  // ── 決まり手ごとのハード除外コース（物理的に絶対ありえない）──
+  // 恵まれは除外（転覆等による繰り上がりのため予測不可）
+  const KIMARI_HARD_EXCLUDE = {
+    '逃げ':       new Set(['2','3','4','5','6']),
+    '差し':       new Set(['1']),
+    'まくり':     new Set(['1']),
+    'まくり差し': new Set(['1','2']),
+    '抜き':       new Set(),
   };
 
-  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0);
+  // ── グレーゾーン：個人kimari%が閾値以上なら有効とみなす ──
+  const KIMARI_SOFT_THRESHOLD = {
+    'まくり': {'2': 0.05},   // 2コースのまくりは個人実績5%以上で有効
+    '抜き':   {'1': 0.03},   // 1コースの抜きは個人実績3%以上で有効
+  };
+
+  // 選手のコース別kimari%をマスタから取得するヘルパー
+  function getPersonalKimari(boatName, courseStr, kimariType){
+    return MASTER_EXT?.course_master?.[boatName]?.[courseStr]?.kimari?.[kimariType] ?? 0;
+  }
+
+  // 選手×決まり手の有効判定
+  function isValidFirst(boat, kimari){
+    const wc  = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;            // 未知の決まり手は除外
+    if(exc.has(wc)) return false;     // ハード除外
+
+    // グレーゾーンチェック
+    const soft = KIMARI_SOFT_THRESHOLD[kimari];
+    if(soft && wc in soft){
+      const threshold = soft[wc];
+      const personal  = getPersonalKimari(boat.name, wc, kimari);
+      return personal >= threshold;   // 個人実績が閾値以上なら有効
+    }
+    return true;
+  }
+
+  const kimariTypes = Object.keys(vKimari).filter(k => vKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
   const scores = {};
   boats.forEach(b => { scores[b.boat] = 0; });
 
@@ -571,16 +601,13 @@ function calcTenkaiProbs(boats, arek){
     const kimariProb = vKimari[kimari];
     if(!kimariProb || kimariProb <= 0) continue;
 
-    const validFirst = VALID_FIRST[kimari] || ['1','2','3','4','5','6'];
-
     // この決まり手で有効な1着候補の prob 合計（正規化用）
     const totalValidProb = boats.reduce((sum, b) =>
-      sum + (validFirst.includes(String(b.boat)) ? b.prob : 0), 0);
+      sum + (isValidFirst(b, kimari) ? b.prob : 0), 0);
     if(totalValidProb <= 0) continue;
 
     for(const winner of boats){
-      const wc = String(winner.boat);
-      if(!validFirst.includes(wc)) continue;
+      if(!isValidFirst(winner, kimari)) continue;
       // kimariProb × (コースの事前1着率 / 有効コース合計) → 1着スコア積算
       scores[winner.boat] += kimariProb * (winner.prob / totalValidProb);
     }
@@ -632,16 +659,34 @@ function calcPlace2Probs(boats, ranked){
                 || MASTER_EXT.tenkai_remaining['_全国']
                 || {};
 
-  const VALID_FIRST = {
-    '逃げ':       ['1'],
-    '差し':       ['2','3','4','5','6'],
-    'まくり':     ['2','3','4','5','6'],
-    'まくり差し': ['3','4','5','6'],
-    '抜き':       ['2','3','4','5','6'],
-    '恵まれ':     ['1','2','3','4','5','6'],
+  // calcTenkaiProbs と同じハード除外・グレーゾーン定義
+  const KIMARI_HARD_EXCLUDE = {
+    '逃げ':       new Set(['2','3','4','5','6']),
+    '差し':       new Set(['1']),
+    'まくり':     new Set(['1']),
+    'まくり差し': new Set(['1','2']),
+    '抜き':       new Set(),
   };
+  const KIMARI_SOFT_THRESHOLD = {
+    'まくり': {'2': 0.05},
+    '抜き':   {'1': 0.03},
+  };
+  function getPersonalKimari2(boatName, courseStr, kimariType){
+    return MASTER_EXT?.course_master?.[boatName]?.[courseStr]?.kimari?.[kimariType] ?? 0;
+  }
+  function isValidFirst2(boat, kimari){
+    const wc  = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;
+    if(exc.has(wc)) return false;
+    const soft = KIMARI_SOFT_THRESHOLD[kimari];
+    if(soft && wc in soft){
+      return getPersonalKimari2(boat.name, wc, kimari) >= soft[wc];
+    }
+    return true;
+  }
 
-  const kimariTypes = Object.keys(vKimari).filter(k=>vKimari[k]>0);
+  const kimariTypes = Object.keys(vKimari).filter(k=>vKimari[k]>0 && k in KIMARI_HARD_EXCLUDE);
   const place2Score = {};
   ranked.forEach(b=>{ place2Score[b.boat]=0; });
 
@@ -653,11 +698,9 @@ function calcPlace2Probs(boats, ranked){
     const kimariProb = vKimari[kimari];
     if(!kimariProb || kimariProb<=0) continue;
 
-    const validFirst = VALID_FIRST[kimari] || ['1','2','3','4','5','6'];
-
     // この決まり手での有効1着候補 tenkai_prob 合計
     const totalTP = ranked.reduce((s,b)=>
-      s+(validFirst.includes(String(b.boat))?b.tenkai_prob:0),0);
+      s+(isValidFirst2(b, kimari)?b.tenkai_prob:0),0);
     if(totalTP<=0) continue;
 
     // kimariRemain: tRemain[kimari] が存在するか
@@ -665,7 +708,7 @@ function calcPlace2Probs(boats, ranked){
 
     for(const winner of ranked){
       const wc = String(winner.boat);
-      if(!validFirst.includes(wc)) continue;
+      if(!isValidFirst2(winner, kimari)) continue;
 
       // この決まり手 + このコースが1着になる確率
       const winnerProb = kimariProb * (tpMap[winner.boat] / totalTP);
