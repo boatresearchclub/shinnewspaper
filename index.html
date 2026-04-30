@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 14:34:28 --></head>
+<!-- auto_push_updated:2026-04-30 14:41:53 --></head>
 <body>
 
 <header class="site-header">
@@ -908,12 +908,16 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   const scenarioProb = {};
   for(const winner of top3){
     scenarioProb[winner.boat] = {};
-    // この艇がこの決まり手で勝つ確率 = kimariProb × winner.tenkai_prob
-    // （tenkai_prob は既に全展開込みの1着率なので、決まり手比率をそのまま掛ける）
+    // 有効な決まり手の venue_kimari 比率合計を算出
+    const validKimariTotal = kimariTypes
+      .filter(k => isValidFirst(winner, k))
+      .reduce((s, k) => s + (vKimari[k] || 0), 0);
+    if(validKimariTotal <= 0) continue;
+    // tenkai_prob を有効決まり手の比率で按分
+    // 例: 1コース(逃げ50%+抜き5%=有効55%) → 逃げ = tenkai_prob × 50/55
     for(const kimari of kimariTypes){
       if(!isValidFirst(winner, kimari)) continue;
-      const kimariProb = vKimari[kimari];
-      scenarioProb[winner.boat][kimari] = kimariProb * winner.tenkai_prob;
+      scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (vKimari[kimari] / validKimariTotal);
     }
   }
 
@@ -925,9 +929,9 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     const wc = String(winner.boat);
     const medals = ['🥇','🥈','🥉'];
 
-    // この1着候補の決まり手別シナリオ（確率降順、1%未満は省略）
+    // この1着候補の決まり手別シナリオ（確率降順、0.1%未満は省略）
     const scenarios = kimariTypes
-      .filter(k => scenarioProb[winner.boat]?.[k] > 0.01)
+      .filter(k => scenarioProb[winner.boat]?.[k] > 0.001)
       .sort((a,b) => (scenarioProb[winner.boat][b]||0) - (scenarioProb[winner.boat][a]||0));
 
     if(scenarios.length === 0) return '';
