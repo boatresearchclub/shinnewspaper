@@ -196,8 +196,42 @@ body {
 .toast.show { transform: translateX(-50%) translateY(0); }
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 600px) {
+  html { font-size: 14px; }
+
+  .container { padding: 0.75rem 0.5rem; }
+
+  /* 確率テーブルをスマホ幅に収める */
+  .prob-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .prob-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+  .prob-table th, .prob-table td { padding: 4px 4px !important; white-space: nowrap; }
+  .prob-table .col-name { max-width: 5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ヘッダタイトル・バッジ行 */
+  .status-badges { display: flex; flex-wrap: wrap; gap: 4px; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+  .status-badges > span { font-size: 10px !important; }
+
+  /* シナリオバー */
+  .scenario-header { padding: 0.6rem 0.75rem !important; gap: 6px !important; }
+  .scenario-header .scenario-bar { font-size: 12px !important; padding: 4px 8px !important; }
+  .scenario-header .mode-desc { font-size: 11px !important; }
+
+  /* 3連単グリッドをシングルカラムに */
+  .buy3-inner { grid-template-columns: 1fr !important; }
+
+  /* buy-card */
+  .buy-card { padding: 0.625rem 0.75rem; }
+  .buy-combo { font-size: 14px !important; letter-spacing: 1px !important; }
+  .buy-grid { padding: 0.75rem !important; gap: 8px !important; }
+
+  /* detail panel */
+  .bt-head-simple, .bt-row { padding: 0.4rem 0.75rem !important; }
+  .bt-row { font-size: 12px; }
+}
 </style>
-<!-- auto_push_updated:2026-04-30 11:48:33 --></head>
+<!-- auto_push_updated:2026-04-30 12:29:50 --></head>
 <body>
 
 <header class="site-header">
@@ -837,13 +871,13 @@ function renderBuy(rno){
       ? `<span style="font-size:9px;color:var(--accent);margin-left:2px">▶展示</span>` : '';
 
     return `<tr>
-      <td style="text-align:center;padding:4px 8px">${medal}</td>
-      <td style="padding:4px 4px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
-      <td style="padding:4px 6px;font-size:0.82rem">${bt.name}</td>
-      <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
-      <td style="padding:4px 4px;text-align:center;font-size:0.82rem">${corrCell}${tenjiMark}</td>
-      <td style="padding:4px 6px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
-      <td style="padding:4px 8px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text2)">${p2Pct}%</td>
+      <td style="text-align:center;padding:4px 3px">${medal}</td>
+      <td style="padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
+      <td class="col-name" style="padding:4px 4px;font-size:0.82rem">${bt.name}</td>
+      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
+      <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${corrCell}${tenjiMark}</td>
+      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
+      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text2)">${p2Pct}%</td>
     </tr>`;
   }).join('');
 
@@ -866,36 +900,38 @@ function renderBuy(rno){
   ].filter(Boolean).join('');
 
   document.getElementById('buy-panel').innerHTML = `
-    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div class="scenario-header" style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
       <span class="scenario-bar ${mode.cls}" style="margin:0;padding:6px 12px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600">
         ${mode.icon} ${mode.label}（荒れスコア ${arek}）
       </span>
-      <span style="font-size:12px;color:var(--text2)">${modeDesc}</span>
+      <span class="mode-desc" style="font-size:12px;color:var(--text2)">${modeDesc}</span>
     </div>
-    <div style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:12px;flex-wrap:wrap">
+    <div class="status-badges" style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
       ${statusBadges}
     </div>
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">展開推定後 着順確率</div>
-      <table style="width:100%;border-collapse:collapse">
+      <div class="prob-table-wrap">
+      <table class="prob-table" style="width:100%;border-collapse:collapse">
         <thead><tr>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px"></th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px">枠</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:left">選手</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px;text-align:right">基本</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:left">選手</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">基本</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">1着補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px;text-align:right">1着率</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 8px;text-align:right">2着率</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">1着率</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">2着率</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
+      </div>
     </div>
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
         <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
           <span>3連単 <span style="font-weight:400;color:var(--text3);font-size:10px">${buy3.length}点</span></span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+        <div class="buy3-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:0">
           ${buy3.map(r=>`<div class="buy-row">
             <span class="buy-label ${r.lc}">${r.l}</span>
             <span class="buy-combo">${r.c}</span>
