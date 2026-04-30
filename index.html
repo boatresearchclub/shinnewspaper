@@ -47,7 +47,7 @@ body {
   align-items: center;
   justify-content: space-between;
   position: sticky;
-  top: 30px;
+  top: 0;
   z-index: 100;
 }
 .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; letter-spacing: .03em; }
@@ -62,8 +62,19 @@ body {
 .tab-btn:hover { color: var(--text2); }
 .tab-btn.active { color: var(--accent2); border-bottom-color: var(--accent); }
 
+
+/* VENUE TABS */
+.sticky-nav-venue { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; display: flex; border-bottom: 1px solid var(--border); }
+.sticky-nav-venue::-webkit-scrollbar { display: none; }
+#venue-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; gap: 2px; display: flex; }
+#venue-tabs::-webkit-scrollbar { display: none; }
+.vtab { flex-shrink: 0; padding: 6px 10px 8px; font-size: 12px; font-family: 'Noto Sans JP', sans-serif; background: none; border: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s; font-weight: 500; white-space: nowrap; }
+.vtab:hover { color: var(--text2); }
+.vtab.loaded { color: var(--text2); font-weight: 700; }
+.vtab.active { color: var(--accent2) !important; border-bottom-color: var(--accent); }
+
 /* RACE BAR */
-.sticky-nav { position: sticky; top: 82px; z-index: 90; background: var(--bg2); border-bottom: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,40,90,0.06); }
+.sticky-nav { position: sticky; top: 52px; z-index: 90; background: var(--bg2); border-bottom: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,40,90,0.06); }
 .sticky-nav-race { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .sticky-nav-race::-webkit-scrollbar { display: none; }
 .sticky-nav-race-inner { display: flex; gap: 4px; padding: 5px 10px; min-width: max-content; }
@@ -162,7 +173,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:11:16 --></head>
+<!-- auto_push_updated:2026-04-30 09:16:12 --></head>
 <body>
 
 <header class="site-header">
@@ -175,8 +186,11 @@ body {
   </div>
 </header>
 
-<!-- レース選択バー -->
+<!-- sticky nav: 会場タブ + レース選択バー -->
 <div class="sticky-nav">
+  <div class="sticky-nav-venue">
+    <div id="venue-tabs"></div>
+  </div>
   <div class="sticky-nav-race">
     <div class="sticky-nav-race-inner" id="race-bar"></div>
   </div>
@@ -186,6 +200,7 @@ body {
   <!-- タブ -->
   <div class="tab-bar" id="tab-bar">
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
+    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">詳細予想</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">買い目</button>
     <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">コメント</button>
   </div>
@@ -193,6 +208,13 @@ body {
   <!-- 出走表タブ -->
   <div id="tab-detail">
     <div id="inline-detail"></div>
+  </div>
+
+  <!-- 詳細予想タブ -->
+  <div id="tab-detail2" style="display:none">
+    <div id="detail2-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると詳細予想が表示されます</div>
+    </div>
   </div>
 
   <!-- 買い目タブ -->
@@ -506,13 +528,14 @@ function renderComment(rno){
 
 // ── タブ切り替え ──
 function switchTab(name){
-  ['detail','buy','comment'].forEach(t=>{
+  ['detail','detail2','buy','comment'].forEach(t=>{
     document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===name);
   });
   if(name==='detail') renderDetail(selectedRace);
+  if(name==='detail2') renderBuy(selectedRace); // 詳細予想=買い目タブと同じ内容（本番に合わせて変更可）
   if(name==='buy') renderBuy(selectedRace);
   if(name==='comment') renderComment(selectedRace);
 }
@@ -520,6 +543,39 @@ function switchTab(name){
 function currentTabName(){
   const b = document.querySelector('.tab-btn.active');
   return b ? (b.dataset.tab||'detail') : 'detail';
+}
+
+// ── 会場タブ構築 ──
+const VENUE_LIST = [
+  '桐生','戸田','江戸川','平和島','多摩川','浜名湖','蒲郡','常滑',
+  '津','三国','びわこ','住之江','尼崎','鳴門','丸亀','児島',
+  '宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'
+];
+
+function buildVenueTabs(){
+  const tabs = document.getElementById('venue-tabs');
+  tabs.innerHTML = '';
+  VENUE_LIST.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'vtab';
+    btn.textContent = v;
+    btn.dataset.venue = v;
+    const isLoaded = !!ALL_DATA[v];
+    if(isLoaded) btn.classList.add('loaded');
+    else { btn.style.opacity = '0.35'; btn.style.cursor = 'default'; }
+    if(v === currentVenue) btn.classList.add('active');
+    btn.onclick = () => {
+      if(!ALL_DATA[v]) return;
+      currentVenue = v;
+      DATA = ALL_DATA[v];
+      selectedRace = parseInt(Object.keys(DATA.races)[0]) || 1;
+      document.getElementById('header-meta').innerHTML = `<strong>${v}</strong> — ${DATA.date||''}`;
+      document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.venue===v));
+      buildRaceBar();
+      selectRace(selectedRace);
+    };
+    tabs.appendChild(btn);
+  });
 }
 
 // ── レース選択バー ──
@@ -560,6 +616,7 @@ function showToast(msg){
 DATA = ALL_DATA['鳴門'];
 currentVenue = '鳴門';
 selectedRace = 1;
+buildVenueTabs();
 buildRaceBar();
 renderDetail(selectedRace);
 </script>
