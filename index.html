@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 13:58:40 --></head>
+<!-- auto_push_updated:2026-04-30 14:06:35 --></head>
 <body>
 
 <header class="site-header">
@@ -513,7 +513,7 @@ function renderDetail(rno){
     <div class="detail-panel">
       ${insuffBanner}
       <div class="bt-head-simple">
-        <span>枠</span><span>選手名</span><span>級</span><span>想定1着率</span>
+        <span>枠</span><span>選手名</span><span>級</span><span>基準1着率</span>
       </div>
       ${boats.map((bt,i)=>`
         <div class="bt-row${i===0?' top1':''}">
@@ -899,6 +899,8 @@ function renderBuy(rno){
       const avg = times.reduce((a,v)=>a+v,0)/n;
       const std = Math.sqrt(times.reduce((a,v)=>a+(v-avg)**2,0)/n);
       if(std > 0){
+        // 展示補正前の tenkai_prob を保存（相対補正列の表示に使用）
+        ranked.forEach(b => { b.tenkai_prob_base = b.tenkai_prob; });
         const coefs = times.map(t=>{
           const h = 50+((avg-t)/std)*10;
           if(h>=60) return 1.15; if(h>=55) return 1.08;
@@ -999,30 +1001,48 @@ function renderBuy(rno){
     const rawPct = (bt.prob*100).toFixed(1);
     const p2Pct  = (bt.place2_prob*100).toFixed(1);
 
-    // 1着補正表示
-    let corrCell;
+    // 相対補正列（venue_kimari による補正差分）
+    // tenjiがある場合は展示補正前のtenkai_prob_preを使いたいが保持していないため
+    // 展示前: tenkai_prob - prob、展示後: 展示補正込みのため「—」で区別しない
+    // → 常に venue_kimari補正差分 = bt.tenkai_prob_base - bt.prob を表示
+    //   （tenkai_prob_base は展示補正前の値。なければ tenkai_prob で代用）
+    let relCorrCell;
     if(useMaster){
-      const diff = bt.tenkai_prob - bt.prob;
+      const base = bt.tenkai_prob_base !== undefined ? bt.tenkai_prob_base : bt.tenkai_prob;
+      const diff = base - bt.prob;
       if(Math.abs(diff)<0.001){
-        corrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
+        relCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
       } else {
         const sign  = diff>0?'+':'';
         const color = diff>0?'var(--green)':'var(--red)';
-        corrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
+        relCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
       }
     } else {
-      corrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
+      relCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
-    // 展示補正マーク
-    const tenjiMark = hasTenji
-      ? `<span style="font-size:9px;color:var(--accent);margin-left:2px">▶展示</span>` : '';
+
+    // 展示補正列
+    let tenjiCorrCell;
+    if(hasTenji && bt.tenkai_prob_base !== undefined){
+      const tenjiDiff = bt.tenkai_prob - bt.tenkai_prob_base;
+      if(Math.abs(tenjiDiff)<0.001){
+        tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
+      } else {
+        const sign  = tenjiDiff>0?'+':'';
+        const color = tenjiDiff>0?'var(--accent)':'var(--red)';
+        tenjiCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(tenjiDiff*100).toFixed(1)}%</span>`;
+      }
+    } else {
+      tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
+    }
 
     return `<tr>
       <td style="text-align:center;padding:4px 3px">${medal}</td>
       <td style="padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
       <td class="col-name" style="padding:4px 4px;font-size:0.82rem">${bt.name}</td>
       <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
-      <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${corrCell}${tenjiMark}</td>
+      <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
+      <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
       <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
       <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text2)">${p2Pct}%</td>
     </tr>`;
@@ -1064,9 +1084,10 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:left">選手</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">基本</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">1着補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">1着率</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">基準</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">相対補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">展示補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">想定1着率</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">2着率</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
