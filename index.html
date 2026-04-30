@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-04-30 15:26:45 --></head>
+<!-- auto_push_updated:2026-04-30 15:40:25 --></head>
 <body>
 
 <header class="site-header">
@@ -1302,19 +1302,69 @@ function renderBuy(rno){
     ? `<span style="color:var(--orange);font-size:11px;font-weight:700">⚡ 僅差2頭軸（${A.boat}号・${B.boat}号 差${(probDiff*100).toFixed(1)}%）</span>`
     : '';
 
-  // 展示状態・マスタ状態の説明バッジ
-  const statusBadges = [
-    hasTenji
-      ? `<span style="color:var(--green);font-size:11px;font-weight:600">🏁 展示補正済み</span>`
-      : `<span style="color:var(--text3);font-size:11px">⏳ 展示前 — 基本確率で表示</span>`,
-    useMaster
-      ? `<span style="color:var(--green);font-size:11px;font-weight:600">📊 venue_kimari 反映（1着補正）</span>`
-      : `<span style="color:var(--text3);font-size:11px">📊 venue_kimari なし</span>`,
-    useTenkaiRemain
-      ? `<span style="color:var(--accent2);font-size:11px;font-weight:600">🔗 tenkai_remaining 反映（2着補正）</span>`
-      : `<span style="color:var(--text3);font-size:11px">🔗 tenkai_remaining なし（2着: tenkai_prob比率）</span>`,
-    dualNote,
-  ].filter(Boolean).join('');
+  // ── 会場平均率テーブル ──
+  // inn_data から各コース1着率 + イン逃げ時2着率を表示
+  const innData    = DATA.inn_data || {};
+  const cRates     = innData.course_rates || [];   // index=コース番号 (1-6)
+  const inn2Place  = innData.inn_2place   || [];   // イン逃げ時2着率
+
+  // コース番号ラベル（進入コース）
+  const courseLabels = ['1','2','3','4','5','6'];
+
+  // 各コースのセル
+  const courseRateCells = courseLabels.map(c => {
+    const ci   = parseInt(c);
+    const rate = cRates[ci];
+    const pct  = rate != null ? (rate * 100).toFixed(1) + '%' : '—';
+    // 1コースは強調
+    const style = ci === 1
+      ? 'font-weight:700;color:var(--accent2)'
+      : 'color:var(--text2)';
+    return `<td style="text-align:center;padding:4px 6px;font-size:12px;font-family:var(--mono);${style}">${pct}</td>`;
+  }).join('');
+
+  // イン逃げ時2着率のセル（1コース以外の5艇）
+  const inn2Cells = courseLabels.map(c => {
+    const ci   = parseInt(c);
+    if(ci === 1){
+      return `<td style="text-align:center;padding:4px 6px;font-size:11px;color:var(--text3)">—</td>`;
+    }
+    const rate = inn2Place[ci];
+    const pct  = rate != null ? (rate * 100).toFixed(1) + '%' : '—';
+    // 2着率が高いほど色を濃く（20%以上で強調）
+    const hi   = rate != null && rate >= 0.20;
+    const style = hi ? 'font-weight:700;color:var(--green)' : 'color:var(--text2)';
+    return `<td style="text-align:center;padding:4px 6px;font-size:12px;font-family:var(--mono);${style}">${pct}</td>`;
+  }).join('');
+
+  const venueStatsTable = `
+    <div style="padding:0.6rem 1.25rem;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);margin-bottom:6px;text-transform:uppercase">
+        ${DATA.venue} — 会場平均
+      </div>
+      <div class="prob-table-wrap">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:2px 6px;font-size:10px;color:var(--text3);min-width:7em"></td>
+            ${courseLabels.map(c=>`<th style="text-align:center;padding:2px 6px;font-size:10px;color:var(--text3);font-weight:500">
+              <span class="boat-circle b${c}" style="width:18px;height:18px;font-size:10px;display:inline-flex;align-items:center;justify-content:center">${c}</span>
+            </th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:4px 6px;font-size:10px;color:var(--text3);white-space:nowrap">コース1着率</td>
+            ${courseRateCells}
+          </tr>
+          <tr>
+            <td style="padding:4px 6px;font-size:10px;color:var(--text3);white-space:nowrap">1－◯ 2着率</td>
+            ${inn2Cells}
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>`;
 
   document.getElementById('buy-panel').innerHTML = `
     <div class="scenario-header" style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -1323,9 +1373,7 @@ function renderBuy(rno){
       </span>
       <span class="mode-desc" style="font-size:12px;color:var(--text2)">${modeDesc}</span>
     </div>
-    <div class="status-badges" style="padding:0.4rem 1.25rem;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
-      ${statusBadges}
-    </div>
+    ${venueStatsTable}
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">展開推定後 着順確率</div>
       <div class="prob-table-wrap">
