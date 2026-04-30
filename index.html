@@ -197,7 +197,7 @@ body {
 
 #buy-panel, #comment-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
 </style>
-<!-- auto_push_updated:2026-04-30 09:32:23 --></head>
+<!-- auto_push_updated:2026-04-30 09:38:08 --></head>
 <body>
 
 <header class="site-header">
@@ -288,16 +288,6 @@ function weightDots(w, max=3){
   for(let i=0;i<max;i++) s+=`<span class="wdot${i<w?'':' empty'}"></span>`;
   return `<div class="buy-weight">${s}</div>`;
 }
-
-// ── テン展示（サンプルでは常に「展示なし」） ──
-const _tenjiCache = {};
-(function(){
-  for(const [key, val] of Object.entries(TENJI_DATA)){
-    const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
-    _tenjiCache[normalized] = val;
-  }
-})();
-function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
 
 const _tenjiCache = {};
 (function(){
