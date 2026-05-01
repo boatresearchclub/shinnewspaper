@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-01 15:21:47 --></head>
+<!-- auto_push_updated:2026-05-01 22:39:50 --></head>
 <body>
 
 <header class="site-header">
@@ -389,25 +389,188 @@ function buildTenjiSection(rno, boats){
   </div>`;
 }
 
-function calcTenjiDelta(boats, tenjiData){
+// ── 会場別テン展示タイム計測制約 ＋ 重みテーブル ──
+//
+// available: 計測が存在するか（falseはデータ自体がない）
+//   lap1:     1周タイム（桐生は半周="half"扱いで重みを下げる）
+//   mawari:   まわり足タイム
+//   chokusen: 直線タイム（1マーク後の立ち上がり加速 → まくり展開に効く）
+//   tenji:    展示タイム（スリット後〜ゴール → 逃げ・先マイ・抜きに効く）
+//
+// weight: 各タイムの基本重み（利用不可項目は0にして再正規化される）
+//
+const VENUE_TENJI_CONFIG = {
+  // ── 計測制約あり ──
+  "江戸川": {
+    available: { lap1:false,   mawari:false, chokusen:false, tenji:true },
+    weight:    { lap1:0,       mawari:0,     chokusen:0,     tenji:1.00 },
+  },
+  "桐生": {
+    available: { lap1:"half",  mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.10,    mawari:0.30,  chokusen:0.35,  tenji:0.25 },
+  },
+  "尼崎": {
+    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:0.25,    mawari:0.40,  chokusen:0,     tenji:0.35 },
+  },
+  "住之江": {
+    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:0.20,    mawari:0.30,  chokusen:0,     tenji:0.50 },
+  },
+  "徳山": {
+    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:0.25,    mawari:0.35,  chokusen:0,     tenji:0.40 },
+  },
+  // ── まくり強（直線を高めに）──
+  "蒲郡": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.40,  tenji:0.20 },
+  },
+  "戸田": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.40,  tenji:0.20 },
+  },
+  "三国": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.15,    mawari:0.28,  chokusen:0.35,  tenji:0.22 },
+  },
+  "平和島": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.15,    mawari:0.28,  chokusen:0.35,  tenji:0.22 },
+  },
+  "浜名湖": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.35,  tenji:0.25 },
+  },
+  // ── 差し強（まわり足を高めに）──
+  "宮島": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.40,  chokusen:0.20,  tenji:0.20 },
+  },
+  "下関": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.38,  chokusen:0.22,  tenji:0.20 },
+  },
+  "若松": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.38,  chokusen:0.22,  tenji:0.20 },
+  },
+  // ── 逃げ強（展示を高めに）──
+  "大村": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.15,  chokusen:0.15,  tenji:0.50 },
+  },
+  "常滑": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.20,  chokusen:0.15,  tenji:0.45 },
+  },
+  "丸亀": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.20,  chokusen:0.18,  tenji:0.42 },
+  },
+  // ── デフォルト（多摩川・津・びわこ・鳴門・児島・芦屋・福岡・唐津）──
+  "_default": {
+    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:0.20,    mawari:0.25,  chokusen:0.25,  tenji:0.30 },
+  },
+};
+
+// arek（荒れスコア）と会場設定を合わせて最終重みを返す
+//   arek < 40: 逃げ展開  → 展示・1周を強調
+//   arek > 60: まくり展開 → 直線（立ち上がり）を強調（計測がある会場のみ）
+//   それ以外  : 混戦     → 会場デフォルトのまま
+function resolveWeights(venue, arek){
+  const cfg = VENUE_TENJI_CONFIG[venue] || VENUE_TENJI_CONFIG["_default"];
+  const base = { ...cfg.weight };
+
+  if(cfg.available.chokusen && arek > 60){
+    // まくり展開 → 直線を強調、展示・1周を下げる
+    base.chokusen = Math.min(base.chokusen + 0.10, 0.50);
+    base.tenji    = Math.max(base.tenji    - 0.05, 0.05);
+    base.lap1     = Math.max(base.lap1     - 0.05, 0.05);
+  } else if(arek < 40){
+    // 逃げ展開 → 展示・1周を強調、直線・まわり足を下げる
+    base.tenji    = Math.min(base.tenji    + 0.10, 0.60);
+    base.lap1     = Math.min(base.lap1     + 0.05, 0.35);
+    if(cfg.available.chokusen) base.chokusen = Math.max(base.chokusen - 0.10, 0.05);
+    base.mawari   = Math.max(base.mawari   - 0.05, 0.05);
+  }
+
+  // 計測がない項目をゼロにして再正規化
+  const FIELDS = ["lap1", "mawari", "chokusen", "tenji"];
+  FIELDS.forEach(f => { if(!cfg.available[f]) base[f] = 0; });
+  const total = FIELDS.reduce((s, f) => s + base[f], 0) || 1;
+  FIELDS.forEach(f => { base[f] = base[f] / total; });
+  return base;
+}
+
+// タイム値 → 偏差値ベースの補正係数（小さい=速い=偏差値高）
+function timeToCoef(h){
+  if(h >= 60) return 1.15;
+  if(h >= 55) return 1.08;
+  if(h >= 45) return 1.00;
+  if(h >= 40) return 0.93;
+  return 0.85;
+}
+
+// 1項目分の補正係数配列を返す（値がnullの艇が1艇でもあればnullを返す）
+function fieldCoefs(boats, tenjiData, field){
+  const vals = boats.map(b => tenjiData[b.boat]?.[field] ?? null);
+  if(vals.some(v => v === null)) return null;
+  const avg = vals.reduce((a, v) => a + v, 0) / vals.length;
+  const std = Math.sqrt(vals.reduce((a, v) => a + (v - avg) ** 2, 0) / vals.length);
+  if(std === 0) return vals.map(() => 1.0);  // 全艇同タイム → 補正なし
+  return vals.map(v => timeToCoef(50 + ((avg - v) / std) * 10));
+}
+
+// ── calcTenjiDelta（多項目対応版）──
+//
+// 会場特性（VENUE_TENJI_CONFIG）× arek（荒れスコア）で各タイムの重みを決定し、
+// 加重合成偏差値で tenkai_prob を補正する。
+//
+// 引数:
+//   boats     : レースの艇データ配列
+//   tenjiData : _tenjiCache から取得した展示データ {frame: {lap1, mawari, chokusen, tenji}}
+//   venue     : 会場名（VENUE_TENJI_CONFIG のキーと一致）
+//   arek      : 荒れスコア（rd.arek）
+//
+// 返り値: { [boat番号]: delta（補正後prob - 元prob） } または null
+//
+function calcTenjiDelta(boats, tenjiData, venue, arek){
   if(!tenjiData) return null;
-  const times = boats.map(b=>tenjiData[b.boat]?.tenji??null);
-  if(times.some(v=>v==null)) return null;
-  const n = times.length;
-  const avg = times.reduce((a,b)=>a+b,0)/n;
-  const std = Math.sqrt(times.reduce((a,b)=>a+(b-avg)**2,0)/n);
-  if(std===0) return null;
-  const coefs = times.map(t=>{
-    const h = 50+((avg-t)/std)*10;
-    if(h>=60) return 1.15; if(h>=55) return 1.08;
-    if(h>=45) return 1.00; if(h>=40) return 0.93; return 0.85;
+
+  const w = resolveWeights(venue || "_default", arek || 50);
+  const FIELDS = ["lap1", "mawari", "chokusen", "tenji"];
+
+  // 各フィールドの補正係数配列を取得（計測なし or 全艇同タイムはスキップ）
+  const coefsMap = {};
+  for(const f of FIELDS){
+    if(w[f] <= 0) continue;
+    const c = fieldCoefs(boats, tenjiData, f);
+    if(c) coefsMap[f] = c;
+  }
+
+  // 有効フィールドが1つもなければ補正不可
+  if(Object.keys(coefsMap).length === 0) return null;
+
+  // 加重平均で合成係数を算出
+  const compositeCoefs = boats.map((_, i) => {
+    let score = 0, wTotal = 0;
+    for(const f of FIELDS){
+      if(!coefsMap[f]) continue;
+      score  += w[f] * coefsMap[f][i];
+      wTotal += w[f];
+    }
+    return wTotal > 0 ? score / wTotal : 1.0;
   });
-  const rawScores = boats.map((b,i)=>b.prob*coefs[i]);
-  const total = rawScores.reduce((a,b)=>a+b,0);
-  if(total===0) return null;
-  const newProbs = rawScores.map(s=>s/total);
+
+  const rawScores = boats.map((b, i) => b.prob * compositeCoefs[i]);
+  const total = rawScores.reduce((a, b) => a + b, 0);
+  if(total === 0) return null;
+
+  const newProbs = rawScores.map(s => s / total);
   const deltaMap = {};
-  boats.forEach((b,i)=>{ deltaMap[b.boat]=newProbs[i]-b.prob; });
+  boats.forEach((b, i) => { deltaMap[b.boat] = newProbs[i] - b.prob; });
   return deltaMap;
 }
 
@@ -426,7 +589,8 @@ function updateTenjiDelta(venue, date, rno){
   const tenjiData = _tenjiCache[key];
   if(!tenjiData) return;
   const boats = DATA.races[rno].boats;
-  const deltaMap = calcTenjiDelta(boats, tenjiData);
+  const arekForTenji = (DATA.races[rno]?.arek) ?? 54.7;
+  const deltaMap = calcTenjiDelta(boats, tenjiData, DATA.venue, arekForTenji);
   if(!deltaMap) return;
   boats.forEach(b=>{ b.tenji_delta=deltaMap[b.boat]; });
 }
@@ -1168,26 +1332,15 @@ function renderBuy(rno){
   const hasTenji  = !!tenjiData;
 
   if(hasTenji){
-    // 展示タイム偏差値 → 係数 → tenkai_prob × 係数 → 再正規化
-    const times = ranked.map(b => tenjiData[b.boat]?.tenji ?? null);
-    if(!times.some(v=>v==null)){
-      const n   = times.length;
-      const avg = times.reduce((a,v)=>a+v,0)/n;
-      const std = Math.sqrt(times.reduce((a,v)=>a+(v-avg)**2,0)/n);
-      if(std > 0){
-        // 展示補正前の tenkai_prob を保存（相対補正列の表示に使用）
-        ranked.forEach(b => { b.tenkai_prob_base = b.tenkai_prob; });
-        const coefs = times.map(t=>{
-          const h = 50+((avg-t)/std)*10;
-          if(h>=60) return 1.15; if(h>=55) return 1.08;
-          if(h>=45) return 1.00; if(h>=40) return 0.93; return 0.85;
-        });
-        const raw   = ranked.map((b,i)=>b.tenkai_prob*coefs[i]);
-        const tot   = raw.reduce((a,v)=>a+v,0)||1;
-        ranked.forEach((b,i)=>{ b.tenkai_prob = raw[i]/tot; });
-        // ソートし直す
-        ranked.sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
-      }
+    // calcTenjiDelta: 会場特性 × arek の加重合成偏差値で補正
+    ranked.forEach(b => { b.tenkai_prob_base = b.tenkai_prob; });
+    const deltaMap = calcTenjiDelta(rawBoats, tenjiData, DATA.venue, arek);
+    if(deltaMap){
+      // delta を適用して再正規化
+      const raw = ranked.map(b => Math.max(b.tenkai_prob + (deltaMap[b.boat] || 0), 0));
+      const tot = raw.reduce((a, v) => a + v, 0) || 1;
+      ranked.forEach((b, i) => { b.tenkai_prob = raw[i] / tot; });
+      ranked.sort((a, b) => b.tenkai_prob - a.tenkai_prob);
     }
   }
 
