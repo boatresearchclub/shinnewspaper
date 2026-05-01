@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-02 08:03:33 --></head>
+<!-- auto_push_updated:2026-05-02 08:09:06 --></head>
 <body>
 
 <header class="site-header">
@@ -1206,20 +1206,38 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     const scenarioRows = scenarios.map(kimari => {
       const prob = scenarioProb[winner.boat][kimari];
 
-      // 2着率の決定（優先順位）:
+      // ── 2着率の決定（優先順位）──────────────────────────────────
       //   1. 逃げ展開(1コース1着) → inn_2place（会場別実績）
-      //   2. 逃げ以外 → tenkai_remaining（決まり手×1着コース別全国実績）
-      //      + winner_course_order で個人実績が信頼できる艇を補正
-      //   3. データなし → tenkai_prob 相対値でフォールバック
+      //   2. tenkai_remaining[決まり手][1着コース][進入コース].rate2（全国実績）
+      //      + winner_course_order[選手名][自コース][勝者コース].rate2 で個人補正
+      //   3. データなし → tenkai_prob 相対値
+      // ─────────────────────────────────────────────────────────────
+
+      // 1着コースを文字列で取得（winner.boat は数値）
+      const winnerBoatStr = String(winner.boat);
+
+      // tenkai_remaining / winner_course_order をキャッシュ
+      const tenkaiRem = MASTER_EXT?.tenkai_remaining  || {};
+      const winnerCO  = MASTER_EXT?.winner_course_order || {};
+
+      // 「この決まり手でこの艇が1着」の残存2着率テーブル
+      // キー: 進入コース(文字列) → {rate2, rate3, trust, count}
+      const remTable = tenkaiRem[kimari]?.[winnerBoatStr] || null;
+
+      // デバッグ: 最初の評価時のみコンソールに出力
+      if(rawBoats[0] && winner === top3[0] && kimari === scenarios[0]){
+        console.log('[SCENARIO DEBUG]',
+          'kimari=', kimari,
+          'winner=', winnerBoatStr,
+          'remTable=', remTable,
+          'tenkaiRem keys=', Object.keys(tenkaiRem)
+        );
+      }
+
+      // 逃げ(1コース1着)のとき inn_2place を優先
       const useInn2 = (kimari === '逃げ' && winner.boat === 1 && Object.keys(inn2Place).length > 0);
-      const wc = String(winner.boat);
 
-      // tenkai_remaining / winner_course_order の参照
-      const tenkaiRem  = MASTER_EXT?.tenkai_remaining  || {};
-      const winnerCO   = MASTER_EXT?.winner_course_order || {};
-      const remForThis = tenkaiRem[kimari]?.[wc] || null; // {進入コース: {rate2, trust}}
-
-      // 1着以外の艇の tenkai_prob 合計（フォールバック用分母）
+      // フォールバック用: 1着以外の tenkai_prob 合計
       const othersTotal = ranked2
         .filter(r => r.boat !== winner.boat)
         .reduce((s, r) => s + r.tenkai_prob, 0) || 1;
@@ -1227,48 +1245,63 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
       const place2List = rawBoats
         .filter(b => b.boat !== winner.boat)
         .map(b => {
-          const sc = String(b.boat);
+          const boatStr = String(b.boat); // 進入コース
           let p2;
+
           if(useInn2){
             // ① 逃げ展開: inn_2place（会場別イン逃げ時の実績2着率）
-            p2 = inn2Place[sc] ?? null;
+            p2 = (inn2Place[boatStr] != null) ? inn2Place[boatStr] : null;
             if(p2 == null){
               const bt = ranked2.find(r => r.boat === b.boat);
               p2 = bt ? bt.tenkai_prob / othersTotal : 0;
             }
-          } else if(remForThis){
+
+          } else if(remTable){
             // ② tenkai_remaining の全国実績値（ベース）
-            const remEntry = remForThis[sc];
-            const baseTR   = (remEntry && remEntry.rate2 != null) ? remEntry.rate2 : null;
-            const trTrust  = (remEntry && remEntry.trust != null) ? remEntry.trust : 0;
+            const remEntry = remTable[boatStr] || null;
+            const baseTR   = (remEntry?.rate2 != null) ? remEntry.rate2 : null;
+            const trTrust  = (remEntry?.trust != null) ? remEntry.trust : 0;
 
             // ③ winner_course_order で個人実績がある艇は補正
-            //    自コース = b.boat（進入コース）、勝者コース = winner.boat
-            const personEntry = winnerCO[b.name]?.[sc]?.[wc];
-            const personRate2 = (personEntry && personEntry.rate2 != null) ? personEntry.rate2 : null;
-            const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
+            //    b.name が進入コース boatStr で winner.boat が1着の展開実績
+            const personEntry = winnerCO[b.name]?.[boatStr]?.[winnerBoatStr] || null;
+            const personRate2 = (personEntry?.rate2 != null) ? personEntry.rate2 : null;
+            const personTrust = (personEntry?.trust != null) ? personEntry.trust : 0;
 
             if(baseTR != null && personRate2 != null && personTrust > 0.3){
               // 個人実績と全国実績をブレンド（信頼度で重み付け）
               const wPerson = personTrust;
-              const wNat    = trTrust * (1 - personTrust);
+              const wNat    = Math.max(0, trTrust * (1 - personTrust));
               const wTot    = wPerson + wNat;
               p2 = wTot > 0 ? (personRate2 * wPerson + baseTR * wNat) / wTot : baseTR;
             } else if(baseTR != null){
               // 全国実績のみ
               p2 = baseTR;
             } else {
-              // tenkai_remaining にこの艇のデータなし → tenkai_prob 相対値
+              // tenkai_remaining にこの艇のデータなし → フォールバック
               const bt = ranked2.find(r => r.boat === b.boat);
               p2 = bt ? bt.tenkai_prob / othersTotal : 0;
             }
+
           } else {
-            // ④ tenkai_remaining なし → tenkai_prob 相対値
+            // ④ tenkai_remaining なし（MASTER_EXT未取得 or データなし）→ フォールバック
             const bt = ranked2.find(r => r.boat === b.boat);
             p2 = bt ? bt.tenkai_prob / othersTotal : 0;
           }
+
           return { boat: b.boat, name: b.name, p2 };
         })
+        // p2 を正規化（合計が1になるよう補正）
+        .reduce((acc, item) => {
+          acc.items.push(item);
+          acc.total += item.p2;
+          return acc;
+        }, { items: [], total: 0 })
+        .items
+        .map(item => ({
+          ...item,
+          p2: (item.p2 != null && item.p2 >= 0) ? item.p2 : 0
+        }))
         .sort((a,b) => b.p2 - a.p2);
 
       const p2Cells = place2List.map(item =>
@@ -1742,39 +1775,6 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
-// ── MASTER_EXT 非同期フェッチ ──
-//
-// IS_SERVER=true の場合のみ /api/master_data を取得して MASTER_EXT に格納する。
-// 完了後に現在表示中のレースを再描画し、venue_kimari・tenkai_remaining・
-// winner_course_order・venue_stats を展開推定に反映させる。
-//
-async function fetchMasterExt(){
-  if(!IS_SERVER) return;
-  try {
-    const res = await fetch('/api/master_data');
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const json = await res.json();
-    MASTER_EXT = json;
-    console.log('[MASTER_EXT] loaded:',
-      'venues=', Object.keys(json.venue_kimari||{}).length,
-      'players=', Object.keys(json.course_master||{}).length,
-      'tenkai_remaining keys=', Object.keys(json.tenkai_remaining||{}).length
-    );
-    // 取得後、現在表示中のレースを再描画して補正を反映
-    if(DATA && selectedRace){
-      const tabName = currentTabName();
-      if(tabName==='detail')        renderDetail(selectedRace);
-      else if(tabName==='detail2')  renderBuy(selectedRace);
-      else if(tabName==='buy')      renderBuy(selectedRace);
-      else if(tabName==='comment')  renderComment(selectedRace);
-      else renderDetail(selectedRace);
-    }
-  } catch(e){
-    console.warn('[MASTER_EXT] fetch failed:', e);
-    MASTER_EXT = null;
-  }
-}
-
 // ── 初期化 ──
 (function(){
   const isRefresh    = sessionStorage.getItem('refresh_flag') === '1';
@@ -1872,7 +1872,35 @@ async function fetchMasterExt(){
   }
 })();
 
-// MASTER_EXT を非同期で取得（初期化完了後に描画を更新）
+// ── MASTER_EXT 非同期フェッチ ─────────────────────────────────────────
+// IS_SERVER=true のときだけ /api/master_data を取得して MASTER_EXT に格納。
+// 取得完了後に現在表示中のレースを再描画し、展開シナリオの2着率補正を反映。
+async function fetchMasterExt(){
+  if(!IS_SERVER) return;
+  try {
+    const res = await fetch('/api/master_data');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    MASTER_EXT = await res.json();
+    console.log('[MASTER_EXT] loaded:',
+      'venue_kimari=', Object.keys(MASTER_EXT.venue_kimari||{}).length, '会場',
+      'tenkai_remaining keys=', Object.keys(MASTER_EXT.tenkai_remaining||{}).join('/'),
+      'winner_course_order=', Object.keys(MASTER_EXT.winner_course_order||{}).length, '選手'
+    );
+    // 取得後に現在表示中のレースを再描画して補正を反映
+    if(DATA && selectedRace){
+      const safeTab = (() => {
+        try { return sessionStorage.getItem('lastTab') || 'detail'; } catch(e){ return 'detail'; }
+      })();
+      if(safeTab === 'detail2') renderBuy(selectedRace);
+      else if(safeTab === 'buy') renderBuy(selectedRace);
+      else if(safeTab === 'comment') renderComment(selectedRace);
+      else renderDetail(selectedRace);
+    }
+  } catch(e){
+    console.warn('[MASTER_EXT] fetch failed:', e);
+    MASTER_EXT = null;
+  }
+}
 fetchMasterExt();
 </script>
 </body>
