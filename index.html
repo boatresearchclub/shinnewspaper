@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-01 22:39:50 --></head>
+<!-- auto_push_updated:2026-05-01 22:50:27 --></head>
 <body>
 
 <header class="site-header">
@@ -1742,6 +1742,39 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
+// ── MASTER_EXT 非同期フェッチ ──
+//
+// IS_SERVER=true の場合のみ /api/master_data を取得して MASTER_EXT に格納する。
+// 完了後に現在表示中のレースを再描画し、venue_kimari・tenkai_remaining・
+// winner_course_order・venue_stats を展開推定に反映させる。
+//
+async function fetchMasterExt(){
+  if(!IS_SERVER) return;
+  try {
+    const res = await fetch('/api/master_data');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    MASTER_EXT = json;
+    console.log('[MASTER_EXT] loaded:',
+      'venues=', Object.keys(json.venue_kimari||{}).length,
+      'players=', Object.keys(json.course_master||{}).length,
+      'tenkai_remaining keys=', Object.keys(json.tenkai_remaining||{}).length
+    );
+    // 取得後、現在表示中のレースを再描画して補正を反映
+    if(DATA && selectedRace){
+      const tabName = currentTabName();
+      if(tabName==='detail')        renderDetail(selectedRace);
+      else if(tabName==='detail2')  renderBuy(selectedRace);
+      else if(tabName==='buy')      renderBuy(selectedRace);
+      else if(tabName==='comment')  renderComment(selectedRace);
+      else renderDetail(selectedRace);
+    }
+  } catch(e){
+    console.warn('[MASTER_EXT] fetch failed:', e);
+    MASTER_EXT = null;
+  }
+}
+
 // ── 初期化 ──
 (function(){
   const isRefresh    = sessionStorage.getItem('refresh_flag') === '1';
@@ -1838,6 +1871,9 @@ function showToast(msg){
       '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
   }
 })();
+
+// MASTER_EXT を非同期で取得（初期化完了後に描画を更新）
+fetchMasterExt();
 </script>
 </body>
 </html>
