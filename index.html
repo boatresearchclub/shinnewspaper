@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-04 08:45:35 --></head>
+<!-- auto_push_updated:2026-05-04 08:51:44 --></head>
 <body>
 
 <header class="site-header">
@@ -1371,22 +1371,12 @@ function renderBuy(rno){
   const hasTenji  = !!tenjiData;
 
   if(hasTenji){
-    // calcTenjiDelta: 会場特性 × arek の加重合成偏差値で補正
-    // 【絶対値方式】deltaMapは final_prob（絶対値確率）をb自身に書き込み済み。
-    //   tenkai_probは展開シナリオ・2着率計算のため「相対値」のまま維持する。
-    //   final_probのみを期待値計算に使用する。
+    // calcTenjiDelta: 展示補正を絶対値で適用し final_prob を各艇に書き込む。
+    // tenkai_prob は展開シナリオ・2着率計算（相対値が必要）のためそのまま維持。
+    // 表示・ソートは final_prob を使用する。
     ranked.forEach(b => { b.tenkai_prob_base = b.tenkai_prob; });
-    const deltaMap = calcTenjiDelta(rawBoats, tenjiData, DATA.venue, arek);
-    if(deltaMap){
-      // final_probはcalcTenjiDelta内でboatオブジェクトに書き込み済み。
-      // tenkai_probは相対正規化ベースのまま維持（展開シナリオ・2着率計算に使用）。
-      // ただし展示表示列のdeltaを tenkai_prob_base との差分で出すため
-      // 参考用に tenkai_prob + delta を算出して表示だけ上書きする。
-      const raw = ranked.map(b => Math.max(b.tenkai_prob + (deltaMap[b.boat] || 0), 0));
-      const tot = raw.reduce((a, v) => a + v, 0) || 1;
-      ranked.forEach((b, i) => { b.tenkai_prob = raw[i] / tot; });
-      ranked.sort((a, b) => b.tenkai_prob - a.tenkai_prob);
-    }
+    calcTenjiDelta(rawBoats, tenjiData, DATA.venue, arek);
+    ranked.sort((a, b) => (b.final_prob ?? b.tenkai_prob) - (a.final_prob ?? a.tenkai_prob));
   }
 
   // ─ STEP3: 2着率計算（inn_2place ベース）
@@ -1468,12 +1458,11 @@ function renderBuy(rno){
 
   // ─ STEP6: 確率テーブル生成
   const probRows = ranked2.map((bt,i)=>{
-    const medals=['🥇','🥈','🥉',''];
+    const medals=['🥇','🥈','🥉','','',''];
     const medal  = medals[i]||'';
-    const pct    = (bt.tenkai_prob*100).toFixed(1);
     const rawPct = (bt.prob*100).toFixed(1);
 
-    // 相対補正列
+    // 相対補正列（基準1着率 → 展開推定後の差分）
     let relCorrCell;
     if(useMaster){
       const base = bt.tenkai_prob_base !== undefined ? bt.tenkai_prob_base : bt.tenkai_prob;
@@ -1489,13 +1478,13 @@ function renderBuy(rno){
       relCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
 
-    // 展示補正列（絶対値方式）
-    // final_prob: base_score × tenji_coef / Σbase_score（合計が1.0にならなくてOK）
+    // 展示補正列
+    // 展示あり: final_prob - tenkai_prob_base の差分を表示
+    // 展示なし: 「—」
     let tenjiCorrCell;
     const fp = bt.final_prob;
-    if(hasTenji && fp != null){
-      const tenjiDiff = fp - bt.tenkai_prob;
-      const fpPct = (fp * 100).toFixed(1);
+    if(hasTenji && fp != null && bt.tenkai_prob_base != null){
+      const tenjiDiff = fp - bt.tenkai_prob_base;
       if(Math.abs(tenjiDiff)<0.001){
         tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
       } else {
@@ -1507,20 +1496,13 @@ function renderBuy(rno){
       tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
 
-    // final_prob列（絶対値確率）
-    // 展示あり→ base_score×tenji_coef/Σbase_score
-    // 展示なし→ tenkai_prob（相対値のまま）
+    // 最終確率（= final_prob）
+    // 展示あり: 絶対値方式（合計が1.0を超える場合あり）
+    // 展示なし: tenkai_prob（相対値）
     const finalProb = bt.final_prob ?? bt.tenkai_prob;
     const finalPct  = (finalProb * 100).toFixed(1);
-    // final_probの合計（1.0との乖離を色で示す）
-    const finalProbColor = finalProb > bt.tenkai_prob * 1.02
-      ? 'var(--accent2)'
-      : finalProb < bt.tenkai_prob * 0.98
-        ? 'var(--red)'
-        : 'var(--text)';
 
-    // 期待値セル（オッズ入力があれば計算、なければ「—」）
-    // data属性にfinal_probを埋め込んでおき、オッズ入力時にJSで動的更新
+    // 期待値セル
     const evCell = `<span class="ev-cell" data-boat="${bt.boat}" data-fp="${finalProb.toFixed(4)}" style="font-size:11px;color:var(--text3)">—</span>`;
 
     return `<tr>
@@ -1530,8 +1512,7 @@ function renderBuy(rno){
       <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
-      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${pct}%</td>
-      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:${finalProbColor}">${finalPct}%</td>
+      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
       <td style="padding:4px 6px;text-align:right;font-family:var(--mono);font-size:0.82rem">${evCell}</td>
     </tr>`;
   }).join('');
@@ -1648,15 +1629,14 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">基準</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">相対補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">展示補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">想定1着率</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right" title="展示補正後の絶対値確率（展示なし時は想定1着率と同値）">最終確率*</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right" title="基準×相対補正×展示補正の絶対値確率（展示なし時は展開推定確率）">最終確率</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">
-        * 最終確率: 展示補正を絶対値で適用（合計が1.0を超える場合あり）。期待値 &gt; 1.0 が期待値プラスの目安。
+        最終確率: 基準1着率×相対補正×展示補正の絶対値（展示なし時は展開推定値）。合計が100%を超える場合あり。期待値 &gt; 1.0 が期待値プラスの目安。
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
