@@ -118,7 +118,7 @@ body {
 /* WEATHER BAR */
 .weather-bar {
   display: flex; flex-wrap: wrap; gap: 6px 14px;
-  padding: 0.55rem 1.25rem;
+  padding: 0.6rem 1.25rem;
   background: var(--bg3);
   border-bottom: 1px solid var(--border);
   font-size: 12px; color: var(--text2);
@@ -126,15 +126,23 @@ body {
 }
 .weather-bar-title {
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
-  color: var(--text3); text-transform: uppercase; margin-right: 2px;
+  color: var(--text3); text-transform: uppercase;
+  margin-right: 8px; padding-right: 8px;
+  border-right: 1px solid var(--border2);
 }
 .weather-item { display: flex; align-items: center; gap: 4px; }
 .weather-item .wi-label { color: var(--text3); font-size: 11px; }
 .weather-item .wi-val   { font-weight: 700; color: var(--text); }
 
 /* TENJI */
-.tenji-section { margin-top: 1rem; border-top: 1px solid var(--border); padding: 0.875rem 0.75rem; }
-.tenji-title { font-size: 0.78rem; font-weight: 700; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
+.tenji-section { border-top: 1px solid var(--border); padding: 0.6rem 1.25rem 0.75rem; }
+.tenji-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  color: var(--text3); text-transform: uppercase;
+  margin-bottom: 0.6rem; padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
 .tenji-badge { font-size: 10px; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 5px; }
 .tenji-badge.waiting { background: var(--text3); }
 .tenji-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: var(--mono); }
@@ -248,7 +256,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 07:27:40 --></head>
+<!-- auto_push_updated:2026-05-05 07:29:58 --></head>
 <body>
 
 <header class="site-header">
