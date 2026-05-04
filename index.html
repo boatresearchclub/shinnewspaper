@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-04 08:51:44 --></head>
+<!-- auto_push_updated:2026-05-04 09:21:47 --></head>
 <body>
 
 <header class="site-header">
@@ -1374,8 +1374,10 @@ function renderBuy(rno){
     // calcTenjiDelta: 展示補正を絶対値で適用し final_prob を各艇に書き込む。
     // tenkai_prob は展開シナリオ・2着率計算（相対値が必要）のためそのまま維持。
     // 表示・ソートは final_prob を使用する。
+    // ※ rawBoats ではなく ranked を渡すことで、描画・ソートに使う
+    //   オブジェクトに直接 final_prob が書き込まれる。
     ranked.forEach(b => { b.tenkai_prob_base = b.tenkai_prob; });
-    calcTenjiDelta(rawBoats, tenjiData, DATA.venue, arek);
+    calcTenjiDelta(ranked, tenjiData, DATA.venue, arek);
     ranked.sort((a, b) => (b.final_prob ?? b.tenkai_prob) - (a.final_prob ?? a.tenkai_prob));
   }
 
