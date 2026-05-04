@@ -116,46 +116,41 @@ body {
 .insufficient-banner { display: flex; align-items: center; gap: 7px; padding: .55rem 1.25rem; background: rgba(255,122,0,0.08); border-bottom: 1px solid rgba(255,122,0,0.18); font-size: 12px; color: var(--orange); line-height: 1.4; }
 
 /* WEATHER BAR */
-.weather-bar { border-bottom: 1px solid var(--border); }
-.weather-bar-title {
-  display: block;
+.weather-bar { border-top: 1px solid var(--border); }
+.weather-bar-title, .tenji-title {
   font-size: 10px; font-weight: 700; letter-spacing: .08em;
   color: var(--text3); text-transform: uppercase;
-  padding: 0.6rem 1.25rem 0.45rem;
+  padding: 0.5rem 1rem;
   background: var(--bg3);
   border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 0;
 }
 .weather-bar-body {
-  display: flex; flex-wrap: wrap; gap: 6px 14px;
-  padding: 0.6rem 1.25rem;
+  display: flex; flex-wrap: wrap; gap: 6px 16px;
+  padding: 0.6rem 1rem;
   background: var(--bg2);
   font-size: 12px; color: var(--text2);
   align-items: center;
+  justify-content: center;
 }
 .weather-item { display: flex; align-items: center; gap: 4px; }
 .weather-item .wi-label { color: var(--text3); font-size: 11px; }
 .weather-item .wi-val   { font-weight: 700; color: var(--text); }
 
 /* TENJI */
-.tenji-section { border-top: 1px solid var(--border); padding: 0.6rem 1.25rem 0.75rem; background: var(--bg3); }
-.tenji-title {
-  font-size: 10px; font-weight: 700; letter-spacing: .08em;
-  color: var(--text3); text-transform: uppercase;
-  margin-bottom: 0.6rem; padding-bottom: 0.45rem;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 6px;
-}
+.tenji-section { border-top: 1px solid var(--border); padding: 0; background: var(--bg3); }
 .tenji-badge { font-size: 10px; background: var(--accent); color: #fff; border-radius: 4px; padding: 1px 5px; }
 .tenji-badge.waiting { background: var(--text3); }
 .tenji-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: var(--mono); }
-.tenji-table th { text-align: center; color: var(--text3); font-weight: 500; font-size: 0.72rem; padding: 3px 6px; border-bottom: 1px solid var(--border); }
+.tenji-table th { text-align: center; color: var(--text3); font-weight: 500; font-size: 0.72rem; padding: 5px 6px 5px; border-bottom: 1px solid var(--border); }
 .tenji-table td { text-align: center; padding: 5px 6px; border-bottom: 1px solid var(--border); color: var(--text); }
 .tenji-table td:nth-child(2) { text-align: left; font-family: 'Noto Sans JP', sans-serif; font-size: 0.8rem; }
 .tenji-table tr:last-child td { border-bottom: none; }
 .tenji-table tr:hover td { background: var(--bg3); }
 .tenji-best { color: var(--red); font-weight: 700; }
 .tenji-rank1 { color: var(--accent); font-weight: 700; }
-.tenji-waiting { text-align: center; color: var(--text3); font-size: 0.8rem; padding: 0.75rem 0; }
+.tenji-waiting { text-align: center; color: var(--text3); font-size: 0.8rem; padding: 0.65rem 1rem; width: 100%; }
 .tenji-delta-plus  { color: #22c55e; font-size: 11px; font-weight: 600; }
 .tenji-delta-minus { color: #ef4444; font-size: 11px; font-weight: 600; }
 .tenji-tilt { font-size: 0.72rem; color: var(--text3); }
@@ -258,7 +253,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 07:39:42 --></head>
+<!-- auto_push_updated:2026-05-05 07:43:58 --></head>
 <body>
 
 <header class="site-header">
@@ -431,9 +426,7 @@ function buildTenjiSection(rno, boats){
     const msg = pastDeadline ? '展示情報がありません' : '取得待ち';
     return `${buildWeatherBar(rno)}<div class="tenji-section">
       <div class="tenji-title">展示情報</div>
-      <div style="background:var(--bg2);border-radius:0 0 var(--radius) var(--radius);margin:0 -1.25rem -0.75rem;padding:0.6rem 1.25rem">
-        <div class="tenji-waiting">${msg}</div>
-      </div>
+      <div style="background:var(--bg2)"><div class="tenji-waiting">${msg}</div></div>
     </div>`;
   }
 
@@ -464,13 +457,15 @@ function buildTenjiSection(rno, boats){
   }).join('');
   return `${buildWeatherBar(rno)}<div class="tenji-section">
     <div class="tenji-title">展示情報</div>
-    <table class="tenji-table">
-      <thead><tr>
-        <th>枠</th><th style="text-align:left">選手</th>
-        <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+    <div style="background:var(--bg2)">
+      <table class="tenji-table">
+        <thead><tr>
+          <th>枠</th><th style="text-align:left">選手</th>
+          <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   </div>`;
 }
 
