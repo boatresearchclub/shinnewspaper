@@ -248,7 +248,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 07:10:53 --></head>
+<!-- auto_push_updated:2026-05-05 07:17:52 --></head>
 <body>
 
 <header class="site-header">
@@ -379,7 +379,7 @@ function buildWeatherBar(rno){
     w.wind_speed     != null ? `<div class="weather-item"><span class="wi-label">風速</span><span class="wi-val">${w.wind_speed}m/s${w.wind_dir_text ? ' ' + w.wind_dir_text : ''}</span></div>` : '',
     w.wave_height    != null ? `<div class="weather-item"><span class="wi-label">波高</span><span class="wi-val">${w.wave_height}cm</span></div>` : '',
   ].filter(Boolean).join('');
-  return `<div class="weather-bar"><span class="weather-bar-title">水面気象</span>${items}</div>`;
+  return `<div class="weather-bar"><span class="weather-bar-title">水面気象情報</span>${items}</div>`;
 }
 
 function buildTenjiSection(rno, boats){
@@ -388,18 +388,32 @@ function buildTenjiSection(rno, boats){
     "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
     "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
     "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
-    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
-    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu","芦屋":"ashiya",
+    "福岡":"fukuoka","唐津":"karatsu","大村":"omura"
   };
-  const slug = SLUG[DATA.venue] || DATA.venue;
-  const key  = tenjiKey(slug, DATA.date, rno);
+  const slug   = SLUG[DATA.venue] || DATA.venue;
+  const key    = tenjiKey(slug, DATA.date, rno);
   const cached = _tenjiCache[key];
 
+  // 未取得の場合: 締め切り5分前を過ぎていたら「展示情報がありません」を表示
   if(cached === undefined || cached === null){
-    return `<div class="tenji-section">
-      <div class="tenji-title">展示情報 <span class="tenji-badge waiting">未取得</span></div>
-      <div class="tenji-waiting">展示データなし（締め切り前 or 取得待ち）</div>
-    </div>`;
+    const rd = DATA.races[String(rno)];
+    const timeStr = rd && rd.time;
+    let pastDeadline = false;
+    if(timeStr && /^\d{1,2}:\d{2}$/.test(timeStr.trim())){
+      const now = new Date();
+      const [h, m] = timeStr.trim().split(':').map(Number);
+      const deadlineMin = h * 60 + m - 5;  // 締め切り5分前
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      pastDeadline = nowMin >= deadlineMin;
+    }
+    if(pastDeadline){
+      return `<div class="tenji-section">
+        <div class="tenji-title">展示情報</div>
+        <div class="tenji-waiting">展示情報がありません</div>
+      </div>`;
+    }
+    return '';  // 5分前より前は何も表示しない
   }
 
   const lap1vals   = boats.map(b=>cached[b.boat]?.lap1).filter(v=>v!=null);
@@ -410,7 +424,6 @@ function buildTenjiSection(rno, boats){
   const bestMawari = mawarivals.length ? Math.min(...mawarivals) : null;
   const bestChoku  = chokuvals.length  ? Math.min(...chokuvals)  : null;
   const bestTenji  = tenjivals.length  ? Math.min(...tenjivals)  : null;
-  const fetched = cached["__fetched_at"] || "";
   const rows = boats.map(bt => {
     const bn = bt.boat;
     const t  = cached[bn];
@@ -429,7 +442,7 @@ function buildTenjiSection(rno, boats){
     </tr>`;
   }).join('');
   return `${buildWeatherBar(rno)}<div class="tenji-section">
-    <div class="tenji-title">展示情報 <span class="tenji-badge">取得済み ${fetched}</span></div>
+    <div class="tenji-title">展示情報</div>
     <table class="tenji-table">
       <thead><tr>
         <th>枠</th><th style="text-align:left">選手</th>
