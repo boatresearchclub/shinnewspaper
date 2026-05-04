@@ -253,7 +253,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 07:43:58 --></head>
+<!-- auto_push_updated:2026-05-05 07:55:36 --></head>
 <body>
 
 <header class="site-header">
@@ -804,7 +804,7 @@ function renderDetail(rno){
     <div class="detail-panel">
       ${insuffBanner}
       <div class="bt-head-simple" style="${colStyle}">
-        <span>枠</span><span>選手名</span><span>級</span><span style="text-align:center">F</span><span>基準1着率</span>
+        <span>枠</span><span>選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span>
       </div>
       ${boats.map((bt,i)=>{
         const fTotal = getFTotal(bt.boat, rno);
@@ -817,7 +817,7 @@ function renderDetail(rno){
           <div>${bt.name}</div>
           <div class="bt-grade">${bt.grade ?? '-'}</div>
           <div>${fCell}</div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
             <span>${(bt.prob*100).toFixed(1)}%</span>
           </div>
         </div>`;
@@ -1451,11 +1451,13 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
         </span>`
       ).join('');
 
-      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-        <span style="font-size:11px;font-weight:700;color:var(--text2);min-width:4.5em">${kimariLabel[kimari]}</span>
-        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--accent2);min-width:3.5em">${(prob*100).toFixed(1)}%</span>
-        <span style="font-size:10px;color:var(--text3);margin-right:4px">2着→</span>
-        <span style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">${p2Cells}</span>
+      return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:var(--text2);min-width:4.5em;flex-shrink:0">${kimariLabel[kimari]}</span>
+        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--accent2);min-width:3em;flex-shrink:0">${(prob*100).toFixed(1)}%</span>
+        <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow:hidden">
+          <span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">2着→</span>
+          <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow-x:auto;scrollbar-width:none">${p2Cells}</span>
+        </span>
       </div>`;
     }).join('');
 
@@ -1645,11 +1647,11 @@ function renderBuy(rno){
       <td style="text-align:center;padding:4px 3px">${medal}</td>
       <td style="padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
       <td class="col-name" style="padding:4px 4px;font-size:0.82rem">${bt.name}</td>
-      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
+      <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
-      <td style="padding:4px 4px;text-align:right;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
-      <td style="padding:4px 6px;text-align:right;font-family:var(--mono);font-size:0.82rem">${evCell}</td>
+      <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
+      <td style="padding:4px 6px;text-align:center;font-family:var(--mono);font-size:0.82rem">${evCell}</td>
     </tr>`;
   }).join('');
 
@@ -1762,11 +1764,11 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:left">選手</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right">基準</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center">基準</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">相対補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">展示補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right" title="基準×相対補正×展示補正の絶対値確率（展示なし時は展開推定確率）">最終確率</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:right" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準×相対補正×展示補正の絶対値確率（展示なし時は展開推定確率）">最終確率</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
