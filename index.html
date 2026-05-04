@@ -231,7 +231,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 06:20:34 --></head>
+<!-- auto_push_updated:2026-05-05 06:27:35 --></head>
 <body>
 
 <header class="site-header">
@@ -1356,8 +1356,13 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
             p2 = bt ? bt.tenkai_prob / othersTotal : 0;
           }
           return { boat: b.boat, name: b.name, p2 };
-        })
-        .sort((a,b) => b.p2 - a.p2);
+        });
+
+      // 正規化: 逃げ(inn_2place)・非逃げ(tenkai_remaining)いずれも
+      // 絶対値で格納されているため、合計を1.0に揃えて相対値化する
+      const p2Sum = place2List.reduce((s, x) => s + x.p2, 0) || 1;
+      place2List.forEach(x => { x.p2 = x.p2 / p2Sum; });
+      place2List.sort((a, b) => b.p2 - a.p2);
 
       const p2Cells = place2List.map(item =>
         `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;white-space:nowrap">
