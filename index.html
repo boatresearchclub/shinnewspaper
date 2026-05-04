@@ -115,6 +115,23 @@ body {
 /* INSUFFICIENT BANNER */
 .insufficient-banner { display: flex; align-items: center; gap: 7px; padding: .55rem 1.25rem; background: rgba(255,122,0,0.08); border-bottom: 1px solid rgba(255,122,0,0.18); font-size: 12px; color: var(--orange); line-height: 1.4; }
 
+/* WEATHER BAR */
+.weather-bar {
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+  padding: 0.55rem 1.25rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text2);
+  align-items: center;
+}
+.weather-bar-title {
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  color: var(--text3); text-transform: uppercase; margin-right: 2px;
+}
+.weather-item { display: flex; align-items: center; gap: 4px; }
+.weather-item .wi-label { color: var(--text3); font-size: 11px; }
+.weather-item .wi-val   { font-weight: 700; color: var(--text); }
+
 /* TENJI */
 .tenji-section { margin-top: 1rem; border-top: 1px solid var(--border); padding: 0.875rem 0.75rem; }
 .tenji-title { font-size: 0.78rem; font-weight: 700; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 6px; }
@@ -231,7 +248,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 06:41:08 --></head>
+<!-- auto_push_updated:2026-05-05 07:10:53 --></head>
 <body>
 
 <header class="site-header">
@@ -331,6 +348,40 @@ const _tenjiCache = {};
 })();
 function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
 
+function buildWeatherBar(rno){
+  const SLUG = {
+    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+  };
+  const slug   = SLUG[DATA.venue] || DATA.venue;
+  const key    = tenjiKey(slug, DATA.date, rno);
+  const cached = _tenjiCache[key];
+  if(!cached) return '';
+  const w = {
+    weather:       cached.__weather,
+    weather_degree:cached.__weather_degree,
+    water_degree:  cached.__water_degree,
+    wind_speed:    cached.__wind_speed,
+    wind_dir_text: cached.__wind_direction_text,
+    wave_height:   cached.__wave_height,
+  };
+  if(Object.values(w).every(v => v == null)) return '';
+  const weatherIcon = {'晴':'☀️','曇':'☁️','雨':'🌧️','雪':'❄️'};
+  const icon = weatherIcon[w.weather] || '🌤️';
+  const items = [
+    w.weather        != null ? `<div class="weather-item"><span class="wi-label">天候</span><span class="wi-val">${icon} ${w.weather}</span></div>` : '',
+    w.weather_degree != null ? `<div class="weather-item"><span class="wi-label">気温</span><span class="wi-val">${w.weather_degree}℃</span></div>` : '',
+    w.water_degree   != null ? `<div class="weather-item"><span class="wi-label">水温</span><span class="wi-val">${w.water_degree}℃</span></div>` : '',
+    w.wind_speed     != null ? `<div class="weather-item"><span class="wi-label">風速</span><span class="wi-val">${w.wind_speed}m/s${w.wind_dir_text ? ' ' + w.wind_dir_text : ''}</span></div>` : '',
+    w.wave_height    != null ? `<div class="weather-item"><span class="wi-label">波高</span><span class="wi-val">${w.wave_height}cm</span></div>` : '',
+  ].filter(Boolean).join('');
+  return `<div class="weather-bar"><span class="weather-bar-title">水面気象</span>${items}</div>`;
+}
+
 function buildTenjiSection(rno, boats){
   const SLUG = {
     "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
@@ -346,7 +397,7 @@ function buildTenjiSection(rno, boats){
 
   if(cached === undefined || cached === null){
     return `<div class="tenji-section">
-      <div class="tenji-title">オリジナル展示 <span class="tenji-badge waiting">未取得</span></div>
+      <div class="tenji-title">展示情報 <span class="tenji-badge waiting">未取得</span></div>
       <div class="tenji-waiting">展示データなし（締め切り前 or 取得待ち）</div>
     </div>`;
   }
@@ -377,8 +428,8 @@ function buildTenjiSection(rno, boats){
       <td>${tilt}</td>
     </tr>`;
   }).join('');
-  return `<div class="tenji-section">
-    <div class="tenji-title">オリジナル展示 <span class="tenji-badge">取得済み ${fetched}</span></div>
+  return `${buildWeatherBar(rno)}<div class="tenji-section">
+    <div class="tenji-title">展示情報 <span class="tenji-badge">取得済み ${fetched}</span></div>
     <table class="tenji-table">
       <thead><tr>
         <th>枠</th><th style="text-align:left">選手</th>
@@ -389,7 +440,7 @@ function buildTenjiSection(rno, boats){
   </div>`;
 }
 
-// ── 会場別テン展示タイム計測制約 ＋ 重みテーブル ──
+// ── 会場別展示情報タイム計測制約 ＋ 重みテーブル ──
 //
 // available: 計測が存在するか（falseはデータ自体がない）
 //   lap1:     1周タイム（桐生は半周="half"扱いで重みを下げる）
