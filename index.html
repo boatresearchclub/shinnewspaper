@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 13:21:51 --></head>
+<!-- auto_push_updated:2026-05-05 13:25:46 --></head>
 <body>
 
 <header class="site-header">
@@ -2029,7 +2029,13 @@ function switchTab(name){
   if(name==='detail') renderDetail(selectedRace);
   if(name==='detail2') renderBuy(selectedRace); // 詳細予想=買い目タブと同じ内容（本番に合わせて変更可）
   if(name==='buy') renderBuy(selectedRace);
-  if(name==='comment') renderComment(selectedRace);
+  if(name==='comment'){
+    if(IS_SERVER && DATA && DATA.date){
+      fetchTenjiAll(currentVenue, DATA.date).then(() => renderComment(selectedRace));
+    } else {
+      renderComment(selectedRace);
+    }
+  }
 }
 
 function currentTabName(){
@@ -2129,8 +2135,7 @@ const VENUE_LIST = [
   '宮島','徳山','下関','若松','芦屋','福岡','唐津','大村'
 ];
 
-// ── サーバーモード: tenji_all API → _tenjiCache に格納 ──────────────────
-// 会場選択時・リフレッシュ後に呼び出す。
+// ── サーバーモード: tenji_all API → _tenjiCache に格納 ──
 const SLUG_MAP = {
   "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
   "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
@@ -2147,9 +2152,9 @@ async function fetchTenjiAll(venue, date){
     const json = await res.json();
     if(!json.ok || !json.races) return;
     for(const [rno, frameMap] of Object.entries(json.races)){
-      const cacheKey = `${slug}_${date}_${rno}`;
-      _tenjiCache[cacheKey] = frameMap;
+      _tenjiCache[`${slug}_${date}_${rno}`] = frameMap;
     }
+    console.log('[fetchTenjiAll] loaded', Object.keys(json.races).length, 'races for', slug, date);
   } catch(e) {
     console.warn('[fetchTenjiAll] error:', e);
   }
@@ -2176,12 +2181,7 @@ function buildVenueTabs(){
       document.getElementById('header-meta').innerHTML = `<strong>${v}</strong> — ${DATA.date||''}`;
       document.querySelectorAll('.vtab').forEach(b => b.classList.toggle('active', b.dataset.venue===v));
       buildRaceBar();
-      // サーバーモード: tenji_allを非同期取得して_tenjiCacheに格納してからレンダリング
-      if(IS_SERVER && DATA.date){
-        fetchTenjiAll(v, DATA.date).then(() => selectRace(selectedRace));
-      } else {
-        selectRace(selectedRace);
-      }
+      selectRace(selectedRace);
     };
     tabs.appendChild(btn);
   });
@@ -2370,20 +2370,12 @@ function updateEV(){
       }
 
       // FLYING_DATAはauto_pushで埋め込み済みのためfetch不要
-      // サーバーモード: tenji_allを取得してからrender
-      const doRender = () => {
-        if(restoreRace){
-          if(safeTab === 'detail')        renderDetail(restoreRace);
-          else if(safeTab === 'detail2')  renderBuy(restoreRace);
-          else if(safeTab === 'buy')      renderBuy(restoreRace);
-          else if(safeTab === 'comment')  renderComment(restoreRace);
-          else                            renderDetail(restoreRace);
-        }
-      };
-      if(IS_SERVER && DATA.date){
-        fetchTenjiAll(restoreVenue, DATA.date).then(doRender);
-      } else {
-        doRender();
+      if(restoreRace){
+        if(safeTab === 'detail')        renderDetail(restoreRace);
+        else if(safeTab === 'detail2')  renderBuy(restoreRace);
+        else if(safeTab === 'buy')      renderBuy(restoreRace);
+        else if(safeTab === 'comment')  renderComment(restoreRace);
+        else                            renderDetail(restoreRace);
       }
       // スクロール位置を復元
       if(restoreScrollY > 0){
