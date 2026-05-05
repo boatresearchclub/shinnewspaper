@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 07:11:57 --></head>
+<!-- auto_push_updated:2026-05-06 07:14:37 --></head>
 <body>
 
 <header class="site-header">
@@ -305,8 +305,8 @@ body {
   <div class="tab-bar" id="tab-bar">
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
-    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
-    <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">コメント</button>
+    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">詳細予想</button>
+    <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手情報</button>
   </div>
 
   <!-- 出走表タブ -->
@@ -314,10 +314,10 @@ body {
     <div id="inline-detail"></div>
   </div>
 
-  <!-- AI予想タブ -->
+  <!-- 詳細予想タブ -->
   <div id="tab-detail2" style="display:none">
     <div id="detail2-panel">
-      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると詳細予想が表示されます</div>
     </div>
   </div>
 
@@ -328,10 +328,10 @@ body {
     </div>
   </div>
 
-  <!-- コメントタブ -->
+  <!-- 選手情報タブ -->
   <div id="tab-comment" style="display:none">
     <div id="comment-panel">
-      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとコメントが表示されます</div>
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると選手情報が表示されます</div>
     </div>
   </div>
 </div>
@@ -2027,7 +2027,7 @@ function switchTab(name){
     b.classList.toggle('active', b.dataset.tab===name);
   });
   if(name==='detail') renderDetail(selectedRace);
-  if(name==='detail2') renderBuy(selectedRace); // AI予想タブ（本番に合わせて変更可）
+  if(name==='detail2') renderBuy(selectedRace); // 詳細予想=買い目タブと同じ内容（本番に合わせて変更可）
   if(name==='buy') renderBuy(selectedRace);
   if(name==='comment'){
     if(IS_SERVER && DATA && DATA.date){
