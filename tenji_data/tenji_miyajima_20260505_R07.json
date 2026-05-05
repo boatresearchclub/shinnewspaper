@@ -12,14 +12,14 @@
     "tenji": 6.64,
     "tenji_rank": 4,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -34,14 +34,14 @@
     "tenji": 6.64,
     "tenji_rank": 4,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -56,14 +56,14 @@
     "tenji": 6.68,
     "tenji_rank": 6,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -78,14 +78,14 @@
     "tenji": 6.61,
     "tenji_rank": 3,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -100,14 +100,14 @@
     "tenji": 6.57,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -122,13 +122,13 @@
     "tenji": 6.59,
     "tenji_rank": 2,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:17:46",
+    "fetched_at": "2026-05-05 13:22:40",
     "weather": "晴",
     "weather_degree": 18,
-    "water_degree": 16,
-    "wind_speed": 2,
+    "water_degree": 15,
+    "wind_speed": 3,
     "wind_direction": 11,
     "wind_direction_text": "南西",
-    "wave_height": 2
+    "wave_height": 3
   }
 ]
