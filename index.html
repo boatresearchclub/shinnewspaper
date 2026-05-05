@@ -92,9 +92,9 @@ body {
 
 /* DETAIL PANEL */
 .detail-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
-.bt-head-simple { display: grid; grid-template-columns: 44px 90px 45px 72px; gap: 6px; padding: .4rem 1.25rem; font-size: 11px; color: var(--text3); font-weight: 700; letter-spacing: .08em; border-bottom: 1px solid var(--border); background: var(--bg3); }
-.detail-panel .bt-row { grid-template-columns: 44px 90px 45px 72px; }
-.bt-row { display: grid; grid-template-columns: 44px 90px 45px 72px; gap: 6px; padding: .75rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 13px; transition: background .12s; }
+.bt-head-simple { display: grid; grid-template-columns: 44px 90px 45px 28px 72px; gap: 6px; padding: .4rem 1.25rem; font-size: 11px; color: var(--text3); font-weight: 700; letter-spacing: .08em; border-bottom: 1px solid var(--border); background: var(--bg3); }
+.detail-panel .bt-row { grid-template-columns: 44px 90px 45px 28px 72px; }
+.bt-row { display: grid; grid-template-columns: 44px 90px 45px 28px 72px; gap: 6px; padding: .75rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 13px; transition: background .12s; }
 .bt-row:last-child { border-bottom: none; }
 .bt-row:hover { background: var(--bg3); }
 /* .bt-row.top1 removed */
@@ -142,10 +142,9 @@ body {
 .weather-item .wi-label { color: var(--text3); font-size: 11px; }
 .weather-item .wi-val   { font-weight: 700; color: var(--text); }
 .wind-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
-.wind-badge.tail  { background: #ffe1e1; color: var(--red);   }  /* 追い風 */
+.wind-badge.tail  { background: #ffe1e1; color: var(--red);    } /* 追い風 */
 .wind-badge.head  { background: #e1eeff; color: var(--accent); } /* 向かい風 */
-.wind-badge.cross { background: #f0f0f0; color: var(--text3); }  /* 横風 */
-.wind-arrow { font-size: 13px; }
+.wind-badge.cross { background: #f0f0f0; color: var(--text3);  } /* 横風 */
 
 /* TENJI */
 .tenji-section { border-top: 1px solid var(--border); padding: 0; background: var(--bg3); }
@@ -154,7 +153,7 @@ body {
 .tenji-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-family: var(--mono); }
 .tenji-table th { text-align: center; color: var(--text3); font-weight: 500; font-size: 0.72rem; padding: 5px 6px 5px; border-bottom: 1px solid var(--border); }
 .tenji-table td { text-align: center; padding: 5px 6px; border-bottom: 1px solid var(--border); color: var(--text); }
-.tenji-table td:nth-child(2) { text-align: left; font-family: 'Noto Sans JP', sans-serif; font-size: 0.8rem; }
+.tenji-table td:nth-child(2) { text-align: center; font-family: 'Noto Sans JP', sans-serif; font-size: 0.8rem; }
 .tenji-table tr:last-child td { border-bottom: none; }
 .tenji-table tr:hover td { background: var(--bg3); }
 .tenji-best { color: var(--red); font-weight: 700; }
@@ -245,7 +244,7 @@ body {
   .prob-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .prob-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
   .prob-table th, .prob-table td { padding: 4px 4px !important; white-space: nowrap; }
-  .prob-table .col-name { max-width: 5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prob-table .col-name { width: 6em; min-width: 6em; max-width: 8em; overflow: hidden; text-overflow: clip; white-space: nowrap; text-align: center; }
 
   /* ヘッダタイトル・バッジ行 */
   .status-badges { display: flex; flex-wrap: wrap; gap: 4px; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
@@ -269,7 +268,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 10:46:04 --></head>
+<!-- auto_push_updated:2026-05-05 10:56:42 --></head>
 <body>
 
 <header class="site-header">
@@ -390,11 +389,13 @@ function buildWeatherBar(rno){
     "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
     "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
   };
+  const slug   = SLUG[DATA.venue] || DATA.venue;
+  const key    = tenjiKey(slug, DATA.date, rno);
+  const cached = _tenjiCache[key];
 
-  // ── 会場別スタートライン方向（1コースが向かう方位角 °）──────────
-  // 「追い風」= ボートが進む方向に風が吹いてくる方向（風向きがSLANG方向と逆）
-  // 風向き数値: 1=北, 2=北北東, ..., 9=南, ... (時計回り16方位)
-  // SL_DIR: スタートラインを越えてボートが進む方位角（度）
+  // ── 会場別スタートライン方向（ボートの進行方位角 °）──────────
+  // 追い風 = 風がボートを後ろから押す（風向とボート進行が逆方向）
+  // 風向き数値: 1=北(0°), 2=北北東(22.5°)... 時計回り16方位
   const SL_DIR = {
     "kiryu":       315,  // 桐生    北西
     "toda":        270,  // 戸田    西
@@ -421,34 +422,19 @@ function buildWeatherBar(rno){
     "karatsu":       0,  // 唐津    北
     "omura":       270,  // 大村    西
   };
-
-  // 風向き数値(1〜16) → 方位角(度) 変換
-  // 1=北(0°), 2=北北東(22.5°), ..., 時計回り
   function windNumToDeg(n){ return ((n - 1) * 22.5) % 360; }
-
-  // 追い風/向かい風/横風を判定
-  // windDeg: 風が「吹いてくる」方向(気象学的風向)
-  // slDeg:   ボートの進行方向(スタートライン越え後)
-  // 追い風 = 風向きとボート進行方向が逆（風がボートを押す）
-  // 差分が 0°付近 → ボートと風が逆 → 追い風
   function getWindType(windNum, slDeg){
     if(windNum == null || slDeg == null) return null;
-    const windDeg = windNumToDeg(windNum);
-    // 風が吹いてくる方向とボート進行方向の角度差
-    let diff = Math.abs(windDeg - slDeg) % 360;
+    let diff = Math.abs(windNumToDeg(windNum) - slDeg) % 360;
     if(diff > 180) diff = 360 - diff;
-    // diff ≈ 0°  → 風向きとボート進行方向が一致 → 向かい風
-    // diff ≈ 180° → 風向きとボート進行方向が逆  → 追い風
-    if(diff <= 45)       return 'head';   // 向かい風
-    if(diff >= 135)      return 'tail';   // 追い風
-    return 'cross';                        // 横風
+    // diff≈0° → 風向=ボート進行方向 → 向かい風
+    // diff≈180° → 風向=ボート逆方向 → 追い風
+    if(diff <= 45)  return 'head';
+    if(diff >= 135) return 'tail';
+    return 'cross';
   }
-
   const WIND_LABEL = { tail:'追い風', head:'向かい風', cross:'横風' };
   const WIND_ARROW = { tail:'↗', head:'↙', cross:'↔' };
-  const slug   = SLUG[DATA.venue] || DATA.venue;
-  const key    = tenjiKey(slug, DATA.date, rno);
-  const cached = _tenjiCache[key];
 
   // データ未取得 → 過去日なら「記録なし」、当日なら「取得待ち」
   if(!cached){
@@ -473,23 +459,28 @@ function buildWeatherBar(rno){
     return `<div class="weather-bar"><span class="weather-bar-title">水面気象情報</span><div class="weather-bar-body"><span class="tenji-waiting" style="margin:0;padding:0;display:inline;font-size:11px">取得待ち</span></div></div>`;
   }
 
-  // ── 追い風/向かい風バッジ ──────────────────────────────
-  const slDeg    = SL_DIR[slug] ?? null;
-  const windType = getWindType(w.wind_dir_num, slDeg);
+  // 追い風/向かい風バッジ
+  const windType  = getWindType(w.wind_dir_num, SL_DIR[slug] ?? null);
   const windBadge = windType
     ? `<span class="wind-badge ${windType}">${WIND_ARROW[windType]} ${WIND_LABEL[windType]}</span>`
     : '';
 
   const weatherIcon = {'晴':'☀️','曇':'☁️','雨':'🌧️','雪':'❄️'};
   const icon = weatherIcon[w.weather] || '🌤️';
-  const items = [
+  const row1 = [
     w.weather        != null ? `<div class="weather-item"><span class="wi-label">天候</span><span class="wi-val">${icon} ${w.weather}</span></div>` : '',
     w.weather_degree != null ? `<div class="weather-item"><span class="wi-label">気温</span><span class="wi-val">${w.weather_degree}℃</span></div>` : '',
     w.water_degree   != null ? `<div class="weather-item"><span class="wi-label">水温</span><span class="wi-val">${w.water_degree}℃</span></div>` : '',
-    w.wind_speed     != null ? `<div class="weather-item"><span class="wi-label">風速</span><span class="wi-val">${w.wind_speed}m/s${w.wind_dir_text ? ' ' + w.wind_dir_text : ''}${windBadge}</span></div>` : '',
-    w.wave_height    != null ? `<div class="weather-item"><span class="wi-label">波高</span><span class="wi-val">${w.wave_height}cm</span></div>` : '',
   ].filter(Boolean).join('');
-  return `<div class="weather-bar"><span class="weather-bar-title">水面気象情報</span><div class="weather-bar-body">${items}</div></div>`;
+  const row2 = [
+    w.wind_speed  != null ? `<div class="weather-item"><span class="wi-label">風速</span><span class="wi-val">${w.wind_speed}m/s${w.wind_dir_text ? ' ' + w.wind_dir_text : ''}${windBadge}</span></div>` : '',
+    w.wave_height != null ? `<div class="weather-item"><span class="wi-label">波高</span><span class="wi-val">${w.wave_height}cm</span></div>` : '',
+  ].filter(Boolean).join('');
+  const weatherRows = [
+    row1 ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">${row1}</div>` : '',
+    row2 ? `<div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">${row2}</div>` : ''
+  ].filter(Boolean).join('');
+  return `<div class="weather-bar"><span class="weather-bar-title">水面気象情報</span><div class="weather-bar-body" style="flex-direction:column;gap:4px;align-items:center">${weatherRows}</div></div>`;
 }
 
 function buildTenjiSection(rno, boats){
@@ -558,7 +549,7 @@ function buildTenjiSection(rno, boats){
     <div style="background:var(--bg2)">
       <table class="tenji-table">
         <thead><tr>
-          <th>枠</th><th style="text-align:left">選手</th>
+          <th>枠</th><th style="text-align:center">選手名</th>
           <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -902,7 +893,7 @@ function renderDetail(rno){
     <div class="detail-panel">
       ${insuffBanner}
       <div class="bt-head-simple" style="${colStyle}">
-        <span>枠</span><span>選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span>
+        <span>枠</span><span style="text-align:center">選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span>
       </div>
       ${boats.map((bt,i)=>{
         const fTotal = getFTotal(bt.boat, rno);
@@ -912,7 +903,7 @@ function renderDetail(rno){
         return `
         <div class="bt-row${i===0?' top1':''}" style="${colStyle}">
           <span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>
-          <div>${bt.name}</div>
+          <div style="text-align:center">${bt.name}</div>
           <div class="bt-grade">${bt.grade ?? '-'}</div>
           <div>${fCell}</div>
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
@@ -1743,8 +1734,8 @@ function renderBuy(rno){
 
     return `<tr>
       <td style="text-align:center;padding:4px 3px">${medal}</td>
-      <td style="padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
-      <td class="col-name" style="padding:4px 4px;font-size:0.82rem">${bt.name}</td>
+      <td style="text-align:center;padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
+      <td class="col-name" style="padding:4px 4px;font-size:0.82rem;text-align:center">${bt.name}</td>
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
@@ -1855,8 +1846,8 @@ function renderBuy(rno){
       <table class="prob-table" style="width:100%;border-collapse:collapse">
         <thead><tr>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px">枠</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:left">選手</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">枠</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">選手名</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center">基準</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">相対補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">展示補正</th>
