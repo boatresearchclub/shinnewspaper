@@ -12,14 +12,14 @@
     "tenji": 6.67,
     "tenji_rank": 4,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -34,14 +34,14 @@
     "tenji": 6.69,
     "tenji_rank": 5,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -56,14 +56,14 @@
     "tenji": 6.63,
     "tenji_rank": 1,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -78,14 +78,14 @@
     "tenji": 6.66,
     "tenji_rank": 3,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -100,14 +100,14 @@
     "tenji": 6.63,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -122,13 +122,13 @@
     "tenji": 6.7,
     "tenji_rank": 6,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 10:36:11",
+    "fetched_at": "2026-05-05 10:46:42",
     "weather": "晴",
-    "weather_degree": 16,
-    "water_degree": 18,
-    "wind_speed": 4,
+    "weather_degree": 17,
+    "water_degree": 19,
+    "wind_speed": 2,
     "wind_direction": 1,
     "wind_direction_text": "北",
-    "wave_height": 2
+    "wave_height": 1
   }
 ]
