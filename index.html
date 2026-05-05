@@ -142,9 +142,10 @@ body {
 .weather-item .wi-label { color: var(--text3); font-size: 11px; }
 .weather-item .wi-val   { font-weight: 700; color: var(--text); }
 .wind-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 4px; vertical-align: middle; }
-.wind-badge.tail  { background: #ffe1e1; color: var(--red);    } /* 追い風 */
-.wind-badge.head  { background: #e1eeff; color: var(--accent); } /* 向かい風 */
-.wind-badge.cross { background: #f0f0f0; color: var(--text3);  } /* 横風 */
+.wind-badge.tail        { background: #ffe1e1; color: var(--red);    } /* 追い風 */
+.wind-badge.head        { background: #e1eeff; color: var(--accent); } /* 向かい風 */
+.wind-badge.cross_right { background: #f0f0f0; color: var(--text3);  } /* 右横風 */
+.wind-badge.cross_left  { background: #f0f0f0; color: var(--text3);  } /* 左横風 */
 
 /* TENJI */
 .tenji-section { border-top: 1px solid var(--border); padding: 0; background: var(--bg3); }
@@ -268,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 10:56:42 --></head>
+<!-- auto_push_updated:2026-05-05 11:19:50 --></head>
 <body>
 
 <header class="site-header">
@@ -396,45 +397,53 @@ function buildWeatherBar(rno){
   // ── 会場別スタートライン方向（ボートの進行方位角 °）──────────
   // 追い風 = 風がボートを後ろから押す（風向とボート進行が逆方向）
   // 風向き数値: 1=北(0°), 2=北北東(22.5°)... 時計回り16方位
+  // 会場別スタートライン方向（ボートの進行方位角°）
+  // ソース: 公式サイト実データの追い風/向かい風分析（2014-2022）から逆算
+  // 追い風方向の逆がボート進行方向 = SL_DIR
   const SL_DIR = {
-    "kiryu":       315,  // 桐生    北西
-    "toda":        270,  // 戸田    西
-    "edogawa":     270,  // 江戸川  西
-    "heiwajima":   270,  // 平和島  西
-    "tamagawa":    270,  // 多摩川  西
-    "hamanako":    270,  // 浜名湖  西
-    "gamagori":    180,  // 蒲郡    南
-    "tokoname":    315,  // 常滑    北西
-    "tsu":         270,  // 津      西
-    "mikuni":        0,  // 三国    北
-    "biwako":      270,  // びわこ  西
-    "suminoe":     270,  // 住之江  西
-    "amagasaki":   315,  // 尼崎    北西
-    "naruto":      270,  // 鳴門    西
-    "marugame":    270,  // 丸亀    西
-    "kojima":      270,  // 児島    西
-    "miyajima":    270,  // 宮島    西
-    "tokuyama":    180,  // 徳山    南
-    "shimonoseki": 270,  // 下関    西
-    "wakamatsu":   180,  // 若松    南
-    "ashiya":      180,  // 芦屋    南
-    "fukuoka":     270,  // 福岡    西
-    "karatsu":       0,  // 唐津    北
-    "omura":       270,  // 大村    西
+    "kiryu":       180,  // 桐生    南  （追い風=北）
+    "toda":        135,  // 戸田    南東 （追い風=北西）
+    "edogawa":      45,  // 江戸川  北東 （追い風=南西）
+    "heiwajima":     0,  // 平和島  北  （追い風=南）
+    "tamagawa":    270,  // 多摩川  西  （追い風=東）※変更なし
+    "hamanako":      0,  // 浜名湖  北  （追い風=南）
+    "gamagori":    225,  // 蒲郡    南西 （追い風=北東）
+    "tokoname":    315,  // 常滑    北西 （追い風=南東）※変更なし
+    "tsu":         315,  // 津      北西 （追い風=南東）
+    "mikuni":      180,  // 三国    南  （追い風=北）
+    "biwako":      180,  // びわこ  南  （追い風=北）
+    "suminoe":     180,  // 住之江  南  （追い風=北）
+    "amagasaki":   225,  // 尼崎    南西 （追い風=北東）
+    "naruto":      135,  // 鳴門    南東 （追い風=北西）
+    "marugame":      0,  // 丸亀    北  （追い風=南）
+    "kojima":      180,  // 児島    南  （追い風=北）
+    "miyajima":    225,  // 宮島    南西 （追い風=北東）
+    "tokuyama":    315,  // 徳山    北西 （追い風=南東）
+    "shimonoseki": 270,  // 下関    西  （追い風=東）※変更なし
+    "wakamatsu":   180,  // 若松    南  （追い風=北）※変更なし
+    "ashiya":      180,  // 芦屋    南  （若松隣接・地形推定）
+    "fukuoka":     225,  // 福岡    南西 （博多湾・地形推定）
+    "karatsu":     180,  // 唐津    南  （追い風=北、年間追い風多し）
+    "omura":       270,  // 大村    西  （大村湾・地形推定）※変更なし
   };
   function windNumToDeg(n){ return ((n - 1) * 22.5) % 360; }
   function getWindType(windNum, slDeg){
     if(windNum == null || slDeg == null) return null;
-    let diff = Math.abs(windNumToDeg(windNum) - slDeg) % 360;
+    const windDeg = windNumToDeg(windNum);
+    let diff = Math.abs(windDeg - slDeg) % 360;
     if(diff > 180) diff = 360 - diff;
     // diff≈0° → 風向=ボート進行方向 → 向かい風
     // diff≈180° → 風向=ボート逆方向 → 追い風
-    if(diff <= 45)  return 'head';
-    if(diff >= 135) return 'tail';
-    return 'cross';
+    if(diff <= 30)  return 'head';    // ±30°以内 = 向かい風
+    if(diff >= 150) return 'tail';    // ±30°以内(逆) = 追い風
+    // 横風: 符号付き差分で右/左を判定
+    // signed 0〜180° → 風がボートの右側から来る（右横風）
+    // signed 180〜360° → 風がボートの左側から来る（左横風）
+    const signed = (windDeg - slDeg + 360) % 360;
+    return signed < 180 ? 'cross_right' : 'cross_left';
   }
-  const WIND_LABEL = { tail:'追い風', head:'向かい風', cross:'横風' };
-  const WIND_ARROW = { tail:'↗', head:'↙', cross:'↔' };
+  const WIND_LABEL = { tail:'追い風', head:'向かい風', cross_right:'右横風', cross_left:'左横風' };
+  const WIND_ARROW = { tail:'↗', head:'↙', cross_right:'→', cross_left:'←' };
 
   // データ未取得 → 過去日なら「記録なし」、当日なら「取得待ち」
   if(!cached){
