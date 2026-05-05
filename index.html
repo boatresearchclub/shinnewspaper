@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 11:44:28 --></head>
+<!-- auto_push_updated:2026-05-05 11:50:48 --></head>
 <body>
 
 <header class="site-header">
@@ -830,6 +830,104 @@ function highlightComment(text){
   return t;
 }
 
+// ── モーター情報セクション（コメントタブ用）──
+//
+// データソース優先順位:
+//   1. _tenjiCache[key][frameNo].motor_rate2 / motor_no / prev_user  ← 展示取得済み
+//   2. boats[].motor2 / motor_no / prev_user                         ← CSV埋め込み値
+//
+// M2率順位は当該レースの6艇間で算出（同率は同順位）。
+//
+function buildMotorInfoSection(rno, boats){
+  const SLUG2 = {
+    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+  };
+  const slug2  = SLUG2[DATA.venue] || DATA.venue;
+  const key2   = tenjiKey(slug2, DATA.date, rno);
+  const cached2 = _tenjiCache[key2];
+
+  // 各艇のモーター情報をマージ（展示キャッシュ優先、なければboatsのフィールドを使用）
+  const motorRows = boats.map(bt => {
+    const td = cached2 ? cached2[bt.boat] : null;
+    return {
+      boat:      bt.boat,
+      name:      bt.name,
+      motor_no:  td?.motor_no  ?? bt.motor_no  ?? null,
+      motor2:    (td?.motor_rate2 != null) ? td.motor_rate2
+                 : (bt.motor2 != null)     ? bt.motor2
+                 : null,
+      prev_user: td?.prev_user ?? bt.prev_user ?? null,
+    };
+  });
+
+  // M2率順位を算出（降順・同率同順位）
+  const sorted2 = [...motorRows]
+    .filter(r => r.motor2 != null)
+    .sort((a, b) => b.motor2 - a.motor2);
+  const rankMap = {};
+  sorted2.forEach((r, i) => {
+    rankMap[r.boat] = (i > 0 && r.motor2 === sorted2[i-1].motor2)
+      ? rankMap[sorted2[i-1].boat]
+      : i + 1;
+  });
+
+  const hasAny = motorRows.some(r => r.motor2 != null || r.motor_no != null || r.prev_user != null);
+  if(!hasAny) return '';
+
+  // 順位バッジ色（1位→金, 2位→銀, 3位→銅）
+  function rankBadge(rank){
+    if(rank == null) return '<span style="color:var(--text3);font-size:11px">—</span>';
+    const colors = {1:'#e6a800',2:'#7a8a99',3:'#a0672a'};
+    const c = colors[rank] || 'var(--text3)';
+    return `<span style="font-size:11px;font-weight:700;color:${c}">${rank}位</span>`;
+  }
+
+  function m2Color(v){
+    if(v == null) return 'var(--text3)';
+    return v >= 40 ? 'var(--green)' : v >= 25 ? 'var(--orange)' : 'var(--red)';
+  }
+
+  const rows = motorRows.map(r => {
+    const rank   = rankMap[r.boat] ?? null;
+    const m2disp = r.motor2 != null
+      ? `<span style="font-family:var(--mono);font-weight:700;color:${m2Color(r.motor2)}">${r.motor2.toFixed(1)}%</span>`
+      : '<span style="color:var(--text3)">—</span>';
+    const monoDisp = r.motor_no != null
+      ? `<span style="font-size:10px;color:var(--text3);font-family:var(--mono)">#${r.motor_no}</span>`
+      : '';
+    const prevDisp = r.prev_user
+      ? `<span style="font-size:11px;color:var(--text2)">${r.prev_user}</span>`
+      : `<span style="font-size:11px;color:var(--text3)">—</span>`;
+
+    return `<div style="display:grid;grid-template-columns:28px 1fr 52px 36px 1fr;gap:4px 8px;align-items:center;padding:0.4rem 1rem;border-bottom:1px solid var(--border)">
+      <span class="boat-circle b${r.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${r.boat}</span>
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+        ${monoDisp ? `<div style="margin-top:1px">${monoDisp}</div>` : ''}
+      </div>
+      <div style="text-align:center">${m2disp}</div>
+      <div style="text-align:center">${rankBadge(rank)}</div>
+      <div>${prevDisp}</div>
+    </div>`;
+  }).join('');
+
+  return `<div style="border-bottom:1px solid var(--border)">
+    <div style="display:grid;grid-template-columns:28px 1fr 52px 36px 1fr;gap:4px 8px;align-items:center;padding:0.35rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border)">
+      <span></span>
+      <span style="font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--text3)">🔧 モーター</span>
+      <span style="font-size:10px;color:var(--text3);text-align:center">M2率</span>
+      <span style="font-size:10px;color:var(--text3);text-align:center">順位</span>
+      <span style="font-size:10px;color:var(--text3)">前節使用者</span>
+    </div>
+    ${rows}
+  </div>`;
+}
+
 function buildCommentSection(rno, boats){
   const SLUG = {
     "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
@@ -900,40 +998,6 @@ function renderDetail(rno){
   // グリッド列: 枠44px 選手名90px 級45px F列28px 基準1着率72px
   const colStyle = 'grid-template-columns: 44px 90px 45px 28px 72px';
 
-  // ── モーター情報セクション ──
-  // M2率の最大値を求めてバーグラフのスケール基準にする
-  const motor2vals = boats.map(b => b.motor2 ?? null).filter(v => v !== null);
-  const maxMotor2  = motor2vals.length ? Math.max(...motor2vals) : 100;
-  const hasMotor2  = motor2vals.length > 0;
-
-  function motorBar(val, max){
-    if(val == null) return '—';
-    const pct    = max > 0 ? Math.round((val / max) * 100) : 0;
-    // 40%以上→緑, 25〜40%→オレンジ, 25%未満→赤
-    const color  = val >= 40 ? 'var(--green)' : val >= 25 ? 'var(--orange)' : 'var(--red)';
-    return `<div style="display:flex;align-items:center;gap:5px">
-      <div style="flex:1;background:var(--bg4);border-radius:3px;height:6px;min-width:40px;max-width:80px;overflow:hidden">
-        <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .3s"></div>
-      </div>
-      <span style="font-size:11px;font-family:var(--mono);color:${color};font-weight:700;min-width:3.2em;text-align:right">${val.toFixed(1)}%</span>
-    </div>`;
-  }
-
-  const motorSection = hasMotor2 ? `
-    <div style="border-top:1px solid var(--border)">
-      <div class="weather-bar-title" style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);padding:0.45rem 1rem;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px">
-        🔧 モーター情報 <span style="font-size:9px;font-weight:400;opacity:.7">M2率 = モーター2連対率</span>
-      </div>
-      <div style="background:var(--bg2)">
-        ${boats.map(bt => `
-          <div style="display:grid;grid-template-columns:44px 90px 1fr;gap:6px;align-items:center;padding:0.45rem 1rem;border-bottom:1px solid var(--border);font-size:12px">
-            <span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>
-            <span style="color:var(--text2);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${bt.name}</span>
-            ${motorBar(bt.motor2 ?? null, maxMotor2)}
-          </div>`).join('')}
-      </div>
-    </div>` : '';
-
   const html = `
     <div class="detail-panel">
       ${insuffBanner}
@@ -956,7 +1020,6 @@ function renderDetail(rno){
           </div>
         </div>`;
       }).join('')}
-      ${motorSection}
       ${tenjiHtml}
     </div>
   `;
@@ -1938,7 +2001,9 @@ function renderComment(rno){
   const rd = DATA.races[rno];
   if(!rd) return;
   const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
-  const html = `<div class="detail-panel">${buildCommentSection(rno, boats)}</div>`;
+  const motorHtml   = buildMotorInfoSection(rno, boats);
+  const commentHtml = buildCommentSection(rno, boats);
+  const html = `<div class="detail-panel">${motorHtml}${commentHtml}</div>`;
   document.getElementById('comment-panel').innerHTML = html;
 }
 
