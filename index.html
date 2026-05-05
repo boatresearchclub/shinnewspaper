@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 07:07:30 --></head>
+<!-- auto_push_updated:2026-05-06 07:11:57 --></head>
 <body>
 
 <header class="site-header">
@@ -305,7 +305,7 @@ body {
   <div class="tab-bar" id="tab-bar">
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
-    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">詳細予想</button>
+    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
     <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">コメント</button>
   </div>
 
@@ -314,10 +314,10 @@ body {
     <div id="inline-detail"></div>
   </div>
 
-  <!-- 詳細予想タブ -->
+  <!-- AI予想タブ -->
   <div id="tab-detail2" style="display:none">
     <div id="detail2-panel">
-      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると詳細予想が表示されます</div>
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
     </div>
   </div>
 
@@ -1939,8 +1939,8 @@ function renderBuy(rno){
       </div>
     </div>`;
 
-  // ── 展開分析タブ: 会場平均・着順確率・展開シナリオ ──
   document.getElementById('buy-panel').innerHTML = `
+
     ${venueStatsTable}
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
@@ -1980,10 +1980,6 @@ function renderBuy(rno){
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
-  `;
-
-  // ── 参考買い目タブ: 買い目のみ ──
-  document.getElementById('detail2-panel').innerHTML = `
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
         <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
@@ -2031,8 +2027,8 @@ function switchTab(name){
     b.classList.toggle('active', b.dataset.tab===name);
   });
   if(name==='detail') renderDetail(selectedRace);
+  if(name==='detail2') renderBuy(selectedRace); // AI予想タブ（本番に合わせて変更可）
   if(name==='buy') renderBuy(selectedRace);
-  if(name==='detail2') renderBuy(selectedRace); // 参考買い目＝renderBuy内で detail2-panel に出力
   if(name==='comment'){
     if(IS_SERVER && DATA && DATA.date){
       fetchTenjiAll(currentVenue, DATA.date).then(() => renderComment(selectedRace));
