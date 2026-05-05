@@ -12,14 +12,14 @@
     "tenji": 6.93,
     "tenji_rank": 6,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "tokuyama",
@@ -34,14 +34,14 @@
     "tenji": 6.9,
     "tenji_rank": 3,
     "tilt": 0,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "tokuyama",
@@ -56,14 +56,14 @@
     "tenji": 6.91,
     "tenji_rank": 5,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "tokuyama",
@@ -78,14 +78,14 @@
     "tenji": 6.9,
     "tenji_rank": 3,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "tokuyama",
@@ -100,14 +100,14 @@
     "tenji": 6.85,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "tokuyama",
@@ -122,13 +122,13 @@
     "tenji": 6.87,
     "tenji_rank": 2,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 13:22:43",
+    "fetched_at": "2026-05-05 13:26:44",
     "weather": "晴",
     "weather_degree": 20,
     "water_degree": 16,
-    "wind_speed": 3,
+    "wind_speed": 2,
     "wind_direction": 9,
     "wind_direction_text": "南",
-    "wave_height": 3
+    "wave_height": 2
   }
 ]
