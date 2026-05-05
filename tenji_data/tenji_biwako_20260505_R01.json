@@ -12,7 +12,14 @@
     "tenji": 6.8,
     "tenji_rank": 5,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   },
   {
     "venue": "biwako",
@@ -27,7 +34,14 @@
     "tenji": 6.69,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   },
   {
     "venue": "biwako",
@@ -42,7 +56,14 @@
     "tenji": 6.77,
     "tenji_rank": 4,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   },
   {
     "venue": "biwako",
@@ -57,7 +78,14 @@
     "tenji": 6.84,
     "tenji_rank": 6,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   },
   {
     "venue": "biwako",
@@ -72,7 +100,14 @@
     "tenji": 6.76,
     "tenji_rank": 3,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   },
   {
     "venue": "biwako",
@@ -87,6 +122,13 @@
     "tenji": 6.69,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-05 10:26:23"
+    "fetched_at": "2026-05-05 10:26:23",
+    "weather": "晴",
+    "weather_degree": 15,
+    "water_degree": 18,
+    "wind_speed": 1,
+    "wind_direction": 7,
+    "wind_direction_text": "南東",
+    "wave_height": 1
   }
 ]
