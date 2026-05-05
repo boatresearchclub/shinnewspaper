@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 13:06:55 --></head>
+<!-- auto_push_updated:2026-05-05 13:16:57 --></head>
 <body>
 
 <header class="site-header">
@@ -853,7 +853,7 @@ function buildMotorInfoSection(rno, boats){
 
   // 各艇のモーター情報をマージ（展示キャッシュ優先、なければboatsのフィールドを使用）
   const motorRows = boats.map(bt => {
-    const td = cached2 ? cached2[bt.boat] : null;
+    const td = cached2 ? cached2[String(bt.boat)] : null;
     return {
       boat:       bt.boat,
       name:       bt.name,
