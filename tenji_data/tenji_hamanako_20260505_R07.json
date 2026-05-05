@@ -12,14 +12,14 @@
     "tenji": 6.58,
     "tenji_rank": 2,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -34,14 +34,14 @@
     "tenji": 6.65,
     "tenji_rank": 6,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -56,14 +56,14 @@
     "tenji": 6.63,
     "tenji_rank": 5,
     "tilt": 0,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -78,14 +78,14 @@
     "tenji": 6.56,
     "tenji_rank": 1,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -100,14 +100,14 @@
     "tenji": 6.6,
     "tenji_rank": 4,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -122,13 +122,13 @@
     "tenji": 6.58,
     "tenji_rank": 2,
     "tilt": -0.5,
-    "fetched_at": "2026-05-05 14:12:12",
+    "fetched_at": "2026-05-05 14:15:03",
     "weather": "晴",
-    "weather_degree": 17,
+    "weather_degree": 18,
     "water_degree": 19,
-    "wind_speed": 5,
+    "wind_speed": 4,
     "wind_direction": 13,
     "wind_direction_text": "西",
-    "wave_height": 3
+    "wave_height": 2
   }
 ]
