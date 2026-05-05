@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-05 11:59:46 --></head>
+<!-- auto_push_updated:2026-05-05 12:05:28 --></head>
 <body>
 
 <header class="site-header">
@@ -2008,9 +2008,11 @@ function renderBuy(rno){
 // ── renderComment ──
 function renderComment(rno){
   const rd = DATA.races[rno];
-  if(!rd) return;
+  if(!rd){ console.warn('[renderComment] no race data for rno=', rno); return; }
   const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
+  console.log('[renderComment] rno=', rno, 'boats:', boats.map(b=>({boat:b.boat,motor2:b.motor2,motor_rank:b.motor_rank,prev_user:b.prev_user})));
   const motorHtml   = buildMotorInfoSection(rno, boats);
+  console.log('[renderComment] motorHtml length:', motorHtml.length);
   const commentHtml = buildCommentSection(rno, boats);
   const html = `<div class="detail-panel">${motorHtml}${commentHtml}</div>`;
   document.getElementById('comment-panel').innerHTML = html;
