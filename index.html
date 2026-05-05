@@ -269,7 +269,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 07:06:20 --></head>
+<!-- auto_push_updated:2026-05-06 07:07:30 --></head>
 <body>
 
 <header class="site-header">
@@ -1939,8 +1939,8 @@ function renderBuy(rno){
       </div>
     </div>`;
 
-  document.getElementById('detail2-panel').innerHTML = `
-
+  // ── 展開分析タブ: 会場平均・着順確率・展開シナリオ ──
+  document.getElementById('buy-panel').innerHTML = `
     ${venueStatsTable}
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
@@ -1980,6 +1980,10 @@ function renderBuy(rno){
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
+  `;
+
+  // ── 参考買い目タブ: 買い目のみ ──
+  document.getElementById('detail2-panel').innerHTML = `
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
         <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
@@ -2027,8 +2031,8 @@ function switchTab(name){
     b.classList.toggle('active', b.dataset.tab===name);
   });
   if(name==='detail') renderDetail(selectedRace);
-  if(name==='buy') renderDetail(selectedRace); // 展開分析タブ＝出走表と同じ内容（本番に合わせて変更可）
-  if(name==='detail2') renderBuy(selectedRace); // 参考買い目タブ
+  if(name==='buy') renderBuy(selectedRace);
+  if(name==='detail2') renderBuy(selectedRace); // 参考買い目＝renderBuy内で detail2-panel に出力
   if(name==='comment'){
     if(IS_SERVER && DATA && DATA.date){
       fetchTenjiAll(currentVenue, DATA.date).then(() => renderComment(selectedRace));
@@ -2251,8 +2255,8 @@ function selectRace(rno){
   if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
   const tabName = currentTabName();
   if(tabName==='detail')        renderDetail(rno);
-  else if(tabName==='buy')      renderDetail(rno);
   else if(tabName==='detail2')  renderBuy(rno);
+  else if(tabName==='buy')      renderBuy(rno);
   else if(tabName==='comment')  renderComment(rno);
   else renderDetail(rno);
 }
@@ -2373,8 +2377,8 @@ function updateEV(){
       const doRender = () => {
         if(restoreRace){
           if(safeTab === 'detail')        renderDetail(restoreRace);
-          else if(safeTab === 'buy')      renderDetail(restoreRace);
           else if(safeTab === 'detail2')  renderBuy(restoreRace);
+          else if(safeTab === 'buy')      renderBuy(restoreRace);
           else if(safeTab === 'comment')  renderComment(restoreRace);
           else                            renderDetail(restoreRace);
         }
