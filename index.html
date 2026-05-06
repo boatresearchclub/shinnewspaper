@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 09:19:03 --></head>
+<!-- auto_push_updated:2026-05-06 09:38:11 --></head>
 <body>
 
 <header class="site-header">
@@ -1300,14 +1300,62 @@ function calcTenkaiProbs(boats, arek){
 
   const kimariTypes = Object.keys(adjustedVKimari).filter(k => adjustedVKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
 
+  // ── 修正D: 全選手の個人kimari率をadjustedVKimariにブレンドする ──
+  //
+  // 各艇の「そのコースでの決まり手使用率」を個人傾向として取り出し、
+  // 会場傾向(adjustedVKimari)と trust 比率でブレンドする。
+  //
+  // strength = 個人傾向の最大ウェイト（50走時）
+  //   0.4 → 「会場60%:個人40%」が上限。データが少ないほど会場寄り。
+  //
+  // 逃げ（1コース専用展開）は1コース艇の個人率のみで補正済み（修正C）のため
+  // ここでは差し・まくり・まくり差し・抜きのみ対象。
+  //
+  const PERSONAL_BLEND_STRENGTH = 0.4; // チューニング用: 0.3(控えめ)〜0.6(強め)
+
+  function blendPersonalKimari(boatObj, baseVKimari){
+    const name   = boatObj.name;
+    const course = String(boatObj.boat);
+    const cm     = MASTER_EXT?.course_master?.[name]?.[course];
+    if(!cm) return baseVKimari;
+
+    const runs = cm.runs ?? 0;
+    if(runs < 15) return baseVKimari; // データ不足はスキップ → 会場傾向のまま
+
+    // runs数に応じた信頼度（15走→約0.17、30走→約0.35、50走→0.4）
+    const trust = Math.min(runs / 50, 1.0) * PERSONAL_BLEND_STRENGTH;
+
+    const personalKimari = cm.kimari ?? {};
+    // 個人kimari率を差し・まくり・まくり差し・抜きのみ対象に正規化
+    const BLEND_TARGETS = ['差し', 'まくり', 'まくり差し', '抜き'];
+    const personalTotal = BLEND_TARGETS.reduce((s, k) => s + (personalKimari[k] ?? 0), 0);
+    if(personalTotal <= 0) return baseVKimari;
+
+    const blended = { ...baseVKimari };
+    for(const k of BLEND_TARGETS){
+      if(!(k in blended)) continue;
+      const personalRate = (personalKimari[k] ?? 0) / personalTotal
+        // 個人率を「ブレンド対象キーの会場合計」スケールに合わせる
+        * BLEND_TARGETS.reduce((s, kk) => s + (baseVKimari[kk] ?? 0), 0);
+      blended[k] = baseVKimari[k] * (1 - trust) + personalRate * trust;
+    }
+
+    // 再正規化（合計を元の合計に揃える）
+    const origTotal   = Object.values(baseVKimari).reduce((s, v) => s + v, 0);
+    const blendTotal  = Object.values(blended).reduce((s, v) => s + v, 0);
+    if(blendTotal > 0){
+      for(const k of Object.keys(blended)) blended[k] = blended[k] / blendTotal * origTotal;
+    }
+    return blended;
+  }
+
   // ── 各艇の決まり手適性スコアを prob に乗算する係数を算出 ──
   //
-  // 設計方針:
-  //   tenkai_prob ∝ prob × Σ(kimariProb × normalizedCoef)
+  // 設計方針（修正D適用後）:
+  //   tenkai_prob ∝ prob × Σ(personalKimariProb × normalizedCoef)
   //
-  //   prob（基本強さ）を起点に、決まり手適性で上下補正する。
-  //   外コース勢が弱ければ1コース艇の prob がそのまま反映され、
-  //   外コース勢に適性があればその分だけ相対的に上がる。
+  //   各艇ごとに個人ブレンドvKimariを使用するため、
+  //   「差し得意な選手がいれば差し展開確率が上がる」が自然に表現される。
   //
   // normalizedCoef は有効艇の平均を1.0基準に正規化しているため、
   // 全艇の補正係数の平均は常に1.0付近に揃い、prob の合計スケールを保持する。
@@ -1316,11 +1364,12 @@ function calcTenkaiProbs(boats, arek){
   const kimariCoefSum = {};
   boats.forEach(b => { kimariCoefSum[b.boat] = 0; });
 
-  for(const kimari of kimariTypes){
-    const kimariProb = adjustedVKimari[kimari];  // 修正C: adjustedVKimariを使用
-    if(!kimariProb || kimariProb <= 0) continue;
+  // 修正D: 艇ごとに個人ブレンドvKimariを先に算出しておく
+  const boatVKimari = {};
+  boats.forEach(b => { boatVKimari[b.boat] = blendPersonalKimari(b, adjustedVKimari); });
 
-    // 有効艇の relCoef を取得
+  for(const kimari of kimariTypes){
+    // 有効艇の relCoef を取得（修正D: kimariProbは艇ごとの個人ブレンド値を使用）
     const relCoefs = {};
     for(const b of boats){
       if(!isValidFirst(b, kimari)){ relCoefs[b.boat] = 0; continue; }
@@ -1344,15 +1393,19 @@ function calcTenkaiProbs(boats, arek){
 
     for(const b of boats){
       if(!isValidFirst(b, kimari)) continue;
+      // 修正D: この艇の個人ブレンドvKimariから当該決まり手の確率を取得
+      const kimariProb = boatVKimari[b.boat][kimari] || 0;
+      if(kimariProb <= 0) continue;
       // 平均を1.0基準に正規化してクリップ
       const normalizedCoef = Math.min(RELATIVE_MAX, Math.max(RELATIVE_MIN, relCoefs[b.boat] / avgCoef));
       // 決まり手比率で重み付けして加算（合計 ≈ 1.0 になる）
       kimariCoefSum[b.boat] += kimariProb * normalizedCoef;
     }
-    // 有効外の艇（ハード除外）は平均的な係数として kimariProb を加算
+    // 有効外の艇（ハード除外）は会場平均値として kimariProb を加算
     // → 「その展開では勝てないが存在は無視しない」扱い
     for(const b of boats){
       if(isValidFirst(b, kimari)) continue;
+      const kimariProb = adjustedVKimari[kimari] || 0; // 有効外は会場平均を維持
       kimariCoefSum[b.boat] += kimariProb * RELATIVE_MIN;
     }
   }
@@ -1380,7 +1433,7 @@ function calcTenkaiProbs(boats, arek){
 // アルゴリズム:
 //   1. 1コースが逃げで1着になる確率 = vKimari["逃げ"] × 1コースのtenkai_prob比率
 //   2. その場合の各コースの2着率 = inn_2place[コース] + winner_course_order 個人補正
-//   3. それ以外の展開（差し・まくり等）は tenkai_remaining（全国実績）+
+//   3. それ以外の展開（差し・まくり等）は tenkai_remaining（会場別実績、なければ全国実績）+
 //      winner_course_order（個人補正）でブレンド。データなし → tenkai_prob 相対値
 //
 // 返り値: { [boat番号]: place2スコア（正規化済み 0-1） }
@@ -1445,7 +1498,14 @@ function calcPlace2Probs(boats, ranked){
   // ── 非逃げ展開（差し・まくり等）の2着: tenkai_remaining + winner_course_order ──
   const nonNigeProb = 1.0 - nigeWinProb;
   // tenkai_remaining: {決まり手: {1着コース: {進入コース: {rate2, trust}}}}
-  const tenkaiRemaining = MASTER_EXT?.tenkai_remaining || {};
+  // 優先順位: ① 会場別(venue_stats[venue].tenkai_remaining) → ② 全国(tenkai_remaining)
+  const tenkaiRemaining = (() => {
+    const venue = DATA.venue;
+    const venueLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
+    if(venueLocal && typeof venueLocal === 'object' && Object.keys(venueLocal).length > 0)
+      return venueLocal;
+    return MASTER_EXT?.tenkai_remaining || {};
+  })();
   if(nonNigeProb > 0){
     for(const winner of ranked){
       const winnerProb = nonNigeProb * (tpMap[winner.boat] / totalTP);
@@ -1595,20 +1655,61 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
 
   const kimariTypes = Object.keys(scenarioVKimari).filter(k => scenarioVKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
 
+  // ── 修正D（シナリオ表示側）: winner艇の個人kimari率をscenarioVKimariにブレンド ──
+  //
+  // calcTenkaiProbs側と同じ blendPersonalKimari ロジックをここでも適用。
+  // winner艇の「差し・まくり・まくり差し得意度」がシナリオの決まり手ラベルに反映される。
+  //
+  const SCENARIO_BLEND_STRENGTH = 0.4; // calcTenkaiProbs側と合わせる
+
+  function blendPersonalKimariScenario(boatObj, baseVKimari){
+    const name   = boatObj.name;
+    const course = String(boatObj.boat);
+    const cm     = MASTER_EXT?.course_master?.[name]?.[course];
+    if(!cm) return baseVKimari;
+
+    const runs = cm.runs ?? 0;
+    if(runs < 15) return baseVKimari;
+
+    const trust = Math.min(runs / 50, 1.0) * SCENARIO_BLEND_STRENGTH;
+    const personalKimari = cm.kimari ?? {};
+    const BLEND_TARGETS = ['差し', 'まくり', 'まくり差し', '抜き'];
+    const personalTotal = BLEND_TARGETS.reduce((s, k) => s + (personalKimari[k] ?? 0), 0);
+    if(personalTotal <= 0) return baseVKimari;
+
+    const blended = { ...baseVKimari };
+    const venueBlendSum = BLEND_TARGETS.reduce((s, kk) => s + (baseVKimari[kk] ?? 0), 0);
+    for(const k of BLEND_TARGETS){
+      if(!(k in blended)) continue;
+      const personalRate = (personalKimari[k] ?? 0) / personalTotal * venueBlendSum;
+      blended[k] = baseVKimari[k] * (1 - trust) + personalRate * trust;
+    }
+
+    const origTotal  = Object.values(baseVKimari).reduce((s, v) => s + v, 0);
+    const blendTotal = Object.values(blended).reduce((s, v) => s + v, 0);
+    if(blendTotal > 0){
+      for(const k of Object.keys(blended)) blended[k] = blended[k] / blendTotal * origTotal;
+    }
+    return blended;
+  }
+
   // 1着率上位3艇
   const top3 = ranked2.slice(0, 3);
 
-  // 各1着候補について決まり手別の発生確率を計算
+  // 各1着候補について決まり手別の発生確率を計算（修正D: winner艇ごとの個人ブレンドvKimariを使用）
   const scenarioProb = {};
   for(const winner of top3){
     scenarioProb[winner.boat] = {};
+    // winner艇の個人傾向でブレンドしたvKimariを算出
+    const winnerVKimari = blendPersonalKimariScenario(winner, scenarioVKimari);
     const validKimariTotal = kimariTypes
       .filter(k => isValidFirst(winner, k))
-      .reduce((s, k) => s + (scenarioVKimari[k] || 0), 0);
+      .reduce((s, k) => s + (winnerVKimari[k] || 0), 0);
     if(validKimariTotal <= 0) continue;
     for(const kimari of kimariTypes){
       if(!isValidFirst(winner, kimari)) continue;
-      scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (scenarioVKimari[kimari] / validKimariTotal);
+      // 修正D: winnerVKimariを使用（winner艇の個人kimari率を反映）
+      scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (winnerVKimari[kimari] / validKimariTotal);
     }
   }
 
@@ -1631,14 +1732,19 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
 
       // 2着率の決定（優先順位）:
       //   1. 逃げ展開(1コース1着) → inn_2place（会場別実績）
-      //   2. 逃げ以外 → tenkai_remaining（決まり手×1着コース別全国実績）
+      //   2. 逃げ以外 → tenkai_remaining（決まり手×1着コース別・会場別実績、なければ全国実績）
       //      + winner_course_order で個人実績が信頼できる艇を補正
       //   3. データなし → tenkai_prob 相対値でフォールバック
       const useInn2 = (kimari === '逃げ' && winner.boat === 1 && Object.keys(inn2Place).length > 0);
       const wc = String(winner.boat);
 
       // tenkai_remaining / winner_course_order の参照
-      const tenkaiRem  = MASTER_EXT?.tenkai_remaining  || {};
+      // 優先順位: ① 会場別(venue_stats[venue].tenkai_remaining) → ② 全国(tenkai_remaining)
+      const tenkaiRem = (() => {
+        const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+        if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
+        return MASTER_EXT?.tenkai_remaining || {};
+      })();
       const winnerCO   = MASTER_EXT?.winner_course_order || {};
       const remForThis = tenkaiRem[kimari]?.[wc] || null; // {進入コース: {rate2, trust}}
 
