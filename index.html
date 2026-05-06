@@ -119,6 +119,13 @@ body {
 /* INSUFFICIENT BANNER */
 .insufficient-banner { display: flex; align-items: center; gap: 7px; padding: .55rem 1.25rem; background: rgba(255,122,0,0.08); border-bottom: 1px solid rgba(255,122,0,0.18); font-size: 12px; color: var(--orange); line-height: 1.4; }
 
+/* COURSE ORDER BANNER (進入変更) */
+.course-order-banner { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: .5rem 1.25rem; font-size: 12px; border-bottom: 1px solid rgba(255,59,59,0.22); background: rgba(255,59,59,0.07); color: var(--red); line-height: 1.5; }
+.course-order-banner .cb-icon { font-size: 14px; flex-shrink: 0; }
+.course-order-banner .cb-text { font-weight: 700; flex-shrink: 0; }
+.course-order-banner .cb-order { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.course-order-banner .cb-sep { color: var(--text3); font-size: 10px; }
+
 /* WEATHER BAR */
 .weather-bar { border-top: 1px solid var(--border); }
 .weather-bar-title, .tenji-title {
@@ -269,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 09:14:24 --></head>
+<!-- auto_push_updated:2026-05-06 09:19:03 --></head>
 <body>
 
 <header class="site-header">
@@ -494,6 +501,58 @@ function buildWeatherBar(rno){
   return `<div class="weather-bar"><span class="weather-bar-title">水面気象情報</span><div class="weather-bar-body" style="flex-direction:column;gap:4px;align-items:center">${weatherRows}</div></div>`;
 }
 
+function buildCourseOrderBanner(rno, boats){
+  // _tenjiCache から course/is_normal_course を読んで「進入変更」バナーを生成
+  const SLUG2 = {
+    "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+    "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+    "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+    "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+    "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+    "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+  };
+  const slug2  = SLUG2[DATA.venue] || DATA.venue;
+  const key2   = tenjiKey(slug2, DATA.date, rno);
+  const cached2 = _tenjiCache[key2];
+  if(!cached2) return '';  // 展示未取得 → バナーなし
+
+  const cf2 = bn => cached2[String(bn)] ?? cached2[bn];
+
+  // course が null の艇が1つでもあればコースデータなし → バナーなし
+  const entries = boats.map(b => {
+    const d = cf2(b.boat);
+    return { frame: b.boat, name: b.name, course: d?.course ?? null, is_normal: d?.is_normal_course ?? null };
+  });
+  if(entries.some(e => e.course == null)) return '';
+
+  const allNormal = entries.every(e => e.is_normal !== false);
+  if(allNormal) return '';  // 全艇枠なり → バナー不要
+
+  // コース順でソート（1コース→2→…）
+  const sorted = [...entries].sort((a,b) => a.course - b.course);
+
+  // ボートサークル
+  const circle = (n) =>
+    `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
+
+  const orderHtml = sorted.map((e,i) => {
+    const warn = e.is_normal === false
+      ? `style="outline:2px solid var(--red);border-radius:50%"`
+      : '';
+    return `${i>0?'<span class="cb-sep">›</span>':''}<span ${warn}>${circle(e.frame)}</span>`;
+  }).join('');
+
+  const changed = entries.filter(e => e.is_normal === false)
+    .map(e => `${e.frame}号→${e.course}コース`).join('　');
+
+  return `<div class="course-order-banner">
+    <span class="cb-icon">⚠</span>
+    <span class="cb-text">進入変更があります</span>
+    <span class="cb-order">${orderHtml}</span>
+    <span style="font-size:11px;color:var(--text2);margin-left:2px">${changed}</span>
+  </div>`;
+}
+
 function buildTenjiSection(rno, boats){
   const SLUG = {
     "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
@@ -524,7 +583,7 @@ function buildTenjiSection(rno, boats){
     }
     // 過去日または締め切り後は「展示情報がありません」
     const msg = pastDeadline ? '展示情報がありません' : '取得待ち';
-    return `${buildWeatherBar(rno)}<div class="tenji-section">
+    return `${buildCourseOrderBanner(rno,boats)}${buildWeatherBar(rno)}<div class="tenji-section">
       <div class="tenji-title">展示情報</div>
       <div style="background:var(--bg2)"><div class="tenji-waiting">${msg}</div></div>
     </div>`;
@@ -543,12 +602,18 @@ function buildTenjiSection(rno, boats){
   const rows = boats.map(bt => {
     const bn = bt.boat;
     const t  = cf(bn);
-    if(!t) return `<tr><td>${bn}</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
+    if(!t) return `<tr><td>${bn}</td><td>—</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
     const f = (v, best) => v==null ? '—' : `<span class="${v===best?'tenji-best':''}">${v.toFixed(2)}</span>`;
     const rankCls = t.tenji_rank===1 ? 'tenji-rank1' : '';
     const tilt = t.tilt != null ? `<span class="tenji-tilt">${t.tilt>0?'+':''}${t.tilt}</span>` : '';
-    return `<tr>
+    const course = t.course ?? null;
+    const isAbnormal = t.is_normal_course === false;
+    const courseCell = course != null
+      ? `<span class="boat-circle b${course}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center${isAbnormal?';outline:2px solid var(--red);outline-offset:1px':''}">${course}</span>`
+      : '—';
+    return `<tr${isAbnormal?' style="background:rgba(255,59,59,0.06)"':''}>
       <td><span class="boat-circle b${bn}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bn}</span></td>
+      <td>${courseCell}</td>
       <td>${bt.name}</td>
       <td>${f(t.lap1, bestLap1)}</td>
       <td>${f(t.mawari, bestMawari)}</td>
@@ -557,12 +622,12 @@ function buildTenjiSection(rno, boats){
       <td>${tilt}</td>
     </tr>`;
   }).join('');
-  return `${buildWeatherBar(rno)}<div class="tenji-section">
+  return `${buildCourseOrderBanner(rno,boats)}${buildWeatherBar(rno)}<div class="tenji-section">
     <div class="tenji-title">展示情報</div>
     <div style="background:var(--bg2)">
       <table class="tenji-table">
         <thead><tr>
-          <th>枠</th><th style="text-align:center">選手名</th>
+          <th>枠</th><th style="text-align:center">コース</th><th style="text-align:center">選手名</th>
           <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
         </tr></thead>
         <tbody>${rows}</tbody>
