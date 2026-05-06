@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-06 12:02:53 --></head>
+<!-- auto_push_updated:2026-05-06 12:09:38 --></head>
 <body>
 
 <header class="site-header">
@@ -541,16 +541,15 @@ function buildCourseOrderBanner(rno, boats){
   const circle = (n) =>
     `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
 
-  // 進入変更した艇のみ「枠番 › コース番号」で表示
-  const changedEntries = entries.filter(e => e.is_normal === false);
-  const changedHtml = changedEntries.map((e, i) =>
-    `${i > 0 ? '<span class="cb-sep" style="margin:0 4px">　</span>' : ''}${circle(e.frame)}<span class="cb-sep" style="margin:0 3px;font-size:13px">›</span>${circle(e.course)}`
+  // コース順に全艇の枠番サークルを並べる
+  const orderHtml = sorted.map((e, i) =>
+    `${i > 0 ? '<span class="cb-sep">›</span>' : ''}${circle(e.frame)}`
   ).join('');
 
   return `<div class="course-order-banner">
     <span class="cb-icon">⚠</span>
     <span class="cb-text">進入変更</span>
-    <span class="cb-order">${changedHtml}</span>
+    <span class="cb-order">${orderHtml}</span>
   </div>`;
 }
 
