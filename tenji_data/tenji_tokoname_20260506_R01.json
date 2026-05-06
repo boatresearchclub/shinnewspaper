@@ -14,7 +14,14 @@
     "tilt": 0,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -31,7 +38,14 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -48,7 +62,14 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -65,7 +86,14 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -82,7 +110,14 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   },
   {
     "venue": "tokoname",
@@ -99,6 +134,13 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:11:55"
+    "fetched_at": "2026-05-06 10:11:55",
+    "weather": "曇り",
+    "weather_degree": 16,
+    "water_degree": 19,
+    "wind_speed": 2,
+    "wind_direction": 13,
+    "wind_direction_text": "西",
+    "wave_height": 1
   }
 ]
