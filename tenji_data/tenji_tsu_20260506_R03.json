@@ -17,14 +17,7 @@
     "parts_exchange": null,
     "weight": 53.6,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   },
   {
     "venue": "tsu",
@@ -44,14 +37,7 @@
     "parts_exchange": null,
     "weight": 54.1,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   },
   {
     "venue": "tsu",
@@ -71,14 +57,7 @@
     "parts_exchange": null,
     "weight": 52.1,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   },
   {
     "venue": "tsu",
@@ -98,14 +77,7 @@
     "parts_exchange": null,
     "weight": 52.1,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   },
   {
     "venue": "tsu",
@@ -125,14 +97,7 @@
     "parts_exchange": null,
     "weight": 51,
     "weight_adjust": 1,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   },
   {
     "venue": "tsu",
@@ -152,13 +117,6 @@
     "parts_exchange": null,
     "weight": 52.6,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:12:05",
-    "weather": "雨",
-    "weather_degree": 16,
-    "water_degree": 19,
-    "wind_speed": 0,
-    "wind_direction": 17,
-    "wind_direction_text": "不明",
-    "wave_height": 0
+    "fetched_at": "2026-05-06 11:18:05"
   }
 ]
