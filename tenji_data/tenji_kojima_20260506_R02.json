@@ -17,7 +17,14 @@
     "parts_exchange": null,
     "weight": 46.5,
     "weight_adjust": 0.5,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   },
   {
     "venue": "kojima",
@@ -37,7 +44,14 @@
     "parts_exchange": null,
     "weight": 46,
     "weight_adjust": 1,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   },
   {
     "venue": "kojima",
@@ -57,7 +71,14 @@
     "parts_exchange": null,
     "weight": 46,
     "weight_adjust": 1,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   },
   {
     "venue": "kojima",
@@ -77,7 +98,14 @@
     "parts_exchange": null,
     "weight": 44,
     "weight_adjust": 3,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   },
   {
     "venue": "kojima",
@@ -97,7 +125,14 @@
     "parts_exchange": null,
     "weight": 47.4,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   },
   {
     "venue": "kojima",
@@ -117,6 +152,13 @@
     "parts_exchange": null,
     "weight": 47.9,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-06 11:03:31"
+    "fetched_at": "2026-05-06 11:03:31",
+    "weather": "曇り",
+    "weather_degree": 17,
+    "water_degree": 17,
+    "wind_speed": 2,
+    "wind_direction": 11,
+    "wind_direction_text": "南西",
+    "wave_height": 3
   }
 ]
