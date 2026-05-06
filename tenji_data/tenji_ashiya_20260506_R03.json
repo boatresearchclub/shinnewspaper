@@ -12,7 +12,14 @@
     "tenji": 6.77,
     "tenji_rank": 6,
     "tilt": 0,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   },
   {
     "venue": "ashiya",
@@ -27,7 +34,14 @@
     "tenji": 6.74,
     "tenji_rank": 3,
     "tilt": -0.5,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   },
   {
     "venue": "ashiya",
@@ -42,7 +56,14 @@
     "tenji": 6.75,
     "tenji_rank": 5,
     "tilt": 0,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   },
   {
     "venue": "ashiya",
@@ -57,7 +78,14 @@
     "tenji": 6.72,
     "tenji_rank": 1,
     "tilt": 0,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   },
   {
     "venue": "ashiya",
@@ -72,7 +100,14 @@
     "tenji": 6.74,
     "tenji_rank": 3,
     "tilt": -0.5,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   },
   {
     "venue": "ashiya",
@@ -87,6 +122,13 @@
     "tenji": 6.73,
     "tenji_rank": 2,
     "tilt": 0,
-    "fetched_at": "2026-05-06 09:38:51"
+    "fetched_at": "2026-05-06 09:38:51",
+    "weather": "晴",
+    "weather_degree": 19.8,
+    "water_degree": 19.9,
+    "wind_speed": 0,
+    "wind_direction": 17,
+    "wind_direction_text": "不明",
+    "wave_height": 1
   }
 ]
