@@ -14,14 +14,10 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 52,
+    "weight_adjust": 0,
+    "fetched_at": "2026-05-06 10:32:36"
   },
   {
     "venue": "amagasaki",
@@ -38,14 +34,10 @@
     "tilt": 0,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 58.1,
+    "weight_adjust": 0,
+    "fetched_at": "2026-05-06 10:32:36"
   },
   {
     "venue": "amagasaki",
@@ -62,14 +54,10 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 51.5,
+    "weight_adjust": 0.5,
+    "fetched_at": "2026-05-06 10:32:36"
   },
   {
     "venue": "amagasaki",
@@ -86,14 +74,10 @@
     "tilt": -0.5,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 52.8,
+    "weight_adjust": 0,
+    "fetched_at": "2026-05-06 10:32:36"
   },
   {
     "venue": "amagasaki",
@@ -110,14 +94,10 @@
     "tilt": 0,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 47,
+    "weight_adjust": 0,
+    "fetched_at": "2026-05-06 10:32:36"
   },
   {
     "venue": "amagasaki",
@@ -134,13 +114,9 @@
     "tilt": 0,
     "course": null,
     "is_normal_course": null,
-    "fetched_at": "2026-05-06 10:25:52",
-    "weather": "曇り",
-    "weather_degree": 19.4,
-    "water_degree": 18.1,
-    "wind_speed": 3,
-    "wind_direction": 6,
-    "wind_direction_text": "東南東",
-    "wave_height": 0
+    "parts_exchange": null,
+    "weight": 52.1,
+    "weight_adjust": 0,
+    "fetched_at": "2026-05-06 10:32:36"
   }
 ]
