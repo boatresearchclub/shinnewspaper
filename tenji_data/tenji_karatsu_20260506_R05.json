@@ -12,14 +12,9 @@
     "tenji": 6.75,
     "tenji_rank": 5,
     "tilt": 0,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   },
   {
     "venue": "karatsu",
@@ -34,14 +29,9 @@
     "tenji": 6.69,
     "tenji_rank": 2,
     "tilt": -0.5,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   },
   {
     "venue": "karatsu",
@@ -56,14 +46,9 @@
     "tenji": 6.71,
     "tenji_rank": 3,
     "tilt": 0,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   },
   {
     "venue": "karatsu",
@@ -78,14 +63,9 @@
     "tenji": 6.78,
     "tenji_rank": 6,
     "tilt": -0.5,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   },
   {
     "venue": "karatsu",
@@ -100,14 +80,9 @@
     "tenji": 6.64,
     "tenji_rank": 1,
     "tilt": -0.5,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   },
   {
     "venue": "karatsu",
@@ -122,13 +97,8 @@
     "tenji": 6.71,
     "tenji_rank": 3,
     "tilt": 0,
-    "fetched_at": "2026-05-06 10:09:15",
-    "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
-    "wind_speed": 2,
-    "wind_direction": 4,
-    "wind_direction_text": "東北東",
-    "wave_height": 2
+    "course": null,
+    "is_normal_course": null,
+    "fetched_at": "2026-05-06 10:11:37"
   }
 ]
