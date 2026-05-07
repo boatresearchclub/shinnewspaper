@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 13:13:06 --></head>
+<!-- auto_push_updated:2026-05-07 13:16:08 --></head>
 <body>
 
 <header class="site-header">
@@ -2429,6 +2429,7 @@ function updateAlertStrip(){
 
   const hits = [];
   const dataForDate = getDataForDate(viewDate);
+  console.log('[Alert] nowMin=', nowMin, 'viewDate=', viewDate, 'venues=', Object.keys(dataForDate));
 
   VENUE_LIST.forEach(venue => {
     const vdata = dataForDate[venue];
@@ -2438,6 +2439,7 @@ function updateAlertStrip(){
       const [h, m] = rd.time.trim().split(':').map(Number);
       const raceMin = h * 60 + m;
       const diff = raceMin - nowMin;
+      console.log('[Alert]', venue, rno+'R', rd.time, 'diff='+diff);
       if(diff >= 0 && diff <= LIMIT){
         hits.push({ venue, rno: parseInt(rno), time: rd.time.trim(), diff });
       }
