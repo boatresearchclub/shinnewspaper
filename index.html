@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 11:01:58 --></head>
+<!-- auto_push_updated:2026-05-07 11:13:18 --></head>
 <body>
 
 <header class="site-header">
@@ -1981,37 +1981,35 @@ function renderBuy(rno){
     //
     b.display_base = baseScore;  // 基準1着率そのまま
 
-    // ── 相対補正の表示差分 ──
-    // 「probのみで正規化した場合の最終確率」を基準線とする
+    // ── 相対補正の表示差分（改善版）──
+    //
+    // 「probのみで正規化した最終確率」を基準線とし、
+    // 「prob+tenkai合成で正規化した最終確率」との差を表示する。
+    //
     // MASTER_EXTなし時は tenkaiScore=prob のため差分=0（正しく±0表示）
+    //
     const probOnlyTotal = ranked.reduce((s, x) => s + x.prob, 0) || 1;
-    const probOnlyFinal = baseScore / probOnlyTotal;
-    // MASTER_EXTありの場合のみ、展開補正による変化分を計算
+    const probOnlyFinal = baseScore / probOnlyTotal;  // probのみ正規化した基準確率
+
     if(useMaster){
-      // 「prob+tenkai 2スコア合成での最終確率」- 「probのみでの最終確率」
-      const wPT = wBase + wTenkai;
-      const compPT = ranked.reduce((s, x) =>
-        s + (x.prob * wBase + (x.tenkai_score ?? x.tenkai_prob) * wTenkai) / wPT, 0) || 1;
-      const fpPT = (baseScore * wBase + tenkaiScore * wTenkai) / wPT / compPT;
-      b.display_tenkai = fpPT - probOnlyFinal;
+      // tenkaiスコアを単独で正規化した確率との差分
+      const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
+      const tenkaiOnlyFinal = tenkaiScore / tenkaiOnlyTotal;
+      b.display_tenkai = tenkaiOnlyFinal - probOnlyFinal;
     } else {
       b.display_tenkai = 0;
     }
 
-    // ── 展示補正の表示差分 ──
-    // 「展示スコアが均等（全艇同一）だった場合の最終確率」との差分
-    // → 展示タイムが平均より速ければプラス、遅ければマイナス
+    // ── 展示補正の表示差分（改善版）──
+    //
+    // tenjiスコアを単独で正規化した確率と、probのみ正規化した確率との差分を表示する。
+    // → 展示タイムが速い艇はプラス（他艇比での相対的優位）、遅い艇はマイナス
+    //
     if(tenjiScoreMap && wTenji > 0){
-      // 展示スコアが全艇均等（=1/n）だった場合の仮想最終確率
-      const n = ranked.length || 1;
-      const tenjiUniform = 1 / n;  // 全艇均等展示スコア
-      const compUniform = ranked.reduce((s, x) => {
-        const bScore = x.prob;
-        const tScore = x.tenkai_score ?? x.tenkai_prob;
-        return s + (bScore * wBase + tScore * wTenkai + tenjiUniform * wTenji) / wTotal;
-      }, 0) || 1;
-      const fpUniform = (baseScore * wBase + tenkaiScore * wTenkai + tenjiUniform * wTenji) / wTotal / compUniform;
-      b.display_tenji = fp - fpUniform;
+      const tenjiOnlyTotal = ranked.reduce((s, x) =>
+        s + (tenjiScoreMap[x.boat] ?? 0), 0) || 1;
+      const tenjiOnlyFinal = (tenjiScoreMap[b.boat] ?? 0) / tenjiOnlyTotal;
+      b.display_tenji = tenjiOnlyFinal - probOnlyFinal;
     } else {
       b.display_tenji = 0;
     }
@@ -2234,7 +2232,7 @@ function renderBuy(rno){
     ${venueStatsTable}
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">展開推定後 着順確率</div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">展開推定後 着順確率 <span style="font-weight:400;font-size:10px;letter-spacing:0;text-transform:none">（最終確率の合計は100%）</span></div>
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
           <label style="font-size:11px;color:var(--text3);white-space:nowrap">単勝オッズ入力</label>
           <div style="display:flex;gap:4px" id="odds-inputs">
@@ -2256,17 +2254,17 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">選手名</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="出走表の基準1着率（そのまま）">基準</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性による最終確率の変化分（プラス=基準より有利な展開）">相対補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムによる最終確率の変化分（プラス=展示タイムが有利）">展示補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準50%+相対補正30%+展示20%の加重合成後、正規化した最終1着率">最終確率</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="出走表の基準1着率（長期統計ベース）">基準</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性スコアを正規化した確率と基準確率の差（プラス＝展開面で有利）">展開補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムスコアを正規化した確率と基準確率の差（プラス＝展示タイムが他艇より優位）">展示補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準50%＋展開補正30%＋展示補正20%の加重合成・正規化後の最終1着率（合計は常に100%）">最終確率</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">
-        基準: 出走表の想定1着率。相対補正: 展開適性で最終確率がどれだけ変化したか（プラス=基準より有利）。展示補正: 展示タイムで最終確率がどれだけ変化したか（プラス=基準より有利）。展示なし時は基準＋相対補正のみ。期待値 &gt; 1.0 が期待値プラスの目安。
+        基準: 長期統計ベースの想定1着率。展開補正: 展開適性スコアを単独正規化した確率と基準の差（＋は有利、－は不利）。展示補正: 展示タイムスコアを単独正規化した確率と基準の差（＋は有利、－は不利）。最終確率: 3指標の加重合成（基準50%・展開30%・展示20%）後に正規化した確率で、合計は常に100%。展示なし時は基準62.5%・展開37.5%で合成。期待値 &gt; 1.0 が期待値プラスの目安。
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
