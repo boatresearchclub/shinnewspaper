@@ -2,41 +2,41 @@
   "venue": "三国",
   "venue_slug": "mikuni",
   "date": "20260507",
-  "race": 10,
-  "fetched_at": "2026-05-08 03:54:58",
-  "kimari": "逃げ",
+  "race": 11,
+  "fetched_at": "2026-05-08 03:55:09",
+  "kimari": "まくり差し",
   "henkan": [],
   "tansho": [
     {
-      "combo": "1",
-      "odds": 170,
+      "combo": "3",
+      "odds": 530,
       "ninki": null
     }
   ],
   "fukusho": [
     {
-      "combo": "1",
-      "odds": 110,
+      "combo": "3",
+      "odds": 360,
       "ninki": null
     },
     {
       "combo": "2",
-      "odds": 160,
+      "odds": 330,
       "ninki": null
     }
   ],
   "nirentan": [
     {
-      "combo": "1-2",
-      "odds": 180,
-      "ninki": 1
+      "combo": "3-2",
+      "odds": 6380,
+      "ninki": 15
     }
   ],
   "sanrentan": [
     {
-      "combo": "1-2-5",
-      "odds": 1050,
-      "ninki": 4
+      "combo": "3-2-5",
+      "odds": 34450,
+      "ninki": 65
     }
   ]
 }
