@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 10:53:07 --></head>
+<!-- auto_push_updated:2026-05-07 10:56:08 --></head>
 <body>
 
 <header class="site-header">
@@ -1931,6 +1931,9 @@ function renderBuy(rno){
   // 正規化（合計を1.0に揃える）
   const compTotal = Object.values(compositeScores).reduce((a,v) => a+v, 0) || 1;
 
+  // useMaster: MASTER_EXTと会場データが揃っている場合のみ相対補正を表示
+  const useMaster = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
+
   ranked.forEach(b => {
     const baseScore   = b.prob;
     const tenkaiScore = b.tenkai_score ?? b.tenkai_prob;
@@ -2018,8 +2021,6 @@ function renderBuy(rno){
   const place2Map = calcPlace2Probs(rawBoats, ranked);
   // place2Map を各ボートに付与して2着ランクを作成
   const ranked2 = [...ranked].map(b=>({...b, place2_prob: place2Map[b.boat]||0}));
-
-  const useMaster       = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
 
   const [A, B, C, D] = ranked;
   const mode    = tenkaiLabel(arek);
