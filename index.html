@@ -234,68 +234,41 @@ body {
   background: #fff8ee;
   border-bottom: 1px solid rgba(239,159,39,0.35);
   padding: 7px 10px 8px;
-  display: none; /* JS で表示 */
+  display: none;
 }
 .alert-strip-title {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .09em;
-  color: #854F0B;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  color: #854F0B; text-transform: uppercase;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
 }
 .alert-strip-cards {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  display: flex; gap: 6px; overflow-x: auto;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .alert-strip-cards::-webkit-scrollbar { display: none; }
 .alert-card {
-  flex-shrink: 0;
-  background: #fff;
+  flex-shrink: 0; background: #fff;
   border: 1px solid rgba(239,159,39,0.55);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  min-width: 100px;
-  cursor: pointer;
+  border-radius: var(--radius-sm); padding: 6px 10px;
+  min-width: 100px; cursor: pointer;
   transition: background .12s, border-color .12s;
 }
 .alert-card:hover { background: #fff1e0; }
-.alert-card.urgent {
-  border-color: rgba(229,57,53,0.55);
-  background: #fff5f5;
-}
+.alert-card.urgent { border-color: rgba(229,57,53,0.55); background: #fff5f5; }
 .alert-card.urgent:hover { background: #ffe1e1; }
 .alert-card-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 3px;
-  background: #fae0b0;
-  color: #633806;
-  margin-bottom: 3px;
-  letter-spacing: .03em;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; padding: 1px 5px;
+  border-radius: 3px; background: #fae0b0; color: #633806;
+  margin-bottom: 3px; letter-spacing: .03em;
 }
-.alert-card.urgent .alert-card-badge {
-  background: #fdd;
-  color: #791F1F;
-}
+.alert-card.urgent .alert-card-badge { background: #fdd; color: #791F1F; }
 .alert-card-venue { font-size: 11px; color: var(--text2); font-weight: 500; }
 .alert-card-race  { font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; }
 .alert-card-time  { font-size: 10px; color: var(--text3); margin-top: 1px; }
 .alert-dot {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: #EF9F27;
-  display: inline-block;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #EF9F27; display: inline-block;
   animation: alertPulse 1.3s ease-in-out infinite;
 }
 .alert-dot.urgent { background: #E24B4A; }
@@ -348,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 13:07:19 --></head>
+<!-- auto_push_updated:2026-05-07 13:13:06 --></head>
 <body>
 
 <header class="site-header">
@@ -371,7 +344,6 @@ body {
 
 <!-- sticky nav: 締め切りアラート + 会場タブ + レース選択バー -->
 <div class="sticky-nav">
-  <!-- 締め切り15分以内アラートバナー -->
   <div id="alert-strip">
     <div class="alert-strip-title">⏱ まもなく締め切り</div>
     <div class="alert-strip-cards" id="alert-cards"></div>
@@ -2446,18 +2418,14 @@ function shiftDate(delta){
 }
 
 // ── 締め切りアラートバナー ──
-//
-// 全会場の全レースを走査し、発走時刻が「今から15分以内かつ未過去」のレースを
-// 残り時間の昇順でカード表示する。5分以内はurgentクラスで赤表示。
-//
 function updateAlertStrip(){
-  const strip = document.getElementById('alert-strip');
+  const strip   = document.getElementById('alert-strip');
   const cardsEl = document.getElementById('alert-cards');
   if(!strip || !cardsEl) return;
 
-  const now = new Date();
+  const now    = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
-  const LIMIT = 15; // 表示する締め切りまでの分数
+  const LIMIT  = 15;
 
   const hits = [];
   const dataForDate = getDataForDate(viewDate);
@@ -2469,7 +2437,7 @@ function updateAlertStrip(){
       if(!rd.time || !/^\d{1,2}:\d{2}$/.test(rd.time.trim())) return;
       const [h, m] = rd.time.trim().split(':').map(Number);
       const raceMin = h * 60 + m;
-      const diff = raceMin - nowMin; // 正=未来、負=過去
+      const diff = raceMin - nowMin;
       if(diff >= 0 && diff <= LIMIT){
         hits.push({ venue, rno: parseInt(rno), time: rd.time.trim(), diff });
       }
@@ -2487,9 +2455,7 @@ function updateAlertStrip(){
   cardsEl.innerHTML = hits.map(h => {
     const urgent = h.diff <= 5;
     const dotCls = urgent ? 'alert-dot urgent' : 'alert-dot';
-    const label  = h.diff <= 0
-      ? '発走直前'
-      : `残り ${h.diff}分`;
+    const label  = h.diff <= 0 ? '発走直前' : `残り ${h.diff}分`;
     return `<div class="alert-card${urgent?' urgent':''}" onclick="jumpToAlert('${h.venue}',${h.rno})">
       <div class="alert-card-badge"><span class="${dotCls}"></span>${label}</div>
       <div class="alert-card-venue">${h.venue}</div>
@@ -2793,7 +2759,29 @@ function updateEV(){
       '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
   }
 
-  // 締め切りアラート: 初回表示 + 1分ごとに更新
+  // ── サンプルデータ用: 現在時刻付近にレース時刻を差し込む ──
+  // 本番では auto_push.py が当日の実データを埋め込むため不要。
+  // sample.html では全レース時刻が過去になっているため、
+  // 現在時刻の +3分・+9分・+13分 にダミーレースを追加してアラート動作を確認できるようにする。
+  (function patchSampleTimes(){
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    function addMin(min){
+      const d = new Date(now.getTime() + min * 60000);
+      return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+    // 芦屋に +3分レース（urgentテスト用）
+    if(ALL_DATA['芦屋'] && ALL_DATA['芦屋'].races){
+      ALL_DATA['芦屋'].races['99'] = { arek: 50, time: addMin(3), boats: ALL_DATA['芦屋'].races['1'].boats };
+    }
+    // 鳴門に +9分・+13分レース
+    if(ALL_DATA['鳴門'] && ALL_DATA['鳴門'].races){
+      ALL_DATA['鳴門'].races['98'] = { arek: 55, time: addMin(9),  boats: ALL_DATA['鳴門'].races['1'].boats };
+      ALL_DATA['鳴門'].races['97'] = { arek: 60, time: addMin(13), boats: ALL_DATA['鳴門'].races['1'].boats };
+    }
+  })();
+
+  // 締め切りアラート: 初回表示 + 1分ごとに自動更新
   updateAlertStrip();
   setInterval(updateAlertStrip, 60 * 1000);
 })();
