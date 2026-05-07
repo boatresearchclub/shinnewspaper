@@ -3,33 +3,40 @@
   "venue_slug": "hamanako",
   "date": "20260507",
   "race": 4,
-  "fetched_at": "2026-05-08 03:38:39",
+  "fetched_at": "2026-05-08 03:49:36",
+  "kimari": "抜き",
+  "henkan": [],
   "tansho": [
     {
       "combo": "1",
-      "odds": 110
+      "odds": 110,
+      "ninki": null
     }
   ],
   "fukusho": [
     {
       "combo": "1",
-      "odds": 130
+      "odds": 130,
+      "ninki": null
     },
     {
       "combo": "2",
-      "odds": 240
+      "odds": 240,
+      "ninki": null
     }
   ],
   "nirentan": [
     {
       "combo": "1-2",
-      "odds": 320
+      "odds": 320,
+      "ninki": 1
     }
   ],
   "sanrentan": [
     {
       "combo": "1-2-5",
-      "odds": 830
+      "odds": 830,
+      "ninki": 3
     }
   ]
 }
