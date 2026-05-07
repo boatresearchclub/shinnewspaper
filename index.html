@@ -213,6 +213,8 @@ body {
 .buy-weight { display: flex; gap: 2px; }
 .wdot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .wdot.empty { background: var(--bg4); }
+.hit-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: var(--gold); color: #5a3a00; flex-shrink: 0; }
+.buy-row.hit { background: rgba(255,179,0,0.10); border-radius: 4px; }
 
 .scenario-bar { padding: .75rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 13px; display: flex; align-items: center; gap: 10px; }
 .scenario-bar.safe { background: rgba(61,214,140,.07); border-left: 3px solid var(--green); }
@@ -335,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 04:29:27 --></head>
+<!-- auto_push_updated:2026-05-08 04:41:05 --></head>
 <body>
 
 <header class="site-header">
@@ -2296,6 +2298,40 @@ function renderBuy(rno){
   `;
 
   // ── AI予想タブ: 買い目のみ ──
+  // 結果データとの的中チェック
+  const rKey      = resultKey(slug, DATA.date, rno);
+  const resultRd  = RESULT_DATA[rKey];
+  const hasResult = !!(resultRd && resultRd.sanrentan && resultRd.sanrentan.length > 0);
+
+  // 結果comboを正規化（区切り文字を統一）して比較用セットを作成
+  function normalizeCombo(s){ return (s||'').replace(/[－−\-]/g,'-'); }
+  const resultSan3  = hasResult ? new Set((resultRd.sanrentan||[]).map(r=>normalizeCombo(r.combo))) : null;
+  const resultNiren = hasResult ? new Set((resultRd.nirentan||[]).map(r=>normalizeCombo(r.combo)))  : null;
+
+  function hitBadge(){ return `<span class="hit-badge">🎯 的中</span>`; }
+
+  function buy3Row(r){
+    const nc = normalizeCombo(r.c);
+    const isHit = resultSan3 && resultSan3.has(nc);
+    return `<div class="buy-row${isHit?' hit':''}">
+      <span class="buy-label ${r.lc}">${r.l}</span>
+      <span class="buy-combo">${r.c}</span>
+      ${r.w>0?weightDots(r.w):''}
+      ${isHit?hitBadge():''}
+    </div>`;
+  }
+
+  function buy2Row(r){
+    const nc = normalizeCombo(r.c);
+    const isHit = resultNiren && resultNiren.has(nc);
+    return `<div class="buy-row${isHit?' hit':''}">
+      <span class="buy-label ${r.lc}">${r.l}</span>
+      <span class="buy-combo">${r.c}</span>
+      ${weightDots(r.w)}
+      ${isHit?hitBadge():''}
+    </div>`;
+  }
+
   document.getElementById('detail2-panel').innerHTML = `
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
@@ -2303,20 +2339,12 @@ function renderBuy(rno){
           <span>3連単 <span style="font-weight:400;color:var(--text3);font-size:10px">${buy3.length}点</span></span>
         </div>
         <div class="buy3-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          ${buy3.map(r=>`<div class="buy-row">
-            <span class="buy-label ${r.lc}">${r.l}</span>
-            <span class="buy-combo">${r.c}</span>
-            ${r.w>0?weightDots(r.w):''}
-          </div>`).join('')}
+          ${buy3.map(buy3Row).join('')}
         </div>
       </div>
       <div class="buy-card">
         <div class="buy-card-title">2連単</div>
-        ${buy2.map(r=>`<div class="buy-row">
-          <span class="buy-label ${r.lc}">${r.l}</span>
-          <span class="buy-combo">${r.c}</span>
-          ${weightDots(r.w)}
-        </div>`).join('')}
+        ${buy2.map(buy2Row).join('')}
       </div>
     </div>
   `;
