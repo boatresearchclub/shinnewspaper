@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 12:29:27 --></head>
+<!-- auto_push_updated:2026-05-07 12:35:10 --></head>
 <body>
 
 <header class="site-header">
@@ -777,13 +777,16 @@ function timeToCoef(h){
 }
 
 // 1項目分の補正係数配列を返す（値がnullの艇が1艇でもあればnullを返す）
+// larger_is_better=true の場合、大きい値ほど高評価（回り足）
 function fieldCoefs(boats, tenjiData, field){
+  const LARGER_IS_BETTER = { mawari: true };  // 回り足は大きいほど速い
   const vals = boats.map(b => tenjiData[b.boat]?.[field] ?? null);
   if(vals.some(v => v === null)) return null;
   const avg = vals.reduce((a, v) => a + v, 0) / vals.length;
   const std = Math.sqrt(vals.reduce((a, v) => a + (v - avg) ** 2, 0) / vals.length);
   if(std === 0) return vals.map(() => 1.0);  // 全艇同タイム → 補正なし
-  return vals.map(v => timeToCoef(50 + ((avg - v) / std) * 10));
+  const sign = LARGER_IS_BETTER[field] ? 1 : -1;  // 小さい=速い項目はavg-v、大きい=速い項目はv-avg
+  return vals.map(v => timeToCoef(50 + sign * ((v - avg) / std) * 10));
 }
 
 // ── calcTenjiScore（独立展示スコア生成）──
