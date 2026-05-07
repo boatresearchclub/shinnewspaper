@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 09:40:03 --></head>
+<!-- auto_push_updated:2026-05-07 09:44:35 --></head>
 <body>
 
 <header class="site-header">
@@ -1410,18 +1410,30 @@ function calcTenkaiProbs(boats, arek){
   const scores = {};
   boats.forEach(b => { scores[b.boat] = b.prob * (kimariCoefSum[b.boat] || RELATIVE_MIN); });
 
-  // ★ tenkai_score: kimari適性係数のみを正規化した独立スコア（probを掛けない）
-  //    相対補正の純粋な寄与分として加重合成に使用
-  const tenkaiOnlyScores = {};
-  boats.forEach(b => { tenkaiOnlyScores[b.boat] = kimariCoefSum[b.boat] || RELATIVE_MIN; });
-  const tenkaiOnlyTotal = Object.values(tenkaiOnlyScores).reduce((a,v) => a+v, 0) || 1;
+  // ★ tenkai_score: 「probを加味した上で、相対補正の寄与分だけを独立スコアとして返す」
+  //
+  // 【設計思想】
+  //   kimariCoefSumをそのまま正規化すると、1号艇は「逃げ以外ハード除外→係数が集まりにくい」
+  //   という構造的な問題で、どのレースでも1号艇の相対補正が下がってしまう。
+  //
+  //   これは kimariCoefSum が「決まり手の有効範囲の広さ」を内包しているためで、
+  //   「強さの独立評価」として使うには不適切。
+  //
+  //   解決策: scores（prob × kimariCoefSum）を正規化したものを tenkai_score とする。
+  //   これは旧来の tenkai_prob と同じ値だが、「相対補正後の強さスコア」として
+  //   加重合成に使う目的では正しい。
+  //   ※ 加重合成で base(prob) と tenkai_score(≒tenkai_prob) を別々に足すことで
+  //     「probの情報を2回使いすぎる」問題は生じない。
+  //     なぜなら tenkai_score = prob × 適性係数 / total であり、
+  //     prob単体（base）と「probに適性を掛けた後の順位」は別の情報だから。
+  const tenkaiOnlyTotal = Object.values(scores).reduce((a,v) => a+v, 0) || 1;
 
   const total = Object.values(scores).reduce((a,b)=>a+b, 0) || 1;
   return [...boats]
     .map(b => ({
       ...b,
       tenkai_prob:  scores[b.boat] / total,
-      tenkai_score: tenkaiOnlyScores[b.boat] / tenkaiOnlyTotal,  // ★ 独立スコア
+      tenkai_score: scores[b.boat] / tenkaiOnlyTotal,  // ★ = tenkai_prob（prob×適性の正規化値）
       // final_prob: renderBuy の加重合成で上書きされる
       final_prob:   scores[b.boat] / total,
     }))
