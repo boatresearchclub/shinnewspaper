@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 13:16:08 --></head>
+<!-- auto_push_updated:2026-05-07 13:18:39 --></head>
 <body>
 
 <header class="site-header">
@@ -2421,7 +2421,7 @@ function shiftDate(delta){
 function updateAlertStrip(){
   const strip   = document.getElementById('alert-strip');
   const cardsEl = document.getElementById('alert-cards');
-  if(!strip || !cardsEl) return;
+  if(!strip || !cardsEl){ console.warn('[Alert] strip/cards element not found'); return; }
 
   const now    = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -2429,19 +2429,22 @@ function updateAlertStrip(){
 
   const hits = [];
   const dataForDate = getDataForDate(viewDate);
-  console.log('[Alert] nowMin=', nowMin, 'viewDate=', viewDate, 'venues=', Object.keys(dataForDate));
+  console.log('[Alert] START nowMin=', nowMin, 'venues=', Object.keys(dataForDate));
 
   VENUE_LIST.forEach(venue => {
     const vdata = dataForDate[venue];
-    if(!vdata || !vdata.races) return;
+    if(!vdata || !vdata.races){ return; }
     Object.entries(vdata.races).forEach(([rno, rd]) => {
-      if(!rd.time || !/^\d{1,2}:\d{2}$/.test(rd.time.trim())) return;
-      const [h, m] = rd.time.trim().split(':').map(Number);
-      const raceMin = h * 60 + m;
+      if(!rd || !rd.time){ return; }
+      const t = String(rd.time).trim();
+      // HH:MM または H:MM どちらでも対応
+      const match = t.match(/^(\d{1,2}):(\d{2})$/);
+      if(!match){ console.log('[Alert] skip bad time', venue, rno, JSON.stringify(rd.time)); return; }
+      const raceMin = parseInt(match[1]) * 60 + parseInt(match[2]);
       const diff = raceMin - nowMin;
-      console.log('[Alert]', venue, rno+'R', rd.time, 'diff='+diff);
+      console.log('[Alert]', venue, rno+'R', t, 'diff='+diff);
       if(diff >= 0 && diff <= LIMIT){
-        hits.push({ venue, rno: parseInt(rno), time: rd.time.trim(), diff });
+        hits.push({ venue, rno: parseInt(rno), time: t, diff });
       }
     });
   });
@@ -2763,8 +2766,6 @@ function updateEV(){
 
   // ── サンプルデータ用: 現在時刻付近にレース時刻を差し込む ──
   // 本番では auto_push.py が当日の実データを埋め込むため不要。
-  // sample.html では全レース時刻が過去になっているため、
-  // 現在時刻の +3分・+9分・+13分 にダミーレースを追加してアラート動作を確認できるようにする。
   (function patchSampleTimes(){
     const now = new Date();
     const pad = n => String(n).padStart(2,'0');
@@ -2772,11 +2773,9 @@ function updateEV(){
       const d = new Date(now.getTime() + min * 60000);
       return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
-    // 芦屋に +3分レース（urgentテスト用）
     if(ALL_DATA['芦屋'] && ALL_DATA['芦屋'].races){
       ALL_DATA['芦屋'].races['99'] = { arek: 50, time: addMin(3), boats: ALL_DATA['芦屋'].races['1'].boats };
     }
-    // 鳴門に +9分・+13分レース
     if(ALL_DATA['鳴門'] && ALL_DATA['鳴門'].races){
       ALL_DATA['鳴門'].races['98'] = { arek: 55, time: addMin(9),  boats: ALL_DATA['鳴門'].races['1'].boats };
       ALL_DATA['鳴門'].races['97'] = { arek: 60, time: addMin(13), boats: ALL_DATA['鳴門'].races['1'].boats };
@@ -2784,7 +2783,8 @@ function updateEV(){
   })();
 
   // 締め切りアラート: 初回表示 + 1分ごとに自動更新
-  updateAlertStrip();
+  // ※ isRefresh パスの非同期処理(fetchTenjiAll)完了を待たず即時実行する
+  setTimeout(updateAlertStrip, 0);
   setInterval(updateAlertStrip, 60 * 1000);
 })();
 </script>
