@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 05:41:11 --></head>
+<!-- auto_push_updated:2026-05-08 05:49:03 --></head>
 <body>
 
 <header class="site-header">
@@ -2197,6 +2197,11 @@ function renderBuy(rno){
       return Object.values(probs).reduce((s, v) => s + v, 0);
     }
 
+    // 1号艇と会場平均の差（押さえ条件判定・軸絞り込みの両方で使用）
+    const boat1Gap = (venueAvgCourse1 !== null && boat1)
+      ? venueAvgCourse1 - boat1.final_prob
+      : null;
+
     // ── 1着軸の決定 ──
     //
     // 通常: final_prob 1位（= A）を単軸とする
@@ -2227,6 +2232,12 @@ function renderBuy(rno){
       if(axisBoats.length === 0){
         const nonBoat1 = ranked2.filter(b => b.boat !== 1);
         axisBoats = [nonBoat1[0]?.boat ?? A.boat];
+      }
+
+      // 5%以内の押さえ条件が発動する場合は1号艇以外の軸を上位1艇に絞る
+      // （押さえで1号艇もカバーするため、非1号艇側は本命1点に集中する）
+      if(boat1Gap !== null && boat1Gap <= 0.05){
+        axisBoats = axisBoats.slice(0, 1);
       }
     }
 
@@ -2348,12 +2359,9 @@ function renderBuy(rno){
     // ── 1号艇押さえ ──
     //
     // boat1BelowAvg（1号艇が会場平均を下回る）かつ
-    // その差が 5% 以内（venueAvgCourse1 - boat1.final_prob <= 0.05）のとき、
+    // その差が 5% 以内（boat1Gap <= 0.05）のとき、
     // 1号艇を軸にした押さえ買い目を追加する。
     //
-    const boat1Gap = (venueAvgCourse1 !== null && boat1)
-      ? venueAvgCourse1 - boat1.final_prob
-      : null;
     if(boat1BelowAvg && boat1Gap !== null && boat1Gap <= 0.05 && scenarioProb[1] != null){
       const boat1Scenarios = kimariTypes
         .filter(k => (scenarioProb[1]?.[k] ?? 0) > 0.001)
