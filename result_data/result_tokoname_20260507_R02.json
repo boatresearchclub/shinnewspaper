@@ -1,0 +1,35 @@
+{
+  "venue": "常滑",
+  "venue_slug": "tokoname",
+  "date": "20260507",
+  "race": 2,
+  "fetched_at": "2026-05-08 03:40:27",
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 100
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 120
+    },
+    {
+      "combo": "2",
+      "odds": 210
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 930
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-4",
+      "odds": 1110
+    }
+  ]
+}
