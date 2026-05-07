@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 10:32:22 --></head>
+<!-- auto_push_updated:2026-05-07 10:40:28 --></head>
 <body>
 
 <header class="site-header">
@@ -657,110 +657,106 @@ function buildTenjiSection(rno, boats){
 
 // ── 会場別展示情報タイム計測制約 ＋ 重みテーブル ──
 //
-// available: 計測が存在するか（falseはデータ自体がない）
-//   lap1:     1周タイム（桐生は半周="half"扱いで重みを下げる）
-//   mawari:   まわり足タイム
-//   chokusen: 直線タイム（1マーク後の立ち上がり加速 → まくり展開に効く）
-//   tenji:    展示タイム（スリット後〜ゴール → 逃げ・先マイ・抜きに効く）
+// 重み設計方針:
+//   lap1  = 4.5（固定）: 1周タイム → 総合的なモーター力
+//   tenji = 4.5（固定）: 展示タイム → スリット後の直線加速力
+//   回り足 or 直線 = 1.0（どちらか一方のみ使用、もう一方は0）:
+//     差し強会場  → mawari=1.0, chokusen=0  （ターン巧さが差し展開に直結）
+//     まくり強会場 → mawari=0,  chokusen=1.0 （立ち上がり加速がまくり展開に直結）
+//   合計 = 10.0 → 再正規化後: lap1≒0.45, tenji≒0.45, mawari or chokusen≒0.10
 //
-// weight: 各タイムの基本重み（利用不可項目は0にして再正規化される）
+// available: 計測が存在するか（falseはデータ自体がない）
+//   lap1:"half" → 桐生は半周計測のため重みを半減して扱う
 //
 const VENUE_TENJI_CONFIG = {
-  // ── 計測制約あり ──
+
+  // ── 計測制約あり（tenji のみ）──
   "江戸川": {
-    available: { lap1:false,   mawari:false, chokusen:false, tenji:true },
-    weight:    { lap1:0,       mawari:0,     chokusen:0,     tenji:1.00 },
+    available: { lap1:false,  mawari:false, chokusen:false, tenji:true },
+    weight:    { lap1:0,      mawari:0,     chokusen:0,     tenji:1.0  },
   },
+
+  // ── lap1が半周計測（桐生）→ まくり強なので直線を採用、lap1重みを半減 ──
   "桐生": {
-    available: { lap1:"half",  mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.10,    mawari:0.30,  chokusen:0.35,  tenji:0.25 },
+    available: { lap1:"half", mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:2.25,   mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
+
+  // ── mawari のみ計測あり（直線なし会場）→ 差し寄りのため回り足採用 ──
   "尼崎": {
-    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
-    weight:    { lap1:0.25,    mawari:0.40,  chokusen:0,     tenji:0.35 },
+    available: { lap1:true,   mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "住之江": {
-    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
-    weight:    { lap1:0.20,    mawari:0.30,  chokusen:0,     tenji:0.50 },
+    available: { lap1:true,   mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "徳山": {
-    available: { lap1:true,    mawari:true,  chokusen:false, tenji:true },
-    weight:    { lap1:0.25,    mawari:0.35,  chokusen:0,     tenji:0.40 },
+    available: { lap1:true,   mawari:true,  chokusen:false, tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
-  // ── まくり強（直線を高めに）──
+
+  // ── まくり強会場 → 直線を採用 ──
   "蒲郡": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.40,  tenji:0.20 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
   "戸田": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.40,  tenji:0.20 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
   "三国": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.15,    mawari:0.28,  chokusen:0.35,  tenji:0.22 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
   "平和島": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.15,    mawari:0.28,  chokusen:0.35,  tenji:0.22 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
   "浜名湖": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.15,    mawari:0.25,  chokusen:0.35,  tenji:0.25 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:0,     chokusen:1.0,   tenji:4.5  },
   },
-  // ── 差し強（まわり足を高めに）──
+
+  // ── 差し強会場 → 回り足を採用 ──
   "宮島": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.40,  chokusen:0.20,  tenji:0.20 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "下関": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.38,  chokusen:0.22,  tenji:0.20 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "若松": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.38,  chokusen:0.22,  tenji:0.20 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
-  // ── 逃げ強（展示を高めに）──
+
+  // ── 逃げ強会場（差しもそこそこ）→ 回り足を採用 ──
   "大村": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.15,  chokusen:0.15,  tenji:0.50 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "常滑": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.20,  chokusen:0.15,  tenji:0.45 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
   "丸亀": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.20,  chokusen:0.18,  tenji:0.42 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
-  // ── デフォルト（多摩川・津・びわこ・鳴門・児島・芦屋・福岡・唐津）──
+
+  // ── デフォルト（多摩川・津・びわこ・鳴門・児島・芦屋・福岡・唐津）→ 回り足を採用 ──
   "_default": {
-    available: { lap1:true,    mawari:true,  chokusen:true,  tenji:true },
-    weight:    { lap1:0.20,    mawari:0.25,  chokusen:0.25,  tenji:0.30 },
+    available: { lap1:true,   mawari:true,  chokusen:true,  tenji:true },
+    weight:    { lap1:4.5,    mawari:1.0,   chokusen:0,     tenji:4.5  },
   },
 };
 
-// arek（荒れスコア）と会場設定を合わせて最終重みを返す
-//   arek < 40: 逃げ展開  → 展示・1周を強調
-//   arek > 60: まくり展開 → 直線（立ち上がり）を強調（計測がある会場のみ）
-//   それ以外  : 混戦     → 会場デフォルトのまま
+// 会場設定から最終重みを返す（arek動的調整なし・会場固定重みのみ）
 function resolveWeights(venue, arek){
   const cfg = VENUE_TENJI_CONFIG[venue] || VENUE_TENJI_CONFIG["_default"];
   const base = { ...cfg.weight };
-
-  if(cfg.available.chokusen && arek > 60){
-    // まくり展開 → 直線を強調、展示・1周を下げる
-    base.chokusen = Math.min(base.chokusen + 0.10, 0.50);
-    base.tenji    = Math.max(base.tenji    - 0.05, 0.05);
-    base.lap1     = Math.max(base.lap1     - 0.05, 0.05);
-  } else if(arek < 40){
-    // 逃げ展開 → 展示・1周を強調、直線・まわり足を下げる
-    base.tenji    = Math.min(base.tenji    + 0.10, 0.60);
-    base.lap1     = Math.min(base.lap1     + 0.05, 0.35);
-    if(cfg.available.chokusen) base.chokusen = Math.max(base.chokusen - 0.10, 0.05);
-    base.mawari   = Math.max(base.mawari   - 0.05, 0.05);
-  }
 
   // 計測がない項目をゼロにして再正規化
   const FIELDS = ["lap1", "mawari", "chokusen", "tenji"];
