@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 05:17:37 --></head>
+<!-- auto_push_updated:2026-05-08 05:33:40 --></head>
 <body>
 
 <header class="site-header">
@@ -2107,34 +2107,86 @@ function renderBuy(rno){
     ? boat1.final_prob < venueAvgCourse1
     : false;
 
-  // final_prob 最下位艇（3着で切る）
-  const minProbBoat = [...ranked2].sort((a,b) => a.final_prob - b.final_prob)[0].boat;
+  // ── 3着除外: tenkai_remaining の rate3（3着以内率）最下位艇を除外 ──
+  //
+  // 各艇について、採用するシナリオ（決まり手×1着艇）ごとの
+  // tenkai_remaining[kimari][1着コース][進入コース].rate3 を平均し、
+  // 全艇中 rate3 が最も低い艇を 3着候補から除外する。
+  //
+  // rate3 が取得できない場合は final_prob を代用する。
+  //
+  const tenkaiRem_buy = (() => {
+    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
+    return MASTER_EXT?.tenkai_remaining || null;
+  })();
 
-  // 3着候補: 最下位を除いた全艇
-  const third_candidates = ranked2.map(b => b.boat).filter(b => b !== minProbBoat);
+  // 各艇の rate3 スコアを計算（シナリオ加重平均）
+  function calcRate3Score(boatObj, allScenarioProb, allKimariTypes){
+    if(!tenkaiRem_buy || !allScenarioProb) return null;
+    const sc = String(boatObj.boat);
+    let weightedSum = 0;
+    let weightTotal = 0;
+
+    // 全1着候補のシナリオを走査
+    for(const [winnerBoatStr, kimariMap] of Object.entries(allScenarioProb)){
+      if(winnerBoatStr === sc) continue;  // 自分が1着のシナリオは除外（3着にはなれない）
+      for(const [kimari, prob] of Object.entries(kimariMap)){
+        if(!(prob > 0)) continue;
+        const entry = tenkaiRem_buy[kimari]?.[winnerBoatStr]?.[sc];
+        if(entry && entry.rate3 != null){
+          weightedSum  += entry.rate3 * prob;
+          weightTotal  += prob;
+        }
+      }
+    }
+    if(weightTotal <= 0) return null;
+    return weightedSum / weightTotal;
+  }
+
+  // calcScenarioData を先読み（軸決定より前に呼ぶため別途計算）
+  const sd_pre = calcScenarioData(ranked2, rawBoats);
+
+  let minRate3Boat;
+  if(sd_pre.valid && tenkaiRem_buy){
+    const rate3Scores = ranked2.map(b => ({
+      boat: b.boat,
+      score: calcRate3Score(b, sd_pre.scenarioProb, sd_pre.kimariTypes) ?? b.final_prob
+    }));
+    minRate3Boat = rate3Scores.sort((a, b) => a.score - b.score)[0].boat;
+  } else {
+    // MASTERなし or tenkai_remaining なし → final_prob 最下位にフォールバック
+    minRate3Boat = [...ranked2].sort((a,b) => a.final_prob - b.final_prob)[0].boat;
+  }
+
+  // 3着候補: rate3 最下位を除いた全艇
+  const third_candidates = ranked2.map(b => b.boat).filter(b => b !== minRate3Boat);
 
   const buy3    = [];
   const buy3seen = new Set();
-  function tryAdd3(first, second, third, label, lc){
+  // prob: この3連単の推定確率（省略可）
+  function tryAdd3(first, second, third, label, lc, prob){
     const key = `${first}-${second}-${third}`;
     if(first===second||second===third||first===third) return;
     if(buy3seen.has(key)) return;
     if(buy3.length >= 15) return;
     buy3seen.add(key);
-    buy3.push({c:`${first}−${second}−${third}`, l:label, lc});
+    buy3.push({c:`${first}−${second}−${third}`, l:label, lc, prob: prob ?? null});
   }
 
   const buy2    = [];
   const buy2seen = new Set();
-  function tryAdd2(first, second, label, lc){
+  // prob: この2連単の推定確率（省略可）
+  function tryAdd2(first, second, label, lc, prob){
     const key = `${first}-${second}`;
     if(first===second) return;
     if(buy2seen.has(key)) return;
     buy2seen.add(key);
-    buy2.push({c:`${first}−${second}`, l:label, lc});
+    buy2.push({c:`${first}−${second}`, l:label, lc, prob: prob ?? null});
   }
 
-  const sd = calcScenarioData(ranked2, rawBoats);
+  // sd_pre は third_candidates 計算で先に呼び出し済み → 再利用
+  const sd = sd_pre;
 
   if(sd.valid){
     const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
@@ -2145,15 +2197,37 @@ function renderBuy(rno){
       return Object.values(probs).reduce((s, v) => s + v, 0);
     }
 
-    // 本命軸の決定
-    let axisBoat = A.boat;
-    if(boat1BelowAvg){
-      // 1号艇以外でシナリオ確率合計が最大の艇
-      const nonBoat1 = ranked2.filter(b => b.boat !== 1);
-      axisBoat = nonBoat1.reduce((best, b) =>
-        totalScenarioProb(b.boat) > totalScenarioProb(best.boat) ? b : best,
-        nonBoat1[0]
-      ).boat;
+    // ── 1着軸の決定 ──
+    //
+    // 通常: final_prob 1位（= A）を単軸とする
+    //
+    // 1号艇除外時（boat1BelowAvg）:
+    //   1号艇以外をシナリオ確率合計の降順に並べ、
+    //   シナリオ確率の累積合計が 50% 以上になるまで複数艇を軸として採用する。
+    //   ただし top3 に入っていない艇は scenarioProb を持たないため除外する。
+    //
+    let axisBoats;  // 軸艇番号の配列
+    if(!boat1BelowAvg){
+      axisBoats = [A.boat];
+    } else {
+      // top3 に含まれる1号艇以外を確率降順でソート
+      const nonBoat1InTop3 = ranked2
+        .filter(b => b.boat !== 1 && (scenarioProb[b.boat] != null))
+        .sort((a, b) => totalScenarioProb(b.boat) - totalScenarioProb(a.boat));
+
+      // 累積50%以上になるまで採用
+      axisBoats = [];
+      let cumAxisProb = 0;
+      for(const b of nonBoat1InTop3){
+        axisBoats.push(b.boat);
+        cumAxisProb += totalScenarioProb(b.boat);
+        if(cumAxisProb >= 0.5) break;
+      }
+      // 誰も選ばれなかった場合（top3外のみ）は final_prob 1位（1号艇以外）にフォールバック
+      if(axisBoats.length === 0){
+        const nonBoat1 = ranked2.filter(b => b.boat !== 1);
+        axisBoats = [nonBoat1[0]?.boat ?? A.boat];
+      }
     }
 
     // 2着候補を50%以上になるまで累積選択する関数
@@ -2189,40 +2263,84 @@ function renderBuy(rno){
       return picked;
     }
 
-    // 軸艇のシナリオを確率降順で並べる
-    const axisScenarios = kimariTypes
-      .filter(k => (scenarioProb[axisBoat]?.[k] ?? 0) > 0.001)
-      .sort((a,b) => (scenarioProb[axisBoat][b]||0) - (scenarioProb[axisBoat][a]||0));
-
-    // 本命・対抗の2着候補をシナリオ上位2つから生成
+    // 本命・対抗の2着候補をシナリオ上位から生成（複数軸対応）
     const labels = ['本命','対抗','穴'];
     const lcMap  = ['bl-honmei','bl-taikou','bl-ana'];
 
-    axisScenarios.slice(0, 3).forEach((kimari, idx) => {
-      const seconds = pick2nd(axisBoat, kimari);
-      seconds.forEach(s2 => {
-        third_candidates.filter(t => t !== axisBoat && t !== s2).forEach(t => {
-          tryAdd3(axisBoat, s2, t, labels[idx]||'穴', lcMap[idx]||'bl-ana');
+    // 軸艇ごとに買い目を生成
+    axisBoats.forEach((axisBoat, axisIdx) => {
+      const axisLabel = axisBoats.length === 1
+        ? null           // 単軸: 本命/対抗/穴 のまま
+        : `軸${axisIdx + 1}`;  // 複数軸: 軸1, 軸2, ...
+
+      const axisScenarios = kimariTypes
+        .filter(k => (scenarioProb[axisBoat]?.[k] ?? 0) > 0.001)
+        .sort((a,b) => (scenarioProb[axisBoat][b]||0) - (scenarioProb[axisBoat][a]||0));
+
+      axisScenarios.slice(0, 3).forEach((kimari, idx) => {
+        const baseLabel    = axisLabel
+          ? `${axisLabel}${labels[idx]||'穴'}`
+          : (labels[idx]||'穴');
+        const baseLc       = lcMap[idx] || 'bl-ana';
+        const scenProb     = scenarioProb[axisBoat]?.[kimari] ?? 0;  // シナリオ発生確率
+        const seconds      = pick2nd(axisBoat, kimari);
+        seconds.forEach(s2 => {
+          // 条件付き2着確率（place2List から取得）
+          const place2List = scenarioPlace2[axisBoat]?.[kimari] || [];
+          const p2Item     = place2List.find(x => x.boat === s2);
+          const p2         = p2Item?.p2 ?? 0;
+
+          // 2連単確率 = シナリオ確率 × 2着確率
+          const prob2      = scenProb * p2;
+
+          // 3連単: 3着候補ごとの rate3 を正規化して掛け合わせる
+          const thirdList  = third_candidates.filter(t => t !== axisBoat && t !== s2);
+          const thirdRate3Map = {};
+          thirdList.forEach(t => {
+            const entry = tenkaiRem_buy?.[kimari]?.[String(axisBoat)]?.[String(t)];
+            thirdRate3Map[t] = entry?.rate3 ?? null;
+          });
+          const r3Total = thirdList.reduce((s, t) => s + (thirdRate3Map[t] ?? 0), 0) || 1;
+
+          thirdList.forEach(t => {
+            const r3Norm = thirdRate3Map[t] != null ? (thirdRate3Map[t] / r3Total) : (1 / thirdList.length);
+            tryAdd3(axisBoat, s2, t, baseLabel, baseLc, prob2 * r3Norm);
+          });
+          tryAdd2(axisBoat, s2, baseLabel, baseLc, prob2);
         });
-        tryAdd2(axisBoat, s2, labels[idx]||'穴', lcMap[idx]||'bl-ana');
       });
     });
 
-    // 対抗軸（軸以外で最もシナリオ確率が高い艇）を追加
+    // 対抗軸（全軸艇以外で最もシナリオ確率が高い艇）を追加
     const otherTop = ranked2
-      .filter(b => b.boat !== axisBoat)
+      .filter(b => !axisBoats.includes(b.boat))
       .sort((a,b) => totalScenarioProb(b.boat) - totalScenarioProb(a.boat))[0];
     if(otherTop && buy3.length < 15){
       const otherScenarios = kimariTypes
         .filter(k => (scenarioProb[otherTop.boat]?.[k] ?? 0) > 0.001)
         .sort((a,b) => (scenarioProb[otherTop.boat][b]||0) - (scenarioProb[otherTop.boat][a]||0));
       otherScenarios.slice(0,2).forEach(kimari => {
-        const seconds = pick2nd(otherTop.boat, kimari);
+        const scenProb   = scenarioProb[otherTop.boat]?.[kimari] ?? 0;
+        const seconds    = pick2nd(otherTop.boat, kimari);
         seconds.forEach(s2 => {
-          third_candidates.filter(t => t !== otherTop.boat && t !== s2).forEach(t => {
-            tryAdd3(otherTop.boat, s2, t, '対抗軸', 'bl-gyaku');
+          const place2List = scenarioPlace2[otherTop.boat]?.[kimari] || [];
+          const p2Item     = place2List.find(x => x.boat === s2);
+          const p2         = p2Item?.p2 ?? 0;
+          const prob2      = scenProb * p2;
+
+          const thirdList = third_candidates.filter(t => t !== otherTop.boat && t !== s2);
+          const thirdRate3Map = {};
+          thirdList.forEach(t => {
+            const entry = tenkaiRem_buy?.[kimari]?.[String(otherTop.boat)]?.[String(t)];
+            thirdRate3Map[t] = entry?.rate3 ?? null;
           });
-          tryAdd2(otherTop.boat, s2, '対抗軸', 'bl-gyaku');
+          const r3Total = thirdList.reduce((s, t) => s + (thirdRate3Map[t] ?? 0), 0) || 1;
+
+          thirdList.forEach(t => {
+            const r3Norm = thirdRate3Map[t] != null ? (thirdRate3Map[t] / r3Total) : (1 / thirdList.length);
+            tryAdd3(otherTop.boat, s2, t, '対抗軸', 'bl-gyaku', prob2 * r3Norm);
+          });
+          tryAdd2(otherTop.boat, s2, '対抗軸', 'bl-gyaku', prob2);
         });
       });
     }
@@ -2434,9 +2552,13 @@ function renderBuy(rno){
   function buy3Row(r){
     const nc = normalizeCombo(r.c);
     const isHit = resultSan3 && resultSan3.has(nc);
+    const probCell = r.prob != null
+      ? `<span style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-left:auto;flex-shrink:0">${(r.prob*100).toFixed(1)}%</span>`
+      : '';
     return `<div class="buy-row${isHit?' hit':''}">
       <span class="buy-label ${r.lc}">${r.l}</span>
       <span class="buy-combo">${r.c}</span>
+      ${probCell}
       ${isHit?hitBadge():''}
     </div>`;
   }
@@ -2444,9 +2566,13 @@ function renderBuy(rno){
   function buy2Row(r){
     const nc = normalizeCombo(r.c);
     const isHit = resultNiren && resultNiren.has(nc);
+    const probCell = r.prob != null
+      ? `<span style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-left:auto;flex-shrink:0">${(r.prob*100).toFixed(1)}%</span>`
+      : '';
     return `<div class="buy-row${isHit?' hit':''}">
       <span class="buy-label ${r.lc}">${r.l}</span>
       <span class="buy-combo">${r.c}</span>
+      ${probCell}
       ${isHit?hitBadge():''}
     </div>`;
   }
