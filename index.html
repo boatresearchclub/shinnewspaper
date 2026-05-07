@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 12:44:44 --></head>
+<!-- auto_push_updated:2026-05-07 12:53:18 --></head>
 <body>
 
 <header class="site-header">
@@ -777,16 +777,14 @@ function timeToCoef(h){
 }
 
 // 1項目分の補正係数配列を返す（値がnullの艇が1艇でもあればnullを返す）
-// larger_is_better=true の場合、大きい値ほど高評価（回り足）
+// 全項目「小さいほど速い（タイム値）」
 function fieldCoefs(boats, tenjiData, field){
-  const LARGER_IS_BETTER = { mawari: true };  // 回り足は大きいほど速い
   const vals = boats.map(b => tenjiData[b.boat]?.[field] ?? null);
   if(vals.some(v => v === null)) return null;
   const avg = vals.reduce((a, v) => a + v, 0) / vals.length;
   const std = Math.sqrt(vals.reduce((a, v) => a + (v - avg) ** 2, 0) / vals.length);
   if(std === 0) return vals.map(() => 1.0);  // 全艇同タイム → 補正なし
-  const sign = LARGER_IS_BETTER[field] ? 1 : -1;  // 小さい=速い項目はavg-v、大きい=速い項目はv-avg
-  return vals.map(v => timeToCoef(50 + sign * ((v - avg) / std) * 10));
+  return vals.map(v => timeToCoef(50 + ((avg - v) / std) * 10));
 }
 
 // ── calcTenjiScore（独立展示スコア生成）──
@@ -1919,103 +1917,50 @@ function renderBuy(rno){
     tenjiScoreMap = calcTenjiScore(ranked, tenjiData, DATA.venue, arek);
   }
 
-  // 重みを欠損に応じて再正規化
-  // 展示なし → wTenji=0, 再正規化で base≒62.5% / tenkai≒37.5%
-  const wBase   = FINAL_PROB_WEIGHTS.base;
-  const wTenkai = FINAL_PROB_WEIGHTS.tenkai;
-  const wTenji  = tenjiScoreMap ? FINAL_PROB_WEIGHTS.tenji : 0;
-  const wTotal  = wBase + wTenkai + wTenji;
-
-  // 加重合成（各スコアは独立・正規化済み）
-  // baseScore を正規化してスケールを揃える（合計=1.0）
+  // ── STEP2: 乗算方式で最終確率を計算 ──
+  //
+  //   final_prob ∝ 基準確率 × 展開係数 × 展示係数
+  //
+  //   展開係数: tenkai_score（展開適性正規化スコア）÷ 基準正規化スコア
+  //             1.0基準。展開面で有利なら>1.0、不利なら<1.0（0.5〜2.0クリップ）
+  //   展示係数: calcTenjiScore の __coef_（平均=1.0基準の展示タイム合成係数）
+  //             展示なし時は1.0（補正なし）
+  //
+  //   乗算後に6艇合計を1.0に正規化して最終確率とする。
+  //
   const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
-  const compositeScores = {};
-  ranked.forEach(b => {
-    const baseScore   = b.prob / probTotal;                                  // 基準1着率（正規化済み）
-    const tenkaiScore = b.tenkai_score ?? b.tenkai_prob;                     // 相対補正独立スコア
-    const tenjiScore  = (tenjiScoreMap && tenjiScoreMap[b.boat] != null)
-                        ? tenjiScoreMap[b.boat] : 0;                         // 展示独立スコア
-    compositeScores[b.boat] =
-      (baseScore * wBase + tenkaiScore * wTenkai + tenjiScore * wTenji) / wTotal;
-  });
-
-  // 正規化（合計を1.0に揃える）
-  const compTotal = Object.values(compositeScores).reduce((a,v) => a+v, 0) || 1;
-
-  // useMaster: MASTER_EXTと会場データが揃っている場合のみ相対補正を表示
   const useMaster = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
 
+  // 各艇の展開係数・展示係数を算出
+  const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
+
   ranked.forEach(b => {
-    const baseScore   = b.prob / probTotal;  // 正規化済み基準1着率
-    const tenkaiScore = b.tenkai_score ?? b.tenkai_prob;
-    const tenjiScore  = (tenjiScoreMap && tenjiScoreMap[b.boat] != null)
-                        ? tenjiScoreMap[b.boat] : 0;
+    const baseNorm    = b.prob / probTotal;  // 基準確率（正規化済み）
 
-    // 正規化後の最終確率
-    const fp = compositeScores[b.boat] / compTotal;
-    b.final_prob = fp;
-
-    // ── 表示用差分: 基準 + 相対補正 + 展示補正 = 最終確率 が成立するよう逆算 ──
-    //
-    // 加重合成前の各スコア寄与（正規化前）:
-    //   base_contrib   = baseScore   × wBase   / wTotal
-    //   tenkai_contrib = tenkaiScore × wTenkai / wTotal
-    //   tenji_contrib  = tenjiScore  × wTenji  / wTotal
-    //
-    // 正規化係数 k = 1 / compTotal を掛けると最終確率になる。
-    // 表示差分:
-    //   相対補正(表示) = (tenkai_contrib - base_contrib) × k
-    //                  = (tenkaiScore×wTenkai - baseScore×wBase) / wTotal / compTotal
-    //   展示補正(表示) = tenji_contrib × k
-    //                  = tenjiScore×wTenji / wTotal / compTotal
-    //
-    // 検証: base_contrib×k + 相対補正(表示) + 展示補正(表示)
-    //     = base_contrib×k + (tenkai_contrib-base_contrib)×k + tenji_contrib×k
-    //     = tenkai_contrib×k + tenji_contrib×k
-    //     ≠ fp ← base_contribが消えてしまう
-    //
-    // 正しい分解:
-    //   base(表示)   = baseScore × wBase / wTotal / compTotal  （= prob の重み付き寄与）
-    //   相対補正(表示) = (tenkaiScore - baseScore) × wTenkai / wTotal / compTotal
-    //   展示補正(表示) = (tenjiScore  - baseScore) × wTenji  / wTotal / compTotal
-    //
-    // 検証: base(表示) + 相対補正(表示) + 展示補正(表示)
-    //     = [baseScore×wBase + (tenkai-base)×wTenkai + (tenji-base)×wTenji] / wTotal / k⁻¹
-    //     = [base×(wBase-wTenkai-wTenji) + tenkai×wTenkai + tenji×wTenji] / wTotal / compTotal
-    //     ← wBase-wTenkai-wTenji ≠ 0 なのでまだズレる
-    //
-    // 最もシンプルな分解（合計が必ずfinal_probになる）:
-    //   base(表示)     = baseScore × wBase / wTotal / compTotal
-    //   相対補正(表示)  = tenkaiScore × wTenkai / wTotal / compTotal
-    //   展示補正(表示)  = tenjiScore  × wTenji  / wTotal / compTotal
-    //   ※ base(表示)はprobそのものではなく「probの加重寄与分」
-    //
-    // ── probを6艇で正規化した「基準確率」を表示用に計算 ──
-    // baseScore はすでに prob/probTotal で正規化済み
-    const probOnlyFinal = baseScore;
-    b.display_base = probOnlyFinal;
-
-    // ── 展開補正の表示係数 ──
-    // 展開スコア正規化値 ÷ 基準正規化値（0.5〜2.0にクリップ）
-    if(useMaster && probOnlyFinal > 0){
-      const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
-      const tenkaiOnlyFinal = tenkaiScore / tenkaiOnlyTotal;
-      const ratio = tenkaiOnlyFinal / probOnlyFinal;
-      b.display_tenkai = Math.min(2.0, Math.max(0.5, ratio));
-    } else {
-      b.display_tenkai = null;
+    // 展開係数: 展開スコア正規化値 ÷ 基準正規化値（0.5〜2.0クリップ）
+    let tenkaiCoef = 1.0;
+    if(useMaster && baseNorm > 0){
+      const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
+      tenkaiCoef = Math.min(2.0, Math.max(0.5, tenkaiNorm / baseNorm));
     }
 
-    // ── 展示補正の表示係数 ──
-    // calcTenjiScore が算出した「平均=1.0基準の展示係数」をそのまま使用
-    // 基準確率の大小に依存せず、展示タイムだけで決まる（0.5〜2.0にクリップ済み）
-    if(tenjiScoreMap && wTenji > 0){
-      const rawCoef = tenjiScoreMap[`__coef_${b.boat}`];
-      b.display_tenji = rawCoef ?? 1.0;
-    } else {
-      b.display_tenji = null;
+    // 展示係数: 平均=1.0基準（calcTenjiScore の __coef_ を使用）
+    let tenjiCoef = 1.0;
+    if(tenjiScoreMap){
+      tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
     }
 
+    // 乗算スコア
+    b._multi_score  = baseNorm * tenkaiCoef * tenjiCoef;
+    b.display_base   = baseNorm;
+    b.display_tenkai = useMaster ? tenkaiCoef : null;
+    b.display_tenji  = hasTenji  ? tenjiCoef  : null;
+  });
+
+  // 正規化して final_prob を確定
+  const multiTotal = ranked.reduce((s, b) => s + b._multi_score, 0) || 1;
+  ranked.forEach(b => {
+    b.final_prob = b._multi_score / multiTotal;
     b.tenkai_prob_base  = b.tenkai_prob;
     b.tenji_score_indep = tenjiScoreMap ? (tenjiScoreMap[b.boat] ?? null) : null;
   });
