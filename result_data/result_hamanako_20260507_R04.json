@@ -1,0 +1,35 @@
+{
+  "venue": "浜名湖",
+  "venue_slug": "hamanako",
+  "date": "20260507",
+  "race": 4,
+  "fetched_at": "2026-05-08 03:38:39",
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 110
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 130
+    },
+    {
+      "combo": "2",
+      "odds": 240
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 320
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-5",
+      "odds": 830
+    }
+  ]
+}
