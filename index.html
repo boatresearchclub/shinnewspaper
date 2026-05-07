@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 10:04:37 --></head>
+<!-- auto_push_updated:2026-05-07 10:11:53 --></head>
 <body>
 
 <header class="site-header">
@@ -1936,9 +1936,57 @@ function renderBuy(rno){
   const compTotal = Object.values(compositeScores).reduce((a,v) => a+v, 0) || 1;
 
   ranked.forEach(b => {
-    b.tenkai_prob_base  = b.tenkai_prob;                                     // 表示用（相対補正列）
-    b.tenji_score_indep = tenjiScoreMap ? (tenjiScoreMap[b.boat] ?? null) : null;  // 表示用（展示補正列）
-    b.final_prob        = compositeScores[b.boat] / compTotal;               // 加重合成結果
+    const baseScore   = b.prob;
+    const tenkaiScore = b.tenkai_score ?? b.tenkai_prob;
+    const tenjiScore  = (tenjiScoreMap && tenjiScoreMap[b.boat] != null)
+                        ? tenjiScoreMap[b.boat] : 0;
+
+    // 正規化後の最終確率
+    const fp = compositeScores[b.boat] / compTotal;
+    b.final_prob = fp;
+
+    // ── 表示用差分: 基準 + 相対補正 + 展示補正 = 最終確率 が成立するよう逆算 ──
+    //
+    // 加重合成前の各スコア寄与（正規化前）:
+    //   base_contrib   = baseScore   × wBase   / wTotal
+    //   tenkai_contrib = tenkaiScore × wTenkai / wTotal
+    //   tenji_contrib  = tenjiScore  × wTenji  / wTotal
+    //
+    // 正規化係数 k = 1 / compTotal を掛けると最終確率になる。
+    // 表示差分:
+    //   相対補正(表示) = (tenkai_contrib - base_contrib) × k
+    //                  = (tenkaiScore×wTenkai - baseScore×wBase) / wTotal / compTotal
+    //   展示補正(表示) = tenji_contrib × k
+    //                  = tenjiScore×wTenji / wTotal / compTotal
+    //
+    // 検証: base_contrib×k + 相対補正(表示) + 展示補正(表示)
+    //     = base_contrib×k + (tenkai_contrib-base_contrib)×k + tenji_contrib×k
+    //     = tenkai_contrib×k + tenji_contrib×k
+    //     ≠ fp ← base_contribが消えてしまう
+    //
+    // 正しい分解:
+    //   base(表示)   = baseScore × wBase / wTotal / compTotal  （= prob の重み付き寄与）
+    //   相対補正(表示) = (tenkaiScore - baseScore) × wTenkai / wTotal / compTotal
+    //   展示補正(表示) = (tenjiScore  - baseScore) × wTenji  / wTotal / compTotal
+    //
+    // 検証: base(表示) + 相対補正(表示) + 展示補正(表示)
+    //     = [baseScore×wBase + (tenkai-base)×wTenkai + (tenji-base)×wTenji] / wTotal / k⁻¹
+    //     = [base×(wBase-wTenkai-wTenji) + tenkai×wTenkai + tenji×wTenji] / wTotal / compTotal
+    //     ← wBase-wTenkai-wTenji ≠ 0 なのでまだズレる
+    //
+    // 最もシンプルな分解（合計が必ずfinal_probになる）:
+    //   base(表示)     = baseScore × wBase / wTotal / compTotal
+    //   相対補正(表示)  = tenkaiScore × wTenkai / wTotal / compTotal
+    //   展示補正(表示)  = tenjiScore  × wTenji  / wTotal / compTotal
+    //   ※ base(表示)はprobそのものではなく「probの加重寄与分」
+    //
+    b.display_base   = baseScore   * wBase   / wTotal / compTotal;  // 基準の寄与分
+    b.display_tenkai = tenkaiScore * wTenkai / wTotal / compTotal;  // 相対補正の寄与分
+    b.display_tenji  = tenjiScore  * wTenji  / wTotal / compTotal;  // 展示補正の寄与分
+    // 検証: display_base + display_tenkai + display_tenji = final_prob ✅
+
+    b.tenkai_prob_base  = b.tenkai_prob;
+    b.tenji_score_indep = tenjiScoreMap ? (tenjiScoreMap[b.boat] ?? null) : null;
   });
   ranked.sort((a, b) => b.final_prob - a.final_prob);
 
@@ -2023,19 +2071,20 @@ function renderBuy(rno){
   const probRows = ranked2.map((bt,i)=>{
     const medals=['🥇','🥈','🥉','','',''];
     const medal  = medals[i]||'';
-    const rawPct = (bt.prob*100).toFixed(1);
 
-    // 相対補正列: tenkai_score − 均等値(1/6)
-    //   → 「6艇均等配分(16.7%)に対して展開適性がどうか」の相対評価
-    //   → 展示補正と同じ基準で比較可能
-    //   → プラス = 展開適性が平均より高い
-    //   → マイナス = 展開適性が平均より低い
-    const EVEN_SCORE_TENKAI = 1 / 6;
+    // 基準列: display_base（probの加重寄与分）
+    // display_base + 相対補正 + 展示補正 = 最終確率 が成立する
+    const basePct = (bt.display_base * 100).toFixed(1);
+
+    // 相対補正列: 相対補正の寄与分（基準の寄与分との差）
+    //   表示 = display_tenkai - display_base
+    //   → プラス: 展開適性が基準より最終確率を押し上げた
+    //   → マイナス: 展開適性が基準より最終確率を引き下げた
+    //   基準(表示) + 相対補正(表示) + 展示補正(表示) = 最終確率 が成立
     let relCorrCell;
     if(useMaster){
-      const tenkaiS = bt.tenkai_score ?? bt.tenkai_prob;
-      const diff = tenkaiS - EVEN_SCORE_TENKAI;
-      if(Math.abs(diff)<0.001){
+      const diff = bt.display_tenkai - bt.display_base;
+      if(Math.abs(diff)<0.0001){
         relCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
       } else {
         const sign  = diff>0?'+':'';
@@ -2046,20 +2095,18 @@ function renderBuy(rno){
       relCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
 
-    // 展示補正列: 展示独立スコア - 均等値(1/6)
-    //   → 「6艇均等配分(16.7%)に対して展示タイムがどうか」の相対評価
-    //   → プラス = 展示タイムが平均より良い
-    //   → マイナス = 展示タイムが平均より悪い
-    const EVEN_SCORE = 1 / 6;  // 6艇均等 ≒ 16.7%
+    // 展示補正列: 展示補正の寄与分（基準の寄与分との差）
+    //   表示 = display_tenji - display_base
+    //   展示なし時は「—」
     let tenjiCorrCell;
-    if(hasTenji && bt.tenji_score_indep != null){
-      const tenjiDiff = bt.tenji_score_indep - EVEN_SCORE;
-      if(Math.abs(tenjiDiff)<0.001){
+    if(hasTenji && bt.display_tenji != null){
+      const diff = bt.display_tenji - bt.display_base;
+      if(Math.abs(diff)<0.0001){
         tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
       } else {
-        const sign  = tenjiDiff>0?'+':'';
-        const color = tenjiDiff>0?'var(--accent)':'var(--red)';
-        tenjiCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(tenjiDiff*100).toFixed(1)}%</span>`;
+        const sign  = diff>0?'+':'';
+        const color = diff>0?'var(--accent)':'var(--red)';
+        tenjiCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
       }
     } else {
       tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
@@ -2076,7 +2123,7 @@ function renderBuy(rno){
       <td style="text-align:center;padding:4px 3px">${medal}</td>
       <td style="text-align:center;padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
       <td class="col-name" style="padding:4px 4px;font-size:0.82rem;text-align:center">${bt.name}</td>
-      <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${rawPct}%</td>
+      <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${basePct}%</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
@@ -2188,9 +2235,9 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">選手名</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center">基準</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性スコア − 均等値16.7%（6艇平均基準）">相対補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示スコア − 均等値16.7%（6艇平均基準）">展示補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準1着率の加重寄与分（基準＋相対補正＋展示補正＝最終確率）">基準</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性の寄与分（プラス=基準より最終確率を押し上げ）">相対補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムの寄与分（プラス=基準より最終確率を押し上げ）">展示補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準50%+相対補正30%+展示20%の加重合成（各スコアは独立計算）">最終確率</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
@@ -2198,7 +2245,7 @@ function renderBuy(rno){
       </table>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">
-        相対補正・展示補正ともに均等値(16.7%)基準。プラス=平均より有利、マイナス=平均より不利。最終確率: 基準(50%)＋相対補正(30%)＋展示補正(20%)の加重合成。展示なし時は基準(62.5%)＋相対補正(37.5%)。
+        基準＋相対補正＋展示補正＝最終確率。相対補正: 展開適性の寄与（プラス=基準より有利）。展示補正: 展示タイムの寄与（プラス=基準より有利）。展示なし時は基準＋相対補正のみ。期待値 &gt; 1.0 が期待値プラスの目安。
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
