@@ -234,7 +234,7 @@ body {
   background: #fff8ee;
   border-bottom: 1px solid rgba(239,159,39,0.35);
   padding: 7px 10px 8px;
-  display: none;
+  display: block;
 }
 .alert-strip-title {
   font-size: 10px; font-weight: 700; letter-spacing: .09em;
@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 13:46:20 --></head>
+<!-- auto_push_updated:2026-05-07 14:03:26 --></head>
 <body>
 
 <header class="site-header">
@@ -2437,7 +2437,7 @@ function updateAlertStrip(){
     return;
   }
 
-  strip.style.display = '';
+  strip.style.display = 'block';
   cardsEl.innerHTML = hits.map(h => {
     const urgent = h.diff <= 5;
     const dotCls = urgent ? 'alert-dot urgent' : 'alert-dot';
