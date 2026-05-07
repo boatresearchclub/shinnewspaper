@@ -335,7 +335,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 04:03:42 --></head>
+<!-- auto_push_updated:2026-05-08 04:29:27 --></head>
 <body>
 
 <header class="site-header">
@@ -1242,9 +1242,9 @@ function calcTenkaiProbs(boats, arek){
     '抜き':   {'1': 0.03},   // 1コースの抜きは個人実績3%以上で有効
   };
 
-  // 相対評価補正の上下限（極端に振れすぎないよう制限）
-  const RELATIVE_MIN = 0.5;
-  const RELATIVE_MAX = 2.0;
+  // 相対評価補正の上下限（個人差をより大きく反映するため拡大 ※会場3:個人7）
+  const RELATIVE_MIN = 0.3;
+  const RELATIVE_MAX = 3.0;
 
   // 選手のコース別kimari%をマスタから取得するヘルパー
   function getPersonalKimari(boatName, courseStr, kimariType){
@@ -1345,16 +1345,16 @@ function calcTenkaiProbs(boats, arek){
   // 補正強度は hiKimariStrength で制御（0.0=補正なし、1.0=最大補正）
   // 被kimariデータがない場合は vKimari をそのまま使用。
   //
-  const hiKimariStrength = 1.5; // 被kimari率1.0で最大1.5倍まで補正
+  const hiKimariStrength = 2.5; // 被kimari率1.0で最大2.5倍まで補正 ※会場3:個人7に強化
   let adjustedVKimari = { ...vKimari };
 
   if(boat1){
     const hiKimari = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.['被kimari'];
     const boat1Runs = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.runs ?? 0;
-    // runs < 20 はデータ不足なので補正しない
-    if(hiKimari && boat1Runs >= 20){
-      // 被kimari率をどれだけ信頼するか（50走で信頼度1.0）
-      const hiTrust = Math.min(boat1Runs / 50, 1.0);
+    // runs < 30 はデータ不足なので補正しない ※マスタ基準に合わせて20→30に変更
+    if(hiKimari && boat1Runs >= 30){
+      // 被kimari率をどれだけ信頼するか（100走で信頼度1.0） ※50→100に変更
+      const hiTrust = Math.min(boat1Runs / 100, 1.0);
 
       const sasareRate     = (hiKimari['差され']     ?? null);
       const makurareRate   = (hiKimari['捲られ']     ?? null);
@@ -1407,7 +1407,7 @@ function calcTenkaiProbs(boats, arek){
   // 逃げ（1コース専用展開）は1コース艇の個人率のみで補正済み（修正C）のため
   // ここでは差し・まくり・まくり差し・抜きのみ対象。
   //
-  const PERSONAL_BLEND_STRENGTH = 0.4; // チューニング用: 0.3(控えめ)〜0.6(強め)
+  const PERSONAL_BLEND_STRENGTH = 0.7; // チューニング用: 0.3(控えめ)〜0.6(強め) ※会場3:個人7に変更
 
   function blendPersonalKimari(boatObj, baseVKimari){
     const name   = boatObj.name;
@@ -1416,10 +1416,10 @@ function calcTenkaiProbs(boats, arek){
     if(!cm) return baseVKimari;
 
     const runs = cm.runs ?? 0;
-    if(runs < 15) return baseVKimari; // データ不足はスキップ → 会場傾向のまま
+    if(runs < 30) return baseVKimari; // データ不足はスキップ ※マスタ基準に合わせて15→30に変更
 
-    // runs数に応じた信頼度（15走→約0.17、30走→約0.35、50走→0.4）
-    const trust = Math.min(runs / 50, 1.0) * PERSONAL_BLEND_STRENGTH;
+    // runs数に応じた信頼度（30走→約0.21、50走→0.35、100走→0.7） ※基準を50→100に変更
+    const trust = Math.min(runs / 100, 1.0) * PERSONAL_BLEND_STRENGTH;
 
     const personalKimari = cm.kimari ?? {};
     // 個人kimari率を差し・まくり・まくり差し・抜きのみ対象に正規化
@@ -1476,7 +1476,7 @@ function calcTenkaiProbs(boats, arek){
       // 20走で信頼度0.4（会場平均寄り）
       // 20走未満は reliable=false のためここには来ないが念のため0に近づける
       const kimariRuns = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.runs ?? 0;
-      const personalTrust = Math.min(kimariRuns / 50, 1.0);
+      const personalTrust = Math.min(kimariRuns / 100, 1.0); // ※基準を50→100に変更
       // 信頼度が低いほど中立値(1.0)に引き戻す
       relCoefs[b.boat] = rawCoef * personalTrust + 1.0 * (1 - personalTrust);
     }
@@ -1598,8 +1598,8 @@ function calcPlace2Probs(boats, ranked){
       const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
 
       let p2;
-      if(baseP2 != null && personRate2 != null && personTrust > 0.3){
-        // 個人実績と inn_2place をブレンド（personTrust で重み付け）
+      if(baseP2 != null && personRate2 != null && personTrust > 0.2){
+        // 個人実績と inn_2place をブレンド（personTrust で重み付け）※閾値を0.3→0.2に緩和
         p2 = personRate2 * personTrust + baseP2 * (1 - personTrust);
       } else if(baseP2 != null){
         p2 = baseP2;
@@ -1658,8 +1658,8 @@ function calcPlace2Probs(boats, ranked){
               const personRate2 = (personEntry && personEntry.rate2 != null) ? personEntry.rate2 : null;
               const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
               let p2;
-              if(personRate2 != null && personTrust > 0.3){
-                // 全国実績と個人実績をブレンド
+              if(personRate2 != null && personTrust > 0.2){
+                // 全国実績と個人実績をブレンド ※閾値を0.3→0.2に緩和
                 const wNat = (1 - personTrust);
                 p2 = (personRate2 * personTrust + baseTR * wNat);
               } else {
@@ -1743,9 +1743,9 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   if(boat1Scenario){
     const hiKimari = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.['被kimari'];
     const boat1Runs = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.runs ?? 0;
-    if(hiKimari && boat1Runs >= 20){
-      const hiTrust = Math.min(boat1Runs / 50, 1.0);
-      const hiStr   = 1.5;
+    if(hiKimari && boat1Runs >= 30){ // ※マスタ基準に合わせて20→30に変更
+      const hiTrust = Math.min(boat1Runs / 100, 1.0); // ※基準を50→100に変更
+      const hiStr   = 2.5; // ※会場3:個人7に強化
       const sasareRate       = hiKimari['差され']     ?? null;
       const makurareRate     = hiKimari['捲られ']     ?? null;
       const makurisasareRate = hiKimari['捲り差され'] ?? null;
@@ -1776,7 +1776,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   // calcTenkaiProbs側と同じ blendPersonalKimari ロジックをここでも適用。
   // winner艇の「差し・まくり・まくり差し得意度」がシナリオの決まり手ラベルに反映される。
   //
-  const SCENARIO_BLEND_STRENGTH = 0.4; // calcTenkaiProbs側と合わせる
+  const SCENARIO_BLEND_STRENGTH = 0.7; // calcTenkaiProbs側と合わせる ※会場3:個人7に変更
 
   function blendPersonalKimariScenario(boatObj, baseVKimari){
     const name   = boatObj.name;
@@ -1785,9 +1785,9 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     if(!cm) return baseVKimari;
 
     const runs = cm.runs ?? 0;
-    if(runs < 15) return baseVKimari;
+    if(runs < 30) return baseVKimari; // ※マスタ基準に合わせて15→30に変更
 
-    const trust = Math.min(runs / 50, 1.0) * SCENARIO_BLEND_STRENGTH;
+    const trust = Math.min(runs / 100, 1.0) * SCENARIO_BLEND_STRENGTH; // ※基準を50→100に変更
     const personalKimari = cm.kimari ?? {};
     const BLEND_TARGETS = ['差し', 'まくり', 'まくり差し', '抜き'];
     const personalTotal = BLEND_TARGETS.reduce((s, k) => s + (personalKimari[k] ?? 0), 0);
@@ -1885,8 +1885,8 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
             const personRate2  = (personEntry2 && personEntry2.rate2 != null) ? personEntry2.rate2 : null;
             const personTrust2 = (personEntry2 && personEntry2.trust != null) ? personEntry2.trust : 0;
 
-            if(baseP2 != null && personRate2 != null && personTrust2 > 0.3){
-              // 個人実績と inn_2place をブレンド（personTrust2 で重み付け）
+            if(baseP2 != null && personRate2 != null && personTrust2 > 0.2){
+              // 個人実績と inn_2place をブレンド（personTrust2 で重み付け）※閾値0.3→0.2に緩和
               const wPerson = personTrust2;
               const wBase   = 1 - personTrust2;
               p2 = personRate2 * wPerson + baseP2 * wBase;
@@ -1912,8 +1912,8 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
             const personRate2 = (personEntry && personEntry.rate2 != null) ? personEntry.rate2 : null;
             const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
 
-            if(baseTR != null && personRate2 != null && personTrust > 0.3){
-              // 個人実績と全国実績をブレンド（信頼度で重み付け）
+            if(baseTR != null && personRate2 != null && personTrust > 0.2){
+              // 個人実績と全国実績をブレンド（信頼度で重み付け）※閾値0.3→0.2に緩和
               const wPerson = personTrust;
               const wNat    = trTrust * (1 - personTrust);
               const wTot    = wPerson + wNat;
@@ -2038,7 +2038,7 @@ function renderBuy(rno){
     let tenkaiCoef = 1.0;
     if(useMaster && baseNorm > 0){
       const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
-      tenkaiCoef = Math.min(2.0, Math.max(0.5, tenkaiNorm / baseNorm));
+      tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
     }
 
     // 展示係数: 平均=1.0基準（calcTenjiScore の __coef_ を使用）
