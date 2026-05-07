@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 04:55:39 --></head>
+<!-- auto_push_updated:2026-05-08 05:17:37 --></head>
 <body>
 
 <header class="site-header">
@@ -1704,17 +1704,26 @@ function tenkaiLabel(arek){
 }
 function combo2(a,b){ return `${Math.min(a,b)}＝${Math.max(a,b)}`; }
 
-// ── 展開シナリオセクション生成 ──
+// ── 展開シナリオ計算（純粋関数）──
 //
-// 1着率上位3艇 × 各決まり手の発生確率 × 条件付き2着率 を展開シナリオとして表示。
-// 2着率: 逃げ展開(1コース1着)のみ inn_2place を使用、それ以外は tenkai_prob 相対値。
+// 買い目生成・HTML表示の両方から参照する共通計算。
+// 戻り値:
+//   {
+//     scenarioProb  : {boat: {kimari: 発生確率}},
+//     scenarioPlace2: {boat: {kimari: [{boat, p2}]}},  // 正規化済み2着リスト
+//     kimariTypes   : string[],
+//     inn2Place     : object,
+//     top3          : ranked2の上位3艇,
+//     valid         : boolean  // MASTERなし等で計算不可の場合 false
+//   }
 //
-function buildScenarioSection(ranked2, place2Map, rawBoats){
-  if(!MASTER_EXT || !MASTER_EXT.venue_kimari) return '';
-
+function calcScenarioData(ranked2, rawBoats){
+  if(!MASTER_EXT || !MASTER_EXT.venue_kimari){
+    return { valid: false };
+  }
   const venue   = DATA.venue;
   const vKimari = MASTER_EXT.venue_kimari[venue];
-  if(!vKimari) return '';
+  if(!vKimari) return { valid: false };
 
   // inn_2place: inn_data に直接入っていれば使用、なければ venue_stats から取得
   const inn2Place = (() => {
@@ -1737,17 +1746,15 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     return !exc.has(wc);
   }
 
-  const kimariLabel = { '逃げ':'逃げ', '差し':'差し', 'まくり':'まくり', 'まくり差し':'まくり差し', '抜き':'抜き' };
-
-  // ── 修正C（シナリオ表示側）: 1コース被kimariでvKimariを補正 ──
+  // ── 1コース被kimariでvKimariを補正 ──
   const boat1Scenario = rawBoats.find(b => b.boat === 1) || null;
   let scenarioVKimari = { ...vKimari };
   if(boat1Scenario){
     const hiKimari = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.['被kimari'];
     const boat1Runs = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.runs ?? 0;
-    if(hiKimari && boat1Runs >= 30){ // ※マスタ基準に合わせて20→30に変更
-      const hiTrust = Math.min(boat1Runs / 100, 1.0); // ※基準を50→100に変更
-      const hiStr   = 2.5; // ※会場3:個人7に強化
+    if(hiKimari && boat1Runs >= 30){
+      const hiTrust = Math.min(boat1Runs / 100, 1.0);
+      const hiStr   = 2.5;
       const sasareRate       = hiKimari['差され']     ?? null;
       const makurareRate     = hiKimari['捲られ']     ?? null;
       const makurisasareRate = hiKimari['捲り差され'] ?? null;
@@ -1773,28 +1780,20 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
 
   const kimariTypes = Object.keys(scenarioVKimari).filter(k => scenarioVKimari[k] > 0 && k in KIMARI_HARD_EXCLUDE);
 
-  // ── 修正D（シナリオ表示側）: winner艇の個人kimari率をscenarioVKimariにブレンド ──
-  //
-  // calcTenkaiProbs側と同じ blendPersonalKimari ロジックをここでも適用。
-  // winner艇の「差し・まくり・まくり差し得意度」がシナリオの決まり手ラベルに反映される。
-  //
-  const SCENARIO_BLEND_STRENGTH = 0.7; // calcTenkaiProbs側と合わせる ※会場3:個人7に変更
-
+  // ── winner艇の個人kimari率をscenarioVKimariにブレンド ──
+  const SCENARIO_BLEND_STRENGTH = 0.7;
   function blendPersonalKimariScenario(boatObj, baseVKimari){
     const name   = boatObj.name;
     const course = String(boatObj.boat);
     const cm     = MASTER_EXT?.course_master?.[name]?.[course];
     if(!cm) return baseVKimari;
-
     const runs = cm.runs ?? 0;
-    if(runs < 30) return baseVKimari; // ※マスタ基準に合わせて15→30に変更
-
-    const trust = Math.min(runs / 100, 1.0) * SCENARIO_BLEND_STRENGTH; // ※基準を50→100に変更
+    if(runs < 30) return baseVKimari;
+    const trust = Math.min(runs / 100, 1.0) * SCENARIO_BLEND_STRENGTH;
     const personalKimari = cm.kimari ?? {};
     const BLEND_TARGETS = ['差し', 'まくり', 'まくり差し', '抜き'];
     const personalTotal = BLEND_TARGETS.reduce((s, k) => s + (personalKimari[k] ?? 0), 0);
     if(personalTotal <= 0) return baseVKimari;
-
     const blended = { ...baseVKimari };
     const venueBlendSum = BLEND_TARGETS.reduce((s, kk) => s + (baseVKimari[kk] ?? 0), 0);
     for(const k of BLEND_TARGETS){
@@ -1802,7 +1801,6 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
       const personalRate = (personalKimari[k] ?? 0) / personalTotal * venueBlendSum;
       blended[k] = baseVKimari[k] * (1 - trust) + personalRate * trust;
     }
-
     const origTotal  = Object.values(baseVKimari).reduce((s, v) => s + v, 0);
     const blendTotal = Object.values(blended).reduce((s, v) => s + v, 0);
     if(blendTotal > 0){
@@ -1814,11 +1812,10 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
   // 1着率上位3艇
   const top3 = ranked2.slice(0, 3);
 
-  // 各1着候補について決まり手別の発生確率を計算（修正D: winner艇ごとの個人ブレンドvKimariを使用）
+  // 各1着候補について決まり手別の発生確率を計算
   const scenarioProb = {};
   for(const winner of top3){
     scenarioProb[winner.boat] = {};
-    // winner艇の個人傾向でブレンドしたvKimariを算出
     const winnerVKimari = blendPersonalKimariScenario(winner, scenarioVKimari);
     const validKimariTotal = kimariTypes
       .filter(k => isValidFirst(winner, k))
@@ -1826,17 +1823,106 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     if(validKimariTotal <= 0) continue;
     for(const kimari of kimariTypes){
       if(!isValidFirst(winner, kimari)) continue;
-      // 修正D: winnerVKimariを使用（winner艇の個人kimari率を反映）
       scenarioProb[winner.boat][kimari] = winner.tenkai_prob * (winnerVKimari[kimari] / validKimariTotal);
     }
   }
+
+  // ── 各シナリオの2着リストを計算して scenarioPlace2 に格納 ──
+  const tenkaiRem = (() => {
+    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
+    return MASTER_EXT?.tenkai_remaining || {};
+  })();
+  const winnerCO = MASTER_EXT?.winner_course_order || {};
+
+  const scenarioPlace2 = {};
+  for(const winner of top3){
+    scenarioPlace2[winner.boat] = {};
+    const wc = String(winner.boat);
+    const othersTotal = ranked2
+      .filter(r => r.boat !== winner.boat)
+      .reduce((s, r) => s + r.tenkai_prob, 0) || 1;
+
+    for(const kimari of kimariTypes){
+      if(!(scenarioProb[winner.boat]?.[kimari] > 0)) continue;
+
+      const useInn2 = (kimari === '逃げ' && winner.boat === 1 && Object.keys(inn2Place).length > 0);
+      const remForThis = tenkaiRem[kimari]?.[wc] || null;
+
+      const place2List = rawBoats
+        .filter(b => b.boat !== winner.boat)
+        .map(b => {
+          const sc = String(b.boat);
+          let p2;
+          if(useInn2){
+            const baseP2 = inn2Place[sc] ?? null;
+            const personEntry2 = winnerCO[b.name]?.[sc]?.['1'];
+            const personRate2  = personEntry2?.rate2 ?? null;
+            const personTrust2 = personEntry2?.trust ?? 0;
+            if(baseP2 != null && personRate2 != null && personTrust2 > 0.2){
+              p2 = personRate2 * personTrust2 + baseP2 * (1 - personTrust2);
+            } else {
+              p2 = baseP2;
+            }
+            if(p2 == null){
+              const bt = ranked2.find(r => r.boat === b.boat);
+              p2 = bt ? bt.tenkai_prob / othersTotal : 0;
+            }
+          } else if(remForThis){
+            const remEntry  = remForThis[sc];
+            const baseTR    = remEntry?.rate2 ?? null;
+            const trTrust   = remEntry?.trust ?? 0;
+            const personEntry = winnerCO[b.name]?.[sc]?.[wc];
+            const personRate2 = personEntry?.rate2 ?? null;
+            const personTrust = personEntry?.trust ?? 0;
+            if(baseTR != null && personRate2 != null && personTrust > 0.2){
+              const wPerson = personTrust;
+              const wNat    = trTrust * (1 - personTrust);
+              const wTot    = wPerson + wNat;
+              p2 = wTot > 0 ? (personRate2 * wPerson + baseTR * wNat) / wTot : baseTR;
+            } else if(baseTR != null){
+              p2 = baseTR;
+            } else {
+              const bt = ranked2.find(r => r.boat === b.boat);
+              p2 = bt ? bt.tenkai_prob / othersTotal : 0;
+            }
+          } else {
+            const bt = ranked2.find(r => r.boat === b.boat);
+            p2 = bt ? bt.tenkai_prob / othersTotal : 0;
+          }
+          return { boat: b.boat, name: b.name, p2 };
+        });
+
+      const p2Sum = place2List.reduce((s, x) => s + x.p2, 0) || 1;
+      place2List.forEach(x => { x.p2 = x.p2 / p2Sum; });
+      place2List.sort((a, b) => b.p2 - a.p2);
+      scenarioPlace2[winner.boat][kimari] = place2List;
+    }
+  }
+
+  return { valid: true, scenarioProb, scenarioPlace2, kimariTypes, inn2Place, top3, scenarioVKimari, isValidFirst };
+}
+
+// ── 展開シナリオセクション生成 ──
+//
+// 1着率上位3艇 × 各決まり手の発生確率 × 条件付き2着率 を展開シナリオとして表示。
+// 2着率: 逃げ展開(1コース1着)のみ inn_2place を使用、それ以外は tenkai_prob 相対値。
+//
+function buildScenarioSection(ranked2, place2Map, rawBoats){
+  const sd = calcScenarioData(ranked2, rawBoats);
+  if(!sd.valid) return '';
+
+  const { scenarioProb, scenarioPlace2, kimariTypes, top3 } = sd;
+
+  // ── 以下は表示専用ロジック ──
+  const kimariLabel = { '逃げ':'逃げ', '差し':'差し', 'まくり':'まくり', 'まくり差し':'まくり差し', '抜き':'抜き' };
+  const inn2Place   = sd.inn2Place;
 
   // 各シナリオのHTML生成
   const boatCircle = (n) =>
     `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
 
   const scenarioBlocks = top3.map((winner, wi) => {
-    const wc = String(winner.boat);
     const medals = ['🥇','🥈','🥉'];
 
     const scenarios = kimariTypes
@@ -1846,101 +1932,8 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     if(scenarios.length === 0) return '';
 
     const scenarioRows = scenarios.map(kimari => {
-      const prob = scenarioProb[winner.boat][kimari];
-
-      // 2着率の決定（優先順位）:
-      //   1. 逃げ展開(1コース1着) → inn_2place（会場別実績）
-      //   2. 逃げ以外 → tenkai_remaining（決まり手×1着コース別・会場別実績、なければ全国実績）
-      //      + winner_course_order で個人実績が信頼できる艇を補正
-      //   3. データなし → tenkai_prob 相対値でフォールバック
-      const useInn2 = (kimari === '逃げ' && winner.boat === 1 && Object.keys(inn2Place).length > 0);
-      const wc = String(winner.boat);
-
-      // tenkai_remaining / winner_course_order の参照
-      // 優先順位: ① 会場別(venue_stats[venue].tenkai_remaining) → ② 全国(tenkai_remaining)
-      const tenkaiRem = (() => {
-        const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
-        if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
-        return MASTER_EXT?.tenkai_remaining || {};
-      })();
-      const winnerCO   = MASTER_EXT?.winner_course_order || {};
-      const remForThis = tenkaiRem[kimari]?.[wc] || null; // {進入コース: {rate2, trust}}
-
-      // 1着以外の艇の tenkai_prob 合計（フォールバック用分母）
-      const othersTotal = ranked2
-        .filter(r => r.boat !== winner.boat)
-        .reduce((s, r) => s + r.tenkai_prob, 0) || 1;
-
-      const place2List = rawBoats
-        .filter(b => b.boat !== winner.boat)
-        .map(b => {
-          const sc = String(b.boat);
-          let p2;
-          if(useInn2){
-            // ① 逃げ展開: inn_2place（会場別イン逃げ時の実績2着率）をベースに
-            //             winner_course_order の個人実績でブレンド補正
-            const baseP2 = inn2Place[sc] ?? null;
-
-            // winner_course_order: 「1号艇が1着のとき、各艇(sc)が2着に来た率」
-            // キー構造: winnerCO[選手名][自コース(sc)][勝者コース('1')]
-            const personEntry2 = winnerCO[b.name]?.[sc]?.['1'];
-            const personRate2  = (personEntry2 && personEntry2.rate2 != null) ? personEntry2.rate2 : null;
-            const personTrust2 = (personEntry2 && personEntry2.trust != null) ? personEntry2.trust : 0;
-
-            if(baseP2 != null && personRate2 != null && personTrust2 > 0.2){
-              // 個人実績と inn_2place をブレンド（personTrust2 で重み付け）※閾値0.3→0.2に緩和
-              const wPerson = personTrust2;
-              const wBase   = 1 - personTrust2;
-              p2 = personRate2 * wPerson + baseP2 * wBase;
-            } else {
-              // 個人実績なし or 信頼度不足 → inn_2place のみ
-              p2 = baseP2;
-            }
-
-            if(p2 == null){
-              // inn_2place にもデータなし → tenkai_prob 相対値
-              const bt = ranked2.find(r => r.boat === b.boat);
-              p2 = bt ? bt.tenkai_prob / othersTotal : 0;
-            }
-          } else if(remForThis){
-            // ② tenkai_remaining の全国実績値（ベース）
-            const remEntry = remForThis[sc];
-            const baseTR   = (remEntry && remEntry.rate2 != null) ? remEntry.rate2 : null;
-            const trTrust  = (remEntry && remEntry.trust != null) ? remEntry.trust : 0;
-
-            // ③ winner_course_order で個人実績がある艇は補正
-            //    自コース = b.boat（進入コース）、勝者コース = winner.boat
-            const personEntry = winnerCO[b.name]?.[sc]?.[wc];
-            const personRate2 = (personEntry && personEntry.rate2 != null) ? personEntry.rate2 : null;
-            const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
-
-            if(baseTR != null && personRate2 != null && personTrust > 0.2){
-              // 個人実績と全国実績をブレンド（信頼度で重み付け）※閾値0.3→0.2に緩和
-              const wPerson = personTrust;
-              const wNat    = trTrust * (1 - personTrust);
-              const wTot    = wPerson + wNat;
-              p2 = wTot > 0 ? (personRate2 * wPerson + baseTR * wNat) / wTot : baseTR;
-            } else if(baseTR != null){
-              // 全国実績のみ
-              p2 = baseTR;
-            } else {
-              // tenkai_remaining にこの艇のデータなし → tenkai_prob 相対値
-              const bt = ranked2.find(r => r.boat === b.boat);
-              p2 = bt ? bt.tenkai_prob / othersTotal : 0;
-            }
-          } else {
-            // ④ tenkai_remaining なし → tenkai_prob 相対値
-            const bt = ranked2.find(r => r.boat === b.boat);
-            p2 = bt ? bt.tenkai_prob / othersTotal : 0;
-          }
-          return { boat: b.boat, name: b.name, p2 };
-        });
-
-      // 正規化: 逃げ(inn_2place)・非逃げ(tenkai_remaining)いずれも
-      // 絶対値で格納されているため、合計を1.0に揃えて相対値化する
-      const p2Sum = place2List.reduce((s, x) => s + x.p2, 0) || 1;
-      place2List.forEach(x => { x.p2 = x.p2 / p2Sum; });
-      place2List.sort((a, b) => b.p2 - a.p2);
+      const prob       = scenarioProb[winner.boat][kimari];
+      const place2List = scenarioPlace2[winner.boat]?.[kimari] || [];
 
       const p2Cells = place2List.map(item =>
         `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;white-space:nowrap">
@@ -2081,63 +2074,191 @@ function renderBuy(rno){
   const probDiff  = A.final_prob - B.final_prob;
   const isDualAxis = probDiff <= 0.05;
 
-  // ─ STEP4: 2着候補を place2_prob で選ぶ関数
-  function place2For(axisBoat){
-    return ranked2
-      .filter(bt => bt.boat !== axisBoat)
-      .sort((x,y) => y.place2_prob - x.place2_prob);
-  }
+  // ─ STEP4 & STEP5: 展開シナリオベースの買い目生成
+  //
+  // 【1着軸の決定】
+  //   1号艇 final_prob が会場平均（inn_data.course_rates[1]）を下回る場合、
+  //   1号艇を除いた中でシナリオ確率合計が最大の艇を本命軸とする。
+  //   それ以外は final_prob 1位（= A）を本命軸とする。
+  //
+  // 【2着候補の選定】
+  //   各シナリオの place2List から確率を累積し、合計50%以上になるまで採用。
+  //   逃げシナリオ(1号艇逃げ)では inn_2place の会場平均を上回る艇を優先。
+  //
+  // 【3着の選定】
+  //   全艇のうち final_prob 最下位の艇を除外した残りを流す。
+  //
+  // 【MASTERなし時】place2_prob ベースの旧ロジックにフォールバック。
 
-  // ─ STEP5: 買い目生成
+  const innData_buy  = DATA.inn_data || {};
+  const cRates_buy   = innData_buy.course_rates || [];
+  const inn2Place_buy = (() => {
+    const v = innData_buy.inn_2place;
+    if(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
+    return MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place || {};
+  })();
+
+  // 会場平均1コース1着率
+  const venueAvgCourse1 = cRates_buy[1] ?? null;
+
+  // 1号艇が会場平均を下回るか
+  const boat1 = ranked2.find(b => b.boat === 1);
+  const boat1BelowAvg = (venueAvgCourse1 !== null && boat1)
+    ? boat1.final_prob < venueAvgCourse1
+    : false;
+
+  // final_prob 最下位艇（3着で切る）
+  const minProbBoat = [...ranked2].sort((a,b) => a.final_prob - b.final_prob)[0].boat;
+
+  // 3着候補: 最下位を除いた全艇
+  const third_candidates = ranked2.map(b => b.boat).filter(b => b !== minProbBoat);
+
   const buy3    = [];
   const buy3seen = new Set();
-  function tryAdd3(first,second,third,label,lc,w){
-    const key=`${first}-${second}-${third}`;
+  function tryAdd3(first, second, third, label, lc){
+    const key = `${first}-${second}-${third}`;
     if(first===second||second===third||first===third) return;
     if(buy3seen.has(key)) return;
-    if(buy3.length>=10) return;
+    if(buy3.length >= 15) return;
     buy3seen.add(key);
-    buy3.push({c:`${first}−${second}−${third}`,l:label,lc,w});
+    buy3.push({c:`${first}−${second}−${third}`, l:label, lc});
   }
-  const allBoats = ranked.map(b=>b.boat);
 
-  if(!isDualAxis){
-    const p2A   = place2For(A.boat);
-    const P2a_  = p2A[0]||B;
-    const P2b_  = p2A[1]||C;
-    allBoats.filter(b=>b!==A.boat&&b!==P2a_.boat).forEach(b=>tryAdd3(A.boat,P2a_.boat,b,'本命','bl-honmei',3));
-    allBoats.filter(b=>b!==A.boat&&b!==P2b_.boat).forEach(b=>tryAdd3(A.boat,P2b_.boat,b,'対抗','bl-taikou',2));
-    if(arek>=45){ allBoats.filter(b=>b!==P2a_.boat&&b!==A.boat).forEach(b=>tryAdd3(P2a_.boat,A.boat,b,'逆転','bl-gyaku',1)); }
+  const buy2    = [];
+  const buy2seen = new Set();
+  function tryAdd2(first, second, label, lc){
+    const key = `${first}-${second}`;
+    if(first===second) return;
+    if(buy2seen.has(key)) return;
+    buy2seen.add(key);
+    buy2.push({c:`${first}−${second}`, l:label, lc});
+  }
+
+  const sd = calcScenarioData(ranked2, rawBoats);
+
+  if(sd.valid){
+    const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
+
+    // シナリオ確率の合計（艇別）
+    function totalScenarioProb(boatNo){
+      const probs = scenarioProb[boatNo] || {};
+      return Object.values(probs).reduce((s, v) => s + v, 0);
+    }
+
+    // 本命軸の決定
+    let axisBoat = A.boat;
+    if(boat1BelowAvg){
+      // 1号艇以外でシナリオ確率合計が最大の艇
+      const nonBoat1 = ranked2.filter(b => b.boat !== 1);
+      axisBoat = nonBoat1.reduce((best, b) =>
+        totalScenarioProb(b.boat) > totalScenarioProb(best.boat) ? b : best,
+        nonBoat1[0]
+      ).boat;
+    }
+
+    // 2着候補を50%以上になるまで累積選択する関数
+    // 逃げシナリオ（1号艇逃げ）は inn_2place 会場平均を超える艇を優先
+    function pick2nd(winnerBoat, kimari){
+      const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
+      if(list.length === 0) return [];
+
+      const isNige = (kimari === '逃げ' && winnerBoat === 1);
+      let sorted;
+      if(isNige && Object.keys(inn2Place_buy).length > 0){
+        // 逃げ: 会場平均を上回る艇を先頭に並べ替え、その中でp2降順
+        const avgRate = Object.values(inn2Place_buy).reduce((s,v)=>s+v,0) / Object.keys(inn2Place_buy).length;
+        sorted = [...list].sort((a,b) => {
+          const aAbove = (inn2Place_buy[String(a.boat)] ?? 0) >= avgRate ? 1 : 0;
+          const bAbove = (inn2Place_buy[String(b.boat)] ?? 0) >= avgRate ? 1 : 0;
+          if(bAbove !== aAbove) return bAbove - aAbove;
+          return b.p2 - a.p2;
+        });
+      } else {
+        sorted = [...list].sort((a,b) => b.p2 - a.p2);
+      }
+
+      // 累積50%以上になるまで採用
+      const picked = [];
+      let cum = 0;
+      for(const item of sorted){
+        if(item.boat === winnerBoat) continue;
+        picked.push(item.boat);
+        cum += item.p2;
+        if(cum >= 0.5) break;
+      }
+      return picked;
+    }
+
+    // 軸艇のシナリオを確率降順で並べる
+    const axisScenarios = kimariTypes
+      .filter(k => (scenarioProb[axisBoat]?.[k] ?? 0) > 0.001)
+      .sort((a,b) => (scenarioProb[axisBoat][b]||0) - (scenarioProb[axisBoat][a]||0));
+
+    // 本命・対抗の2着候補をシナリオ上位2つから生成
+    const labels = ['本命','対抗','穴'];
+    const lcMap  = ['bl-honmei','bl-taikou','bl-ana'];
+
+    axisScenarios.slice(0, 3).forEach((kimari, idx) => {
+      const seconds = pick2nd(axisBoat, kimari);
+      seconds.forEach(s2 => {
+        third_candidates.filter(t => t !== axisBoat && t !== s2).forEach(t => {
+          tryAdd3(axisBoat, s2, t, labels[idx]||'穴', lcMap[idx]||'bl-ana');
+        });
+        tryAdd2(axisBoat, s2, labels[idx]||'穴', lcMap[idx]||'bl-ana');
+      });
+    });
+
+    // 対抗軸（軸以外で最もシナリオ確率が高い艇）を追加
+    const otherTop = ranked2
+      .filter(b => b.boat !== axisBoat)
+      .sort((a,b) => totalScenarioProb(b.boat) - totalScenarioProb(a.boat))[0];
+    if(otherTop && buy3.length < 15){
+      const otherScenarios = kimariTypes
+        .filter(k => (scenarioProb[otherTop.boat]?.[k] ?? 0) > 0.001)
+        .sort((a,b) => (scenarioProb[otherTop.boat][b]||0) - (scenarioProb[otherTop.boat][a]||0));
+      otherScenarios.slice(0,2).forEach(kimari => {
+        const seconds = pick2nd(otherTop.boat, kimari);
+        seconds.forEach(s2 => {
+          third_candidates.filter(t => t !== otherTop.boat && t !== s2).forEach(t => {
+            tryAdd3(otherTop.boat, s2, t, '対抗軸', 'bl-gyaku');
+          });
+          tryAdd2(otherTop.boat, s2, '対抗軸', 'bl-gyaku');
+        });
+      });
+    }
+
   } else {
+    // ── MASTERなし: 旧ロジックにフォールバック ──
+    function place2For(axisBoat){
+      return ranked2.filter(bt => bt.boat !== axisBoat).sort((x,y) => y.place2_prob - x.place2_prob);
+    }
+    const allBoats = ranked.map(b=>b.boat);
     const p2A  = place2For(A.boat);
-    const p2B  = place2For(B.boat);
-    const P2a_ = p2A[0]||C;
+    const P2a_ = p2A[0]||B;
     const P2b_ = p2A[1]||C;
-    const P2Ba = p2B[0]||A;
-    const P2Bb = p2B[1]||C;
-    allBoats.filter(b=>b!==A.boat&&b!==P2a_.boat).forEach(b=>tryAdd3(A.boat,P2a_.boat,b,'本命','bl-honmei',3));
-    tryAdd3(A.boat,P2b_.boat,P2a_.boat,'対抗','bl-taikou',2);
-    allBoats.filter(b=>b!==B.boat&&b!==P2Ba.boat).forEach(b=>tryAdd3(B.boat,P2Ba.boat,b,'B軸','bl-gyaku',2));
-    tryAdd3(B.boat,P2Bb.boat,P2Ba.boat,'B軸','bl-gyaku',1);
-  }
-  allBoats.filter(b=>b!==A.boat).forEach(second=>{
-    allBoats.filter(b=>b!==A.boat&&b!==second).forEach(third=>{ if(buy3.length>=10) return; tryAdd3(A.boat,second,third,'補填','bl-ana',0); });
-  });
-
-  // 2連単（2着もplace2_probで選定）
-  const buy2=[];
-  const p2ForA = place2For(A.boat);
-  const P2a = p2ForA[0]||B;
-  const P2b = p2ForA[1]||C;
-  buy2.push({c:`${A.boat}−${P2a.boat}`,l:'本命',lc:'bl-honmei',w:3});
-  if(isDualAxis){
-    const p2ForB = place2For(B.boat);
-    buy2.push({c:`${B.boat}−${(p2ForB[0]||A).boat}`,l:'B軸',lc:'bl-gyaku',w:2});
-    buy2.push({c:`${A.boat}−${P2b.boat}`,l:'対抗',lc:'bl-taikou',w:1});
-  } else {
-    buy2.push({c:`${A.boat}−${P2b.boat}`,l:'対抗',lc:'bl-taikou',w:2});
-    if(arek>=45){ buy2.push({c:`${B.boat}−${A.boat}`,l:'逆転',lc:'bl-gyaku',w:1}); }
-    else { buy2.push({c:`${A.boat}−${(p2ForA[2]||B).boat}`,l:'穴',lc:'bl-ana',w:1}); }
+    function tryAdd3fb(first,second,third,label,lc){
+      const key=`${first}-${second}-${third}`;
+      if(first===second||second===third||first===third) return;
+      if(buy3seen.has(key)) return;
+      if(buy3.length>=10) return;
+      buy3seen.add(key);
+      buy3.push({c:`${first}−${second}−${third}`,l:label,lc});
+    }
+    function tryAdd2fb(first,second,label,lc){
+      const key=`${first}-${second}`;
+      if(first===second) return;
+      if(buy2seen.has(key)) return;
+      buy2seen.add(key);
+      buy2.push({c:`${first}−${second}`,l:label,lc});
+    }
+    allBoats.filter(b=>b!==A.boat&&b!==P2a_.boat).forEach(b=>tryAdd3fb(A.boat,P2a_.boat,b,'本命','bl-honmei'));
+    allBoats.filter(b=>b!==A.boat&&b!==P2b_.boat).forEach(b=>tryAdd3fb(A.boat,P2b_.boat,b,'対抗','bl-taikou'));
+    tryAdd2fb(A.boat, P2a_.boat, '本命', 'bl-honmei');
+    tryAdd2fb(A.boat, P2b_.boat, '対抗', 'bl-taikou');
+    if(arek>=45){
+      allBoats.filter(b=>b!==P2a_.boat&&b!==A.boat).forEach(b=>tryAdd3fb(P2a_.boat,A.boat,b,'逆転','bl-gyaku'));
+      tryAdd2fb(P2a_.boat, A.boat, '逆転', 'bl-gyaku');
+    }
   }
 
   // ─ STEP6: 確率テーブル生成
