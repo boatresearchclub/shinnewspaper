@@ -68,9 +68,9 @@ body {
 
 
 /* VENUE TABS */
-.sticky-nav-venue { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; display: flex; border-bottom: 1px solid var(--border); }
+.sticky-nav-venue { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; display: flex; border-bottom: 1px solid var(--border); touch-action: pan-x; }
 .sticky-nav-venue::-webkit-scrollbar { display: none; }
-#venue-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; gap: 2px; display: flex; }
+#venue-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; gap: 2px; display: flex; touch-action: pan-x; }
 #venue-tabs::-webkit-scrollbar { display: none; }
 .vtab { flex-shrink: 0; padding: 6px 10px 8px; font-size: 12px; font-family: 'Noto Sans JP', sans-serif; background: none; border: none; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s; font-weight: 500; white-space: nowrap; }
 .vtab:hover { color: var(--text2); }
@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 14:24:28 --></head>
+<!-- auto_push_updated:2026-05-07 14:32:26 --></head>
 <body>
 
 <header class="site-header">
