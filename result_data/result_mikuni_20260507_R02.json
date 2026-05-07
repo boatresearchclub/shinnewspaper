@@ -1,0 +1,35 @@
+{
+  "venue": "三国",
+  "venue_slug": "mikuni",
+  "date": "20260507",
+  "race": 2,
+  "fetched_at": "2026-05-08 03:42:38",
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 130
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 130
+    },
+    {
+      "combo": "6",
+      "odds": 440
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-6",
+      "odds": 970
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-6-2",
+      "odds": 2210
+    }
+  ]
+}
