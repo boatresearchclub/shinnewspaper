@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 14:03:26 --></head>
+<!-- auto_push_updated:2026-05-07 14:24:28 --></head>
 <body>
 
 <header class="site-header">
@@ -363,6 +363,7 @@ body {
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
     <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
     <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手情報</button>
+    <button class="tab-btn" data-tab="result" onclick="switchTab('result')">結果</button>
   </div>
 
   <!-- 出走表タブ -->
@@ -388,6 +389,13 @@ body {
   <div id="tab-comment" style="display:none">
     <div id="comment-panel">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると選手情報が表示されます</div>
+    </div>
+  </div>
+
+  <!-- 結果タブ -->
+  <div id="tab-result" style="display:none">
+    <div id="result-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">（未実装）</div>
     </div>
   </div>
 </div>
@@ -1095,20 +1103,25 @@ function renderDetail(rno){
     return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースは基準1着率精度が低いです</div>`;
   })() : '';
 
-  // グリッド列: 枠44px 選手名90px 級45px F列28px 基準1着率72px
-  const colStyle = 'grid-template-columns: 44px 90px 45px 28px 72px';
+  // グリッド列: 枠44px 選手名90px 級45px F列28px 基準1着率72px ST順52px
+  const colStyle = 'grid-template-columns: 44px 90px 45px 28px 72px 52px';
 
   const html = `
     <div class="detail-panel">
       ${courseOrderBanner}
       ${insuffBanner}
       <div class="bt-head-simple" style="${colStyle}">
-        <span>枠</span><span style="text-align:center">選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span>
+        <span>枠</span><span style="text-align:center">選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span><span style="text-align:center">平均ST順</span>
       </div>
       ${boats.map((bt,i)=>{
         const fTotal = getFTotal(bt.boat, rno);
         const fCell = fTotal > 0
           ? `<span style="color:#e60012;font-weight:700;font-size:13px;display:block;text-align:center">${fTotal}</span>`
+          : `<span style="color:var(--text3);font-size:11px;display:block;text-align:center">—</span>`;
+        const course = String(bt.boat);
+        const stRank = MASTER_EXT?.course_master?.[bt.name]?.[course]?.st_rank;
+        const stCell = stRank != null
+          ? `<span style="display:block;text-align:center;font-size:12px">${stRank.toFixed(1)}</span>`
           : `<span style="color:var(--text3);font-size:11px;display:block;text-align:center">—</span>`;
         return `
         <div class="bt-row${i===0?' top1':''}" style="${colStyle}">
@@ -1119,6 +1132,7 @@ function renderDetail(rno){
           <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
             <span>${(bt.prob*100).toFixed(1)}%</span>
           </div>
+          <div>${stCell}</div>
         </div>`;
       }).join('')}
       ${tenjiHtml}
@@ -2293,7 +2307,7 @@ function renderComment(rno){
 
 // ── タブ切り替え ──
 function switchTab(name){
-  ['detail','detail2','buy','comment'].forEach(t=>{
+  ['detail','detail2','buy','comment','result'].forEach(t=>{
     document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b=>{
