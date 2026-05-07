@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 05:33:40 --></head>
+<!-- auto_push_updated:2026-05-08 05:41:11 --></head>
 <body>
 
 <header class="site-header">
@@ -2341,6 +2341,46 @@ function renderBuy(rno){
             tryAdd3(otherTop.boat, s2, t, '対抗軸', 'bl-gyaku', prob2 * r3Norm);
           });
           tryAdd2(otherTop.boat, s2, '対抗軸', 'bl-gyaku', prob2);
+        });
+      });
+    }
+
+    // ── 1号艇押さえ ──
+    //
+    // boat1BelowAvg（1号艇が会場平均を下回る）かつ
+    // その差が 5% 以内（venueAvgCourse1 - boat1.final_prob <= 0.05）のとき、
+    // 1号艇を軸にした押さえ買い目を追加する。
+    //
+    const boat1Gap = (venueAvgCourse1 !== null && boat1)
+      ? venueAvgCourse1 - boat1.final_prob
+      : null;
+    if(boat1BelowAvg && boat1Gap !== null && boat1Gap <= 0.05 && scenarioProb[1] != null){
+      const boat1Scenarios = kimariTypes
+        .filter(k => (scenarioProb[1]?.[k] ?? 0) > 0.001)
+        .sort((a, b) => (scenarioProb[1][b]||0) - (scenarioProb[1][a]||0));
+
+      boat1Scenarios.slice(0, 2).forEach(kimari => {
+        const scenProb  = scenarioProb[1]?.[kimari] ?? 0;
+        const seconds   = pick2nd(1, kimari);
+        seconds.forEach(s2 => {
+          const place2List = scenarioPlace2[1]?.[kimari] || [];
+          const p2Item     = place2List.find(x => x.boat === s2);
+          const p2         = p2Item?.p2 ?? 0;
+          const prob2      = scenProb * p2;
+
+          const thirdList = third_candidates.filter(t => t !== 1 && t !== s2);
+          const thirdRate3Map = {};
+          thirdList.forEach(t => {
+            const entry = tenkaiRem_buy?.[kimari]?.['1']?.[String(t)];
+            thirdRate3Map[t] = entry?.rate3 ?? null;
+          });
+          const r3Total = thirdList.reduce((s, t) => s + (thirdRate3Map[t] ?? 0), 0) || 1;
+
+          thirdList.forEach(t => {
+            const r3Norm = thirdRate3Map[t] != null ? (thirdRate3Map[t] / r3Total) : (1 / thirdList.length);
+            tryAdd3(1, s2, t, '押さえ', 'bl-ana', prob2 * r3Norm);
+          });
+          tryAdd2(1, s2, '押さえ', 'bl-ana', prob2);
         });
       });
     }
