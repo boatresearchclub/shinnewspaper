@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 13:21:25 --></head>
+<!-- auto_push_updated:2026-05-07 13:24:17 --></head>
 <body>
 
 <header class="site-header">
@@ -2658,6 +2658,7 @@ function updateEV(){
 
 // ── 初期化 ──
 (function(){
+  try {
   const isRefresh    = sessionStorage.getItem('refresh_flag') === '1';
   const restoreVenue = sessionStorage.getItem('refresh_venue') || '';
   const restoreRace  = parseInt(sessionStorage.getItem('refresh_race') || '0') || 0;
@@ -2761,9 +2762,13 @@ function updateEV(){
       '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
   }
 
-  // 締め切りアラート: 初回表示 + 1分ごとに自動更新
-  updateAlertStrip();
-  setInterval(updateAlertStrip, 60 * 1000);
+  } catch(e) {
+    console.error('[INIT] error:', e);
+  } finally {
+    // 初期化の成否に関わらずアラートを起動
+    updateAlertStrip();
+    setInterval(updateAlertStrip, 60 * 1000);
+  }
 })();
 </script>
 </body>
