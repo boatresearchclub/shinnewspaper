@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 15:02:03 --></head>
+<!-- auto_push_updated:2026-05-07 15:08:36 --></head>
 <body>
 
 <header class="site-header">
@@ -2141,7 +2141,6 @@ function renderBuy(rno){
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
-      <td style="padding:4px 6px;text-align:center;font-family:var(--mono);font-size:0.82rem">${evCell}</td>
     </tr>`;
   }).join('');
 
@@ -2228,20 +2227,6 @@ function renderBuy(rno){
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
         <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">展開推定後 着順確率 <span style="font-weight:400;font-size:10px;letter-spacing:0;text-transform:none">（基準・展開・展示 均等1:1:1 / 合計100%）</span></div>
-        <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-          <label style="font-size:11px;color:var(--text3);white-space:nowrap">単勝オッズ入力</label>
-          <div style="display:flex;gap:4px" id="odds-inputs">
-            ${ranked2.map(bt=>`
-              <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-                <span class="boat-circle b${bt.boat}" style="width:18px;height:18px;font-size:10px;line-height:18px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>
-                <input type="number" min="1" step="0.1"
-                  id="odds-${bt.boat}"
-                  placeholder="—"
-                  style="width:44px;font-size:11px;font-family:var(--mono);border:1px solid var(--border2);border-radius:4px;padding:2px 4px;background:var(--bg2);color:var(--text);text-align:right"
-                  oninput="updateEV()" />
-              </div>`).join('')}
-          </div>
-        </div>
       </div>
       <div class="prob-table-wrap">
       <table class="prob-table" style="width:100%;border-collapse:collapse">
@@ -2253,7 +2238,6 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性の係数（1.0基準: ▲=有利 ▼=不利）">展開補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムの係数（1.0基準: ▲=有利 ▼=不利）">展示補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準・展開・展示を均等（1:1:1）で合成・正規化した最終1着率（合計は常に100%）">最終確率</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
