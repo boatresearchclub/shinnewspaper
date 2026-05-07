@@ -276,7 +276,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 11:31:19 --></head>
+<!-- auto_push_updated:2026-05-07 12:29:27 --></head>
 <body>
 
 <header class="site-header">
@@ -824,9 +824,14 @@ function calcTenjiScore(boats, tenjiData, venue, arek){
 
   // ★ 係数をそのまま正規化して独立スコアにする（probを一切掛けない）
   const coefTotal = compositeCoefs.reduce((a, v) => a + v, 0) || 1;
+  const coefAvg   = coefTotal / boats.length;  // 平均係数（6艇均等なら全艇1.0）
   const tenjiScoreMap = {};
   boats.forEach((b, i) => {
     tenjiScoreMap[b.boat] = compositeCoefs[i] / coefTotal;
+    // 表示用: 平均を1.0基準とした係数（0.5〜2.0にクリップ）
+    tenjiScoreMap[`__coef_${b.boat}`] = coefAvg > 0
+      ? Math.min(2.0, Math.max(0.5, compositeCoefs[i] / coefAvg))
+      : 1.0;
   });
   return tenjiScoreMap;
 }
@@ -1985,27 +1990,25 @@ function renderBuy(rno){
     const probOnlyFinal = baseScore / probOnlyTotal;  // 基準（正規化済み・合計100%）
     b.display_base = probOnlyFinal;
 
-    // ── 展開補正の表示差分 ──
-    // 展開スコアを単独正規化した確率 − 基準確率
-    // → 展開面で基準より有利ならプラス、不利ならマイナス
-    if(useMaster){
+    // ── 展開補正の表示係数 ──
+    // 展開スコア正規化値 ÷ 基準正規化値（0.5〜2.0にクリップ）
+    if(useMaster && probOnlyFinal > 0){
       const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
       const tenkaiOnlyFinal = tenkaiScore / tenkaiOnlyTotal;
-      b.display_tenkai = tenkaiOnlyFinal - probOnlyFinal;
+      const ratio = tenkaiOnlyFinal / probOnlyFinal;
+      b.display_tenkai = Math.min(2.0, Math.max(0.5, ratio));
     } else {
-      b.display_tenkai = 0;
+      b.display_tenkai = null;
     }
 
-    // ── 展示補正の表示差分 ──
-    // 展示スコアを単独正規化した確率 − 基準確率
-    // → 展示タイムが他艇より速ければプラス、遅ければマイナス
+    // ── 展示補正の表示係数 ──
+    // calcTenjiScore が算出した「平均=1.0基準の展示係数」をそのまま使用
+    // 基準確率の大小に依存せず、展示タイムだけで決まる（0.5〜2.0にクリップ済み）
     if(tenjiScoreMap && wTenji > 0){
-      const tenjiOnlyTotal = ranked.reduce((s, x) =>
-        s + (tenjiScoreMap[x.boat] ?? 0), 0) || 1;
-      const tenjiOnlyFinal = (tenjiScoreMap[b.boat] ?? 0) / tenjiOnlyTotal;
-      b.display_tenji = tenjiOnlyFinal - probOnlyFinal;
+      const rawCoef = tenjiScoreMap[`__coef_${b.boat}`];
+      b.display_tenji = rawCoef ?? 1.0;
     } else {
-      b.display_tenji = 0;
+      b.display_tenji = null;
     }
 
     b.tenkai_prob_base  = b.tenkai_prob;
@@ -2096,30 +2099,31 @@ function renderBuy(rno){
     // 基準列: probを6艇で正規化した相対確率（合計100%）
     const basePct = (bt.display_base * 100).toFixed(1);
 
-    // 相対補正列: MASTER_EXTなし or 差分0 の場合は「—」
+    // 展開補正列: 係数表示（▲1.08 / ▼0.82 形式）
     let relCorrCell;
-    if(useMaster && Math.abs(bt.display_tenkai) >= 0.0001){
-      const diff  = bt.display_tenkai;
-      const sign  = diff>0?'+':'';
-      const color = diff>0?'var(--green)':'var(--red)';
-      relCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
-    } else if(useMaster){
-      relCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
+    if(useMaster && bt.display_tenkai != null){
+      const coef  = bt.display_tenkai;
+      if(Math.abs(coef - 1.0) < 0.02){
+        relCorrCell = `<span style="font-size:10px;color:var(--text3)">±1.00</span>`;
+      } else {
+        const color = coef >= 1.0 ? 'var(--green)' : 'var(--red)';
+        const mark  = coef >= 1.0 ? '▲' : '▼';
+        relCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${mark}${coef.toFixed(2)}</span>`;
+      }
     } else {
       relCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
 
-    // 展示補正列: 展示タイムで最終確率がどれだけ変化したか（差分）
-    //   展示なし時は「—」
+    // 展示補正列: 係数表示（▲1.08 / ▼0.82 形式）
     let tenjiCorrCell;
     if(hasTenji && bt.display_tenji != null){
-      const diff = bt.display_tenji;
-      if(Math.abs(diff)<0.0001){
-        tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">±0</span>`;
+      const coef  = bt.display_tenji;
+      if(Math.abs(coef - 1.0) < 0.02){
+        tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">±1.00</span>`;
       } else {
-        const sign  = diff>0?'+':'';
-        const color = diff>0?'var(--accent)':'var(--red)';
-        tenjiCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${sign}${(diff*100).toFixed(1)}%</span>`;
+        const color = coef >= 1.0 ? 'var(--accent)' : 'var(--red)';
+        const mark  = coef >= 1.0 ? '▲' : '▼';
+        tenjiCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${mark}${coef.toFixed(2)}</span>`;
       }
     } else {
       tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
@@ -2249,8 +2253,8 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">選手名</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="6艇のprobを正規化した相対1着率（合計100%）">基準</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性スコアを正規化した確率と基準確率の差（プラス＝展開面で有利）">展開補正</th>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムスコアを正規化した確率と基準確率の差（プラス＝展示タイムが他艇より優位）">展示補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性の係数（1.0基準: ▲=有利 ▼=不利）">展開補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムの係数（1.0基準: ▲=有利 ▼=不利）">展示補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準・展開・展示を均等（1:1:1）で合成・正規化した最終1着率（合計は常に100%）">最終確率</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="最終確率×オッズ（>1.0が期待値プラス）">期待値</th>
         </tr></thead>
@@ -2258,7 +2262,7 @@ function renderBuy(rno){
       </table>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-top:4px">
-        基準: 6艇のprobを正規化した相対1着率（合計100%）。展開補正: 展開適性スコアを正規化した確率と基準の差（＋は有利、－は不利）。展示補正: 展示タイムスコアを正規化した確率と基準の差（＋は有利、－は不利）。最終確率: 3指標を均等（1:1:1）に合成・正規化した確率（合計は常に100%）。展示なし時は基準と展開を1:1で合成。期待値 &gt; 1.0 が期待値プラスの目安。
+        基準: 6艇のprobを正規化した相対1着率（合計100%）。展開補正: 展開適性の係数（1.0基準、▲有利／▼不利）。展示補正: 展示タイムの係数（1.0基準、▲有利／▼不利）。最終確率: 3指標を均等（1:1:1）に合成・正規化した確率（合計は常に100%）。展示なし時は基準と展開を1:1で合成。期待値 &gt; 1.0 が期待値プラスの目安。
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
