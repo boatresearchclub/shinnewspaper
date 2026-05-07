@@ -321,7 +321,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-07 15:08:36 --></head>
+<!-- auto_push_updated:2026-05-07 15:15:29 --></head>
 <body>
 
 <header class="site-header">
@@ -2172,8 +2172,8 @@ function renderBuy(rno){
     const pct  = rate != null ? (rate * 100).toFixed(1) + '%' : '—';
     // 1コースは強調
     const style = ci === 1
-      ? 'font-weight:700;color:var(--accent2)'
-      : 'color:var(--text2)';
+      ? 'font-weight:700;color:var(--text)'
+      : 'color:var(--text)';
     return `<td style="text-align:center;padding:4px 6px;font-size:12px;font-family:var(--mono);${style}">${pct}</td>`;
   }).join('');
 
@@ -2185,10 +2185,9 @@ function renderBuy(rno){
     }
     const rate = inn2Place[c] ?? null;
     const pct  = rate != null ? (rate * 100).toFixed(1) + '%' : 'データなし';
-    const hi   = rate != null && rate >= 0.20;
     const style = rate == null
       ? 'color:var(--text3);font-size:11px'
-      : hi ? 'font-weight:700;color:var(--green)' : 'color:var(--text2)';
+      : 'color:var(--text)';
     return `<td style="text-align:center;padding:4px 6px;font-size:12px;font-family:var(--mono);${style}">${pct}</td>`;
   }).join('');
 
@@ -2241,9 +2240,6 @@ function renderBuy(rno){
         </tr></thead>
         <tbody>${probRows}</tbody>
       </table>
-      </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:4px">
-        基準: 6艇のprobを正規化した相対1着率（合計100%）。展開補正: 展開適性の係数（1.0基準、▲有利／▼不利）。展示補正: 展示タイムの係数（1.0基準、▲有利／▼不利）。最終確率: 3指標を均等（1:1:1）に合成・正規化した確率（合計は常に100%）。展示なし時は基準と展開を1:1で合成。期待値 &gt; 1.0 が期待値プラスの目安。
       </div>
     </div>
     ${buildScenarioSection(ranked2, place2Map, rawBoats)}
