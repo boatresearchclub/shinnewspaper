@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 06:38:04 --></head>
+<!-- auto_push_updated:2026-05-08 06:50:48 --></head>
 <body>
 
 <header class="site-header">
@@ -1959,7 +1959,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
         <span style="font-size:12px">${medals[wi]}</span>
         ${boatCircle(winner.boat)}
         <span style="font-size:13px;font-weight:700">${winner.name}</span>
-        <span style="font-size:12px;font-family:var(--mono);color:var(--accent2);font-weight:700">${(winner.tenkai_prob*100).toFixed(1)}%</span>
+        <span style="font-size:12px;font-family:var(--mono);color:var(--accent2);font-weight:700">${(winner.final_prob*100).toFixed(1)}%</span>
       </div>
       <div style="padding-left:0.5rem">${scenarioRows}</div>
     </div>`;
@@ -2107,13 +2107,12 @@ function renderBuy(rno){
     ? boat1.final_prob < venueAvgCourse1
     : false;
 
-  // ── 3着: シナリオ別 rate3 を使った累積選択（個人補正付き）──
+  // ── 3着: rate3 最下位1艇を除外して残り全流し ──
   //
-  // pick3rd(winnerBoat, kimari, second) で呼び出す。
-  // ① tenkai_remaining の rate3（全国/会場実績）をベースに取得
-  // ② winner_course_order の rate3（個人実績）で personTrust ブレンド補正
-  // ③ rate3 降順でソートし、累積合計が 50% 以上になるまで艇を採用
-  // ④ rate3 データが全くない場合は final_prob でフォールバック
+  // pick3rd(winnerBoat, kimari, secondBoat) で呼び出す。
+  // シナリオの rate3（個人補正ブレンド済み）が最も低い艇を1艇除外し、
+  // 残り全艇を3着候補として返す。
+  // rate3 データが全くない場合は final_prob 最下位を除外してフォールバック。
   //
   const tenkaiRem_buy = (() => {
     const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
@@ -2124,15 +2123,16 @@ function renderBuy(rno){
   // winner_course_order（個人実績）: renderBuy スコープで参照できるよう定義
   const winnerCO_buy = MASTER_EXT?.winner_course_order || {};
 
-  // calcScenarioData を先読み（軸決定より前に呼ぶため別途計算）
-  const sd_pre = calcScenarioData(ranked2, rawBoats);
+  // calcScenarioData を先読み（軸決定より前に呼ぶため）
+  const sd = calcScenarioData(ranked2, rawBoats);
 
-  // シナリオ別・3着率ベースの候補選択関数（個人補正付き）
+  // シナリオ別・rate3最下位1艇除外の3着候補関数（個人補正付き）
   function pick3rd(winnerBoat, kimari, secondBoat){
     const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
     if(allBoats.length === 0) return [];
+    if(allBoats.length === 1) return allBoats;
 
-    // rate3 が取得できる場合: 個人補正ブレンド → rate3 降順で累積50%以上まで採用
+    // rate3（個人補正ブレンド済み）でスコアリングして最下位1艇を除外
     if(tenkaiRem_buy){
       const wc = String(winnerBoat);
       const withScore = allBoats.map(b => {
@@ -2141,58 +2141,36 @@ function renderBuy(rno){
         const entry = tenkaiRem_buy?.[kimari]?.[wc]?.[sc];
         const baseR3 = entry?.rate3 ?? null;
 
-        // ── winner_course_order による個人補正 ──
-        // キー: winnerCO_buy[自艇名][自コース(sc)][勝者コース(wc)]
+        // winner_course_order による個人補正
         const personEntry = bt ? winnerCO_buy[bt.name]?.[sc]?.[wc] : null;
-        const personR3    = (personEntry?.rate3 != null) ? personEntry.rate3 : null;
-        const personTrust = (personEntry?.trust  != null) ? personEntry.trust  : 0;
+        const personR3    = personEntry?.rate3 ?? null;
+        const personTrust = personEntry?.trust  ?? 0;
 
         let r3;
         if(baseR3 != null && personR3 != null && personTrust > 0.3){
-          // 全国実績と個人実績を personTrust でブレンド
           r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
         } else {
           r3 = baseR3;
         }
-
         return { boat: b, r3 };
       });
+
       const hasR3 = withScore.some(x => x.r3 != null);
       if(hasR3){
-        // rate3 がない艇は 0 として扱いソート
-        const sorted = [...withScore].sort((a, b) => (b.r3 ?? 0) - (a.r3 ?? 0));
-        const total  = sorted.reduce((s, x) => s + (x.r3 ?? 0), 0);
-        const picked = [];
-        let cum = 0;
-        for(const item of sorted){
-          if((item.r3 ?? 0) <= 0) break;  // rate3=0以下は除外
-          picked.push(item.boat);
-          cum += item.r3;
-          if(total > 0 && cum / total >= 0.5) break;
-        }
-        if(picked.length > 0) return picked;
+        // rate3 昇順でソートし最下位1艇（先頭）を除外
+        const sorted = [...withScore].sort((a, b) => (a.r3 ?? -1) - (b.r3 ?? -1));
+        const worst  = sorted[0].boat;
+        return allBoats.filter(b => b !== worst);
       }
     }
 
-    // フォールバック: final_prob 降順で累積50%以上まで採用
-    const total = allBoats.reduce((s, b) => {
-      const bt = ranked2.find(r => r.boat === b);
-      return s + (bt?.final_prob ?? 0);
-    }, 0) || 1;
-    const sortedFb = [...allBoats].sort((a, b) => {
+    // フォールバック: final_prob 最下位1艇を除外
+    const worst = [...allBoats].sort((a, b) => {
       const fa = ranked2.find(r => r.boat === a)?.final_prob ?? 0;
       const fb = ranked2.find(r => r.boat === b)?.final_prob ?? 0;
-      return fb - fa;
-    });
-    const picked = [];
-    let cum = 0;
-    for(const b of sortedFb){
-      const fp = ranked2.find(r => r.boat === b)?.final_prob ?? 0;
-      picked.push(b);
-      cum += fp;
-      if(cum / total >= 0.5) break;
-    }
-    return picked;
+      return fa - fb;
+    })[0];
+    return allBoats.filter(b => b !== worst);
   }
 
   const buy3    = [];
@@ -2218,8 +2196,6 @@ function renderBuy(rno){
     buy2.push({c:`${first}−${second}`, l:label, lc, prob: prob ?? null});
   }
 
-  // sd_pre は third_candidates 計算で先に呼び出し済み → 再利用
-  const sd = sd_pre;
 
   if(sd.valid){
     const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
