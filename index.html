@@ -3206,3 +3206,17 @@ function updateEV(){
 </script>
 </body>
 </html>
+enter;color:var(--text3)">会場を選択してください</div>';
+  }
+
+  } catch(e) {
+    console.error('[INIT] error:', e);
+  } finally {
+    // 初期化の成否に関わらずアラートを起動
+    updateAlertStrip();
+    setInterval(updateAlertStrip, 60 * 1000);
+  }
+})();
+</script>
+</body>
+</html>
