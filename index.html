@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 10:00:40 --></head>
+<!-- auto_push_updated:2026-05-08 10:15:14 --></head>
 <body>
 
 <header class="site-header">
@@ -1201,7 +1201,7 @@ function renderDetail(rno){
 // ── 展開推定（1着率のみ）──
 //
 // 【役割】venue_kimari × prob × 個人kimari適性 × 相対評価 で各艇の1着率(tenkai_prob)を算出する。
-// 2着率の優先順位: ①逃げ→inn_2place ②非逃げ→tenkai_remaining(全国)+winner_course_order(個人補正) ③フォールバック→tenkai_prob相対値
+// 2着率の優先順位: ①逃げ→inn_2place ②非逃げ→tenkai_remaining(会場別のみ)+winner_course_order(個人補正・重み1.5倍) ③フォールバック→tenkai_prob相対値
 //
 // MASTER_EXT なし → prob をそのまま tenkai_prob にコピーして返す
 // MASTER_EXT あり → 決まり手別有効コース制約（ハード除外＋個人適性）＋
@@ -1621,13 +1621,13 @@ function calcPlace2Probs(boats, ranked){
   // ── 非逃げ展開（差し・まくり等）の2着: tenkai_remaining + winner_course_order ──
   const nonNigeProb = 1.0 - nigeWinProb;
   // tenkai_remaining: {決まり手: {1着コース: {進入コース: {rate2, trust}}}}
-  // 優先順位: ① 会場別(venue_stats[venue].tenkai_remaining) → ② 全国(tenkai_remaining)
+  // 会場別のみ使用（全国実績フォールバックなし）
   const tenkaiRemaining = (() => {
     const venue = DATA.venue;
     const venueLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
     if(venueLocal && typeof venueLocal === 'object' && Object.keys(venueLocal).length > 0)
       return venueLocal;
-    return MASTER_EXT?.tenkai_remaining || {};
+    return {};  // 会場別データなければ空（全国フォールバックなし）
   })();
   if(nonNigeProb > 0){
     for(const winner of ranked){
@@ -1666,7 +1666,7 @@ function calcPlace2Probs(boats, ranked){
               const personTrust = (personEntry && personEntry.trust != null) ? personEntry.trust : 0;
               let p2;
               if(personRate2 != null && personTrust > 0.3){
-                // 全国実績と個人実績をブレンド ※閾値: 0.3（count>=10相当）
+                // 会場別実績と個人実績をブレンド ※閾値: 0.3（count>=10相当）
                 const wNat = (1 - personTrust);
                 p2 = (personRate2 * personTrust + baseTR * wNat);
               } else {
