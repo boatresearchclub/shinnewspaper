@@ -92,9 +92,9 @@ body {
 
 /* DETAIL PANEL */
 .detail-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.25rem; box-shadow: 0 6px 18px rgba(0,40,90,0.08); }
-.bt-head-simple { display: grid; grid-template-columns: 44px 82px 40px 28px 60px 52px 52px; gap: 6px; padding: .4rem 1.25rem; font-size: 11px; color: var(--text3); font-weight: 700; letter-spacing: .08em; border-bottom: 1px solid var(--border); background: var(--bg3); }
-.detail-panel .bt-row { grid-template-columns: 44px 82px 40px 28px 60px 52px 52px; }
-.bt-row { display: grid; grid-template-columns: 44px 82px 40px 28px 60px 52px 52px; gap: 6px; padding: .75rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 13px; transition: background .12s; }
+.bt-head-simple { display: grid; grid-template-columns: 32px 82px 40px 28px 60px 52px 52px; gap: 4px; padding: .4rem 1.25rem; font-size: 11px; color: var(--text3); font-weight: 700; letter-spacing: .08em; border-bottom: 1px solid var(--border); background: var(--bg3); }
+.detail-panel .bt-row { grid-template-columns: 32px 82px 40px 28px 60px 52px 52px; }
+.bt-row { display: grid; grid-template-columns: 32px 82px 40px 28px 60px 52px 52px; gap: 4px; padding: .75rem 1.25rem; align-items: center; border-bottom: 1px solid var(--border); font-size: 13px; transition: background .12s; }
 .bt-row:last-child { border-bottom: none; }
 .bt-row:hover { background: var(--bg3); }
 /* .bt-row.top1 removed */
@@ -337,7 +337,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-08 09:51:28 --></head>
+<!-- auto_push_updated:2026-05-08 09:55:28 --></head>
 <body>
 
 <header class="site-header">
@@ -1155,8 +1155,8 @@ function renderDetail(rno){
     return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースは基準1着率精度が低いです</div>`;
   })() : '';
 
-  // グリッド列: 枠44px 選手名82px 級40px F列28px 基準1着率60px 3連対率52px ST順52px
-  const colStyle = 'grid-template-columns: 44px 82px 40px 28px 60px 52px 52px';
+  // グリッド列: 枠32px 選手名82px 級40px F列28px 基準1着率60px 3連対率52px ST順52px
+  const colStyle = 'grid-template-columns: 32px 82px 40px 28px 60px 52px 52px';
 
   const html = `
     <div class="detail-panel">
@@ -1191,7 +1191,6 @@ function renderDetail(rno){
           <div>${place3Cell}</div>
           <div>${stCell}</div>
         </div>`;
-      }).join('')}
       }).join('')}
       ${tenjiHtml}
     </div>
