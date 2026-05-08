@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 05:17:03 --></head>
+<!-- auto_push_updated:2026-05-09 05:19:08 --></head>
 <body>
 
 <header class="site-header">
@@ -720,22 +720,12 @@ function buildTenjiSection(rno, boats){
   const rows = boats.map(bt => {
     const bn = bt.boat;
     const t  = cf(bn);
-    if(!t) return `<tr><td>${bn}</td><td>—</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
+    if(!t) return `<tr><td>${bn}</td><td>${bt.name}</td><td colspan="5">—</td></tr>`;
     const f = (v, best) => v==null ? '—' : `<span class="${v===best?'tenji-best':''}">${v.toFixed(2)}</span>`;
     const rankCls = t.tenji_rank===1 ? 'tenji-rank1' : '';
     const tilt = t.tilt != null ? `<span class="tenji-tilt">${t.tilt>0?'+':''}${t.tilt}</span>` : '';
-    const course = t.course ?? null;
-    // is_normal_course が明示されていればそちらを優先、
-    // なければ「展示コース ≠ 枠番」で進入変更を判定
-    const isAbnormal = t.is_normal_course != null
-      ? t.is_normal_course === false
-      : (course != null && course !== bn);
-    const courseCell = course != null
-      ? `<span class="boat-circle b${course}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center${isAbnormal?';outline:2px solid var(--red);outline-offset:1px':''}">${course}</span>`
-      : '—';
     return `<tr>
       <td><span class="boat-circle b${bn}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bn}</span></td>
-      <td>${courseCell}</td>
       <td>${bt.name}</td>
       <td>${f(t.lap1, bestLap1)}</td>
       <td>${f(t.mawari, bestMawari)}</td>
@@ -749,7 +739,7 @@ function buildTenjiSection(rno, boats){
     <div style="background:var(--bg2)">
       <table class="tenji-table">
         <thead><tr>
-          <th>枠</th><th style="text-align:center">コース</th><th style="text-align:center">選手名</th>
+          <th>枠</th><th style="text-align:center">選手名</th>
           <th>1周</th><th>回り足</th><th>直線</th><th>展示</th><th>チルト</th>
         </tr></thead>
         <tbody>${rows}</tbody>
