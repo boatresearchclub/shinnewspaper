@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 05:51:15 --></head>
+<!-- auto_push_updated:2026-05-09 06:09:06 --></head>
 <body>
 
 <header class="site-header">
@@ -846,6 +846,47 @@ const VENUE_TENJI_CONFIG = {
   },
 };
 
+// ── 会場別 hiKimariStrength テーブル ──────────────────────────────────
+//
+// 1コース選手の被kimari率がvKimariを動的補正する際の強度係数。
+// 値が大きいほど個人の被kimari率が展開確率に強く反映される。
+//
+// 設計基準:
+//   逃げ強会場（大村・常滑・丸亀・尼崎・住之江）
+//     → 1.5: イン有利な水面特性で1号艇が崩れにくい。外コース補正を抑える。
+//   荒れ強会場（戸田・三国・平和島・浜名湖・蒲郡）
+//     → 2.5: 外コースが決まりやすく、被kimari個人差が展開に直結しやすい。
+//   特殊水面（江戸川）
+//     → 2.0: 潮流・水路の特異性が強く個人被kimari率の汎化精度が低いため中程度に抑制。
+//   デフォルト（上記以外: 多摩川・津・びわこ・鳴門・児島・芦屋・福岡・唐津など）
+//     → 2.0: 現行より若干抑制し過補正リスクを低減。
+//
+const VENUE_HI_KIMARI_STRENGTH = {
+  // 逃げ強会場 → 弱め
+  "大村":    1.5,
+  "常滑":    1.5,
+  "丸亀":    1.5,
+  "尼崎":    1.5,
+  "住之江":  1.5,
+  "桐生":    1.5,
+  "下関":    1.5,
+  // 荒れ強会場 → 強め
+  "戸田":    2.5,
+  "三国":    2.5,
+  "平和島":  2.5,
+  "浜名湖":  2.5,
+  "蒲郡":    2.5,
+  // 特殊水面 → 中程度
+  "江戸川":  2.0,
+  // デフォルト (未登録会場はここを使用)
+  "_default": 2.0,
+};
+
+// 会場名から hiKimariStrength を取得するヘルパー
+function getHiKimariStrength(venue){
+  return VENUE_HI_KIMARI_STRENGTH[venue] ?? VENUE_HI_KIMARI_STRENGTH["_default"];
+}
+
 // 会場設定から最終重みを返す（arek動的調整なし・会場固定重みのみ）
 function resolveWeights(venue, arek){
   const cfg = VENUE_TENJI_CONFIG[venue] || VENUE_TENJI_CONFIG["_default"];
@@ -1341,10 +1382,10 @@ function calcTenkaiProbs(boats, arek){
   // 例: 差され率0.30（高い）→ 差し展開の確率を最大+50%補正
   //     捲られ率0.05（低い）→ まくり展開はほぼそのまま
   //
-  // 補正強度は hiKimariStrength で制御（0.0=補正なし、1.0=最大補正）
+  // 補正強度は VENUE_HI_KIMARI_STRENGTH で会場別に制御。
   // 被kimariデータがない場合は vKimari をそのまま使用。
   //
-  const hiKimariStrength = 2.5; // 被kimari率1.0で最大2.5倍まで補正 ※会場3:個人7に強化
+  const hiKimariStrength = getHiKimariStrength(venue); // 会場別: 逃げ強→1.5 / 荒れ強→2.5 / 既定→2.0
   let adjustedVKimari = { ...vKimari };
 
   if(boat1){
@@ -1751,7 +1792,7 @@ function calcScenarioData(ranked2, rawBoats){
     const boat1Runs = MASTER_EXT?.course_master?.[boat1Scenario.name]?.['1']?.runs ?? 0;
     if(hiKimari && boat1Runs >= 30){
       const hiTrust = Math.min(boat1Runs / 100, 1.0);
-      const hiStr   = 2.5;
+      const hiStr   = getHiKimariStrength(venue); // 会場別強度 (calcTenkaiProbs と同一テーブル参照)
       const sasareRate       = hiKimari['差され']     ?? null;
       const makurareRate     = hiKimari['捲られ']     ?? null;
       const makurisasareRate = hiKimari['捲り差され'] ?? null;
@@ -1856,7 +1897,7 @@ function calcScenarioData(ranked2, rawBoats){
             const personEntry2 = winnerCO[b.name]?.[sc]?.['1'];
             const personRate2  = personEntry2?.rate2 ?? null;
             const personTrust2 = personEntry2?.trust ?? 0;
-            if(baseP2 != null && personRate2 != null && personTrust2 > 0.2){
+            if(baseP2 != null && personRate2 != null && personTrust2 > 0.3){ // 他箇所と統一(count>=10相当)
               p2 = personRate2 * personTrust2 + baseP2 * (1 - personTrust2);
             } else {
               p2 = baseP2;
