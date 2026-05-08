@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 07:41:22 --></head>
+<!-- auto_push_updated:2026-05-09 07:56:05 --></head>
 <body>
 
 <header class="site-header">
@@ -3256,6 +3256,29 @@ function updateEV(){
     // 初期化の成否に関わらずアラートを起動
     updateAlertStrip();
     setInterval(updateAlertStrip, 60 * 1000);
+
+    // ── 展示情報の自動更新（バナーと同様に定期実行） ──
+    // サーバーモード かつ 当日データの場合のみ fetch する。
+    // fetchTenjiAll はキャッシュ(_tenjiCache)を上書きするだけなので
+    // 完了後に現在表示中のタブを再レンダリングして画面へ反映する。
+    const TENJI_AUTO_INTERVAL = 3 * 60 * 1000; // 3分ごと
+    if(IS_SERVER){
+      setInterval(async () => {
+        if(!currentVenue || !DATA || !DATA.date) return;
+        try {
+          await fetchTenjiAll(currentVenue, DATA.date);
+          // 現在表示中のタブに応じて再レンダリング
+          const tab = currentTabName();
+          if(tab === 'detail')       renderDetail(selectedRace);
+          else if(tab === 'detail2') renderBuy(selectedRace);
+          else if(tab === 'buy')     renderBuy(selectedRace);
+          else if(tab === 'comment') renderComment(selectedRace);
+          console.log('[tenji-auto] refreshed:', currentVenue, DATA.date);
+        } catch(e) {
+          console.warn('[tenji-auto] error:', e);
+        }
+      }, TENJI_AUTO_INTERVAL);
+    }
   }
 })();
 </script>
