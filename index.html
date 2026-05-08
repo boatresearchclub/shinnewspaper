@@ -116,6 +116,12 @@ body {
 .gb1 { background: var(--bg4); color: var(--text2); }
 .gb2 { background: rgba(255,90,90,.1); color: #ff8a8a; }
 
+/* PERSISTENT BANNERS (タブ共通・常時表示) */
+#persistent-banners { margin-bottom: 0; }
+#persistent-banners .insufficient-banner,
+#persistent-banners .course-order-banner { border-radius: 0; margin: 0; }
+#persistent-banners:not(:empty) { margin-bottom: 0.75rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+
 /* INSUFFICIENT BANNER */
 .insufficient-banner { display: flex; align-items: center; gap: 7px; padding: .55rem 1.25rem; background: rgba(255,122,0,0.08); border-bottom: 1px solid rgba(255,122,0,0.18); font-size: 12px; color: var(--orange); line-height: 1.4; }
 
@@ -337,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 00:41:46 --></head>
+<!-- auto_push_updated:2026-05-09 05:17:03 --></head>
 <body>
 
 <header class="site-header">
@@ -373,6 +379,9 @@ body {
 </div>
 
 <div class="container">
+  <!-- 常時表示バナー（タブ切替に関係なく表示） -->
+  <div id="persistent-banners"></div>
+
   <!-- タブ -->
   <div class="tab-bar" id="tab-bar">
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
@@ -1144,24 +1153,17 @@ function renderDetail(rno){
   const rd = DATA.races[String(rno)];
   if(!rd) return;
   const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
-  const courseOrderBanner = buildCourseOrderBanner(rno, boats);
   const tenjiHtml = buildTenjiSection(rno, boats);
 
-  const insuffBoats = boats.filter(bt => bt.dq === 'insufficient');
-  const insuffBanner = insuffBoats.length > 0 ? (() => {
-    const circles = insuffBoats.map(bt =>
-      `<span class="boat-circle b${bt.boat}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>`
-    ).join('');
-    return `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースは基準1着率精度が低いです</div>`;
-  })() : '';
 
   // グリッド列: 枠32px 選手名82px 級40px F列28px 基準1着率60px 3連対率52px ST順52px
   const colStyle = 'grid-template-columns: 32px 82px 40px 28px 60px 52px 52px';
 
+  // バナーをタブ外の常時表示エリアに更新
+  updatePersistentBanners(rno);
+
   const html = `
     <div class="detail-panel">
-      ${courseOrderBanner}
-      ${insuffBanner}
       <div class="bt-head-simple" style="${colStyle}">
         <span>枠</span><span style="text-align:center">選手名</span><span>級</span><span style="text-align:center">F</span><span style="text-align:center">基準1着率</span><span style="text-align:center">3連対率</span><span style="text-align:center">平均ST順</span>
       </div>
@@ -3028,9 +3030,31 @@ function doRefresh(){
   setTimeout(()=>{ location.reload(true); }, 150);
 }
 
+function updatePersistentBanners(rno){
+  if(!DATA) return;
+  const rd = DATA.races[String(rno)];
+  const container = document.getElementById('persistent-banners');
+  if(!container) return;
+  if(!rd){ container.innerHTML = ''; return; }
+  const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
+  let html = '';
+  // 進入変更バナー
+  html += buildCourseOrderBanner(rno, boats);
+  // データ不足バナー
+  const insuffBoats = boats.filter(bt => bt.dq === 'insufficient');
+  if(insuffBoats.length > 0){
+    const circles = insuffBoats.map(bt =>
+      `<span class="boat-circle b${bt.boat}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span>`
+    ).join('');
+    html += `<div class="insufficient-banner">⚠ ${circles}<span class="insuf-boats"></span>コースデータ不足 — このレースは基準1着率精度が低いです</div>`;
+  }
+  container.innerHTML = html;
+}
+
 function selectRace(rno){
   if(!DATA) return;
   selectedRace = rno;
+  updatePersistentBanners(rno);
   document.querySelectorAll('.race-btn').forEach(c=>c.classList.remove('active'));
   const btn = document.getElementById(`rc-${rno}`);
   if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'}); }
@@ -3193,20 +3217,6 @@ function updateEV(){
     document.getElementById('race-bar').innerHTML = '';
     document.getElementById('inline-detail').innerHTML =
       '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
-  }
-
-  } catch(e) {
-    console.error('[INIT] error:', e);
-  } finally {
-    // 初期化の成否に関わらずアラートを起動
-    updateAlertStrip();
-    setInterval(updateAlertStrip, 60 * 1000);
-  }
-})();
-</script>
-</body>
-</html>
-enter;color:var(--text3)">会場を選択してください</div>';
   }
 
   } catch(e) {
