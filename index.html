@@ -3615,3 +3615,17 @@ function autoRefreshCurrentView(){
 </script>
 </body>
 </html>
+
+    } else if(tab === 'odds'){
+      renderOdds(selectedRace);
+    }
+    // 進入変更バナーも更新
+    updatePersistentBanners(selectedRace);
+    console.log('[autoRefresh] tab=' + tab + ' race=' + selectedRace);
+  } catch(e) {
+    console.warn('[autoRefresh] error:', e);
+  }
+}
+</script>
+</body>
+</html>
