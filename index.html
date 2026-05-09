@@ -355,7 +355,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 11:42:49 --></head>
+<!-- auto_push_updated:2026-05-09 12:13:38 --></head>
 <body>
 
 <header class="site-header">
@@ -3432,9 +3432,42 @@ function updateEV(){
   } finally {
     // 初期化の成否に関わらずアラートを起動
     updateAlertStrip();
-    setInterval(updateAlertStrip, 60 * 1000);
+
+    // ── 60秒ごとに締め切りアラート＋現在タブを自動更新 ──
+    setInterval(function(){
+      updateAlertStrip();
+      autoRefreshCurrentView();
+    }, 60 * 1000);
   }
 })();
+
+// ── 現在表示中のタブ・レースを再レンダリング（水面気象・展示・モーター情報の自動更新）──
+function autoRefreshCurrentView(){
+  if(!DATA || !selectedRace) return;
+  const tab = currentTabName();
+  try {
+    if(tab === 'detail'){
+      renderDetail(selectedRace);
+    } else if(tab === 'buy'){
+      renderBuy(selectedRace);
+    } else if(tab === 'detail2'){
+      renderBuy(selectedRace);
+    } else if(tab === 'comment'){
+      if(IS_SERVER && DATA.date){
+        fetchTenjiAll(currentVenue, DATA.date).then(() => renderComment(selectedRace));
+      } else {
+        renderComment(selectedRace);
+      }
+    } else if(tab === 'result'){
+      renderResult(selectedRace);
+    }
+    // 進入変更バナーも更新
+    updatePersistentBanners(selectedRace);
+    console.log('[autoRefresh] tab=' + tab + ' race=' + selectedRace);
+  } catch(e) {
+    console.warn('[autoRefresh] error:', e);
+  }
+}
 </script>
 </body>
 </html>
