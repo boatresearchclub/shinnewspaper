@@ -355,7 +355,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 11:30:18 --></head>
+<!-- auto_push_updated:2026-05-09 11:41:41 --></head>
 <body>
 
 <header class="site-header">
@@ -2065,9 +2065,6 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap){
 
   if(top3Scenarios.length === 0) return '';
 
-  // 最高シナリオ確率（バー表示の基準）
-  const maxScenProb = top3Scenarios[0]?.prob ?? 0.01;
-
   // 決まり手→カラー
   const KIMARI_COLOR = {
     '逃げ': 'var(--accent2)', '差し': 'var(--green)',
@@ -2080,78 +2077,43 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap){
 
   const scenarioBlocks = top3Scenarios.map((sc, wi) => {
     const place2List = scenarioPlace2[sc.boat]?.[sc.kimari] || [];
-    const top2Place  = place2List.slice(0, 4); // 2着候補上位4艇
+    const top4Place  = place2List.slice(0, 4);
 
-    // ── 各2着候補の3着スコアを計算 ──
-    const p2Cells = top2Place.map(item => {
+    // 各2着候補 → 「2着➌42% ー 3着➍31%/➋25%」の1行
+    const p2Lines = top4Place.map(item => {
       const third3 = calc3rdScores(sc.boat, sc.kimari, item.boat).slice(0, 3);
       const third3html = third3.map(t3 =>
         `<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap">
           ${boatCircle(t3.boat)}
-          <span style="font-size:10px;font-family:var(--mono);color:var(--text3)">${t3.r3 != null ? (t3.r3*100).toFixed(0)+'%' : '—'}</span>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text)">${t3.r3 != null ? (t3.r3*100).toFixed(0)+'%' : '—'}</span>
         </span>`
-      ).join('<span style="color:var(--border2);margin:0 2px;font-size:9px">/</span>');
+      ).join('<span style="color:var(--text3);margin:0 3px;font-size:11px">/</span>');
 
-      return `<div style="margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-          <span style="font-size:10px;color:var(--text3);flex-shrink:0">2着</span>
-          ${boatCircle(item.boat)}
-          <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text)">${(item.p2*100).toFixed(0)}%</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:4px;padding-left:20px;flex-wrap:wrap">
-          <span style="font-size:10px;color:var(--text3);flex-shrink:0">3着</span>
-          ${third3html}
-        </div>
+      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--text3);flex-shrink:0">2着</span>
+        ${boatCircle(item.boat)}
+        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text);min-width:2.8em">${(item.p2*100).toFixed(0)}%</span>
+        <span style="font-size:11px;color:var(--text3);flex-shrink:0;margin-left:2px">ー 3着</span>
+        ${third3html}
       </div>`;
     }).join('');
 
-    // 確率バー
-    const barWidth = Math.round((sc.prob / maxScenProb) * 100);
     const kimariColor = KIMARI_COLOR[sc.kimari] || 'var(--accent2)';
     const kBg = KIMARI_BG[sc.kimari] || 'rgba(108,122,148,.1)';
-    const rankLabel = ['①','②','③'][wi] || '';
 
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:${wi===0?'var(--accent)':'var(--text3)'};color:#fff;font-size:10px;font-weight:700;flex-shrink:0">${wi+1}</span>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
         ${boatCircle(sc.boat)}
         <span style="font-size:13px;font-weight:700;flex-shrink:0">${sc.name}</span>
         <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:${kBg};color:${kimariColor};flex-shrink:0">${sc.kimari}</span>
-        <span style="font-size:13px;font-family:var(--mono);font-weight:700;color:${kimariColor};margin-left:auto;flex-shrink:0">${(sc.prob*100).toFixed(1)}%</span>
+        <span style="font-size:13px;font-family:var(--mono);font-weight:700;color:var(--text);margin-left:auto;flex-shrink:0">${(sc.prob*100).toFixed(1)}%</span>
       </div>
-      <div style="height:4px;background:var(--bg4);border-radius:2px;margin-bottom:10px;overflow:hidden">
-        <div style="height:100%;width:${barWidth}%;background:${kimariColor};border-radius:2px;transition:width .3s"></div>
-      </div>
-      <div style="padding-left:4px">${p2Cells}</div>
+      <div style="padding-left:4px">${p2Lines}</div>
     </div>`;
   }).join('');
 
-  // ── 軸信頼度インジケーター ──
-  const top1 = ranked2[0];
-  const top1Prob = top1?.final_prob ?? 0;
-  const venueAvg1 = (DATA.inn_data?.course_rates?.[1]) ?? 0.45;
-  const reliabilityRatio = top1Prob / Math.max(venueAvg1, 0.01);
-  let axisNote = '';
-  if(reliabilityRatio >= 1.5){
-    axisNote = `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(0,184,107,.1);border-radius:4px;font-size:11px;font-weight:700;color:var(--green)">
-      ✅ ${top1.name}（${top1.boat}号）軸固定推奨 — 会場平均の${reliabilityRatio.toFixed(1)}倍
-    </div>`;
-  } else if(reliabilityRatio >= 1.1){
-    axisNote = `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(0,102,255,.08);border-radius:4px;font-size:11px;font-weight:700;color:var(--accent2)">
-      🎯 ${top1.name}（${top1.boat}号）軸優勢 — 会場平均の${reliabilityRatio.toFixed(1)}倍
-    </div>`;
-  } else {
-    const top2 = ranked2[1];
-    axisNote = `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(255,122,0,.09);border-radius:4px;font-size:11px;font-weight:700;color:var(--orange)">
-      ⚡ 軸不確定 — ${top1.boat}号vs${top2?.boat ?? '?'}号の2頭軸推奨
-    </div>`;
-  }
-
   return `<div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">展開シナリオ</div>
-      ${axisNote}
-    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ</div>
     ${scenarioBlocks}
   </div>`;
 }
