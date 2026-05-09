@@ -215,6 +215,18 @@ body {
 .bl-honmei { background: rgba(61,214,140,.15); color: var(--green); }
 .bl-taikou { background: rgba(245,200,66,.12); color: var(--gold); }
 .bl-ana, .bl-gyaku { background: rgba(255,90,90,.1); color: #ff8a8a; }
+/* 決まり手別カラー */
+.bl-nige    { background: rgba(0,102,255,.13); color: var(--accent2); }        /* 逃げ: 青 */
+.bl-sashi   { background: rgba(0,184,107,.13); color: var(--green); }          /* 差し: 緑 */
+.bl-makuri  { background: rgba(255,59,59,.13); color: var(--red); }            /* まくり: 赤 */
+.bl-makusas { background: rgba(255,122,0,.13); color: var(--orange); }         /* まくり差し: オレンジ */
+.bl-nuki    { background: rgba(108,122,148,.15); color: var(--text2); }        /* 抜き: グレー */
+/* シナリオグループ区切り */
+.buy-scenario-header { display:flex; align-items:center; gap:7px; padding:7px 0 4px; font-size:11px; font-weight:700; color:var(--text3); letter-spacing:.06em; border-top:1px solid var(--border); margin-top:2px; }
+.buy-scenario-header:first-child { border-top:none; margin-top:0; }
+.buy-scenario-rank { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--accent); color:#fff; font-size:9px; font-weight:700; flex-shrink:0; }
+.buy-scenario-rank.s2 { background:var(--text3); }
+.buy-scenario-rank.s3 { background:var(--text3); opacity:.7; }
 .buy-combo { font-family: var(--mono); font-size: 15px; font-weight: 500; flex: 1; letter-spacing: 2px; }
 .buy-weight { display: flex; gap: 2px; }
 .wdot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
@@ -343,7 +355,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 09:45:35 --></head>
+<!-- auto_push_updated:2026-05-09 10:19:56 --></head>
 <body>
 
 <header class="site-header">
@@ -1748,14 +1760,19 @@ function combo2(a,b){ return `${Math.min(a,b)}＝${Math.max(a,b)}`; }
 // 戻り値:
 //   {
 //     scenarioProb  : {boat: {kimari: 発生確率}},
-//     scenarioPlace2: {boat: {kimari: [{boat, p2}]}},  // 正規化済み2着リスト
+//     scenarioPlace2: {boat: {kimari: [{boat, p2}]}},  // 正規化済み2着リスト（展示係数補正済み）
 //     kimariTypes   : string[],
 //     inn2Place     : object,
 //     top3          : ranked2の上位3艇,
 //     valid         : boolean  // MASTERなし等で計算不可の場合 false
 //   }
 //
-function calcScenarioData(ranked2, rawBoats){
+// tenjiScoreMap: calcTenjiScore の戻り値（展示データなし時は null）
+//   __coef_N（平均=1.0基準）を 2着確率の補正に使用。
+//   null の場合は補正なし（係数=1.0 として扱う）。
+//   補正強度は TENJI_P2_COEF_CLIP でクリップ（過補正防止）。
+//
+function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
   if(!MASTER_EXT || !MASTER_EXT.venue_kimari){
     return { valid: false };
   }
@@ -1936,6 +1953,25 @@ function calcScenarioData(ranked2, rawBoats){
           return { boat: b.boat, name: b.name, p2 };
         });
 
+      // ── 展示係数補正（問題3対応）──
+      //
+      // 正規化前に各艇の展示係数（平均=1.0基準）を p2 に乗算する。
+      // 展示が速い艇は p2 が上昇、遅い艇は p2 が低下。
+      // 正規化後も相対順位のみ変わるため、合計は常に 1.0 を維持する。
+      //
+      // 過補正防止: 係数は TENJI_P2_COEF_CLIP の範囲にクリップ。
+      //   1着の展開係数クリップ（0.3〜3.0）より狭い（0.75〜1.35）のは、
+      //   2着は1着ほど支配的でなく、展示の影響が相対的に小さいため。
+      //
+      const TENJI_P2_COEF_CLIP = [0.75, 1.35];
+      if(tenjiScoreMap){
+        place2List.forEach(x => {
+          const rawCoef = tenjiScoreMap[`__coef_${x.boat}`] ?? 1.0;
+          const coef    = Math.min(TENJI_P2_COEF_CLIP[1], Math.max(TENJI_P2_COEF_CLIP[0], rawCoef));
+          x.p2 *= coef;
+        });
+      }
+
       const p2Sum = place2List.reduce((s, x) => s + x.p2, 0) || 1;
       place2List.forEach(x => { x.p2 = x.p2 / p2Sum; });
       place2List.sort((a, b) => b.p2 - a.p2);
@@ -1953,7 +1989,7 @@ function calcScenarioData(ranked2, rawBoats){
 // 2着率: 逃げ展開(1コース1着)のみ inn_2place を使用、それ以外は tenkai_prob 相対値。
 //
 function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap){
-  const sd = calcScenarioData(ranked2, rawBoats);
+  const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
   if(!sd.valid) return '';
 
   const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
@@ -2160,7 +2196,8 @@ function renderBuy(rno){
   const winnerCO_buy = MASTER_EXT?.winner_course_order || {};
 
   // calcScenarioData を先読み（軸決定より前に呼ぶため）
-  const sd = calcScenarioData(ranked2, rawBoats);
+  // tenjiScoreMap を渡して 2着確率に展示係数を反映させる（問題3対応）
+  const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
 
   // シナリオ別・rate3最下位1艇除外の3着候補関数（個人補正付き）
   function pick3rd(winnerBoat, kimari, secondBoat){
@@ -2296,8 +2333,66 @@ function renderBuy(rno){
       }
     }
 
-    // 2着候補を50%以上になるまで累積選択する関数
-    // 逃げシナリオ（1号艇逃げ）は inn_2place 会場平均を超える艇を優先
+    // 2着候補を累積確率が閾値以上になるまで選択する関数
+    //
+    // 【問題2対応】閾値を決まり手別に設定
+    //   逃げ: 2着が2コースに集中しやすい  → 早めに打ち切り（0.40）で点数抑制
+    //   差し: 2着がやや分散              → やや広め（0.55）で取りこぼし防止
+    //   まくり・まくり差し: 荒れ展開で分散 → 広め（0.60）でカバー
+    //   抜き: 標準（0.50）
+    //
+    // 逃げシナリオ（1号艇逃げ）は inn_2place 会場平均を超える艇を優先する
+    // 既存ロジックを維持。
+    //
+    // ── 折り返し買い目ヘルパー（ケースB対応）──
+    //
+    // 正順 axisBoat-s2-t を買っているとき、
+    // 「s2 と t の着順が逆になる」パターン axisBoat-t-s2 を条件付きで追加する。
+    //
+    // 追加条件: rate2(t) / rate2(s2) が REVERSE_RATIO 以上
+    //   → s2 が圧倒的に2着有力（例: 50% vs 5%）なら折り返し不要
+    //   → ある程度拮抗（例: 35% vs 20%）なら折り返しを買う
+    //   rate2 データがない場合は確率値があれば無条件追加
+    //
+    // REVERSE_RATIO チューニング目安:
+    //   0.25 → 広め（t の rate2 が s2 の1/4以上で折り返し追加）
+    //   0.35 → 標準
+    //   0.50 → 絞り（ほぼ拮抗時のみ追加）
+    //
+    const REVERSE_RATIO = 0.35;
+
+    function addReverseIfNeeded(axisBoat, kimari, s2, t, label, lc, scenProb){
+      const wc     = String(axisBoat);
+      const entryS = tenkaiRem_buy?.[kimari]?.[wc]?.[String(s2)];
+      const entryT = tenkaiRem_buy?.[kimari]?.[wc]?.[String(t)];
+
+      const r2_s2 = entryS?.rate2 ?? null;
+      const r2_t  = entryT?.rate2 ?? null;
+      // tが2着に入ったとき s2 が3着になる率
+      const r3_s2_when_t2nd = entryS?.rate3 ?? null;
+
+      // 折り返し確率
+      const probReverse = (r2_t != null && r3_s2_when_t2nd != null)
+        ? scenProb * r2_t * r3_s2_when_t2nd
+        : null;
+
+      // 追加判定
+      const shouldAdd = (r2_s2 != null && r2_t != null)
+        ? (r2_t / r2_s2) >= REVERSE_RATIO
+        : probReverse !== null;  // データなし → 確率があれば追加
+
+      if(shouldAdd){
+        tryAdd3(axisBoat, t, s2, `${label}折返`, lc, probReverse);
+      }
+    }
+
+    const PICK2_THRESHOLD = {
+      '逃げ':       0.40,
+      '差し':       0.55,
+      'まくり':     0.60,
+      'まくり差し': 0.60,
+      '抜き':       0.50,
+    };
     function pick2nd(winnerBoat, kimari){
       const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
       if(list.length === 0) return [];
@@ -2317,115 +2412,136 @@ function renderBuy(rno){
         sorted = [...list].sort((a,b) => b.p2 - a.p2);
       }
 
-      // 累積50%以上になるまで採用
+      // 決まり手別の累積閾値で打ち切り
+      const threshold = PICK2_THRESHOLD[kimari] ?? 0.50;
       const picked = [];
       let cum = 0;
       for(const item of sorted){
         if(item.boat === winnerBoat) continue;
         picked.push(item.boat);
         cum += item.p2;
-        if(cum >= 0.5) break;
+        if(cum >= threshold) break;
       }
       return picked;
     }
 
-    // 本命・対抗の2着候補をシナリオ上位から生成（複数軸対応）
-    const labels = ['本命','対抗','穴'];
-    const lcMap  = ['bl-honmei','bl-taikou','bl-ana'];
+    // ── 決まり手 → CSS class マップ ──
+    function kimariToLc(kimari){
+      return { '逃げ':'bl-nige', '差し':'bl-sashi', 'まくり':'bl-makuri',
+               'まくり差し':'bl-makusas', '抜き':'bl-nuki' }[kimari] || 'bl-nuki';
+    }
 
-    // 軸艇ごとに買い目を生成
-    axisBoats.forEach((axisBoat, axisIdx) => {
-      const axisLabel = axisBoats.length === 1
-        ? null           // 単軸: 本命/対抗/穴 のまま
-        : `軸${axisIdx + 1}`;  // 複数軸: 軸1, 軸2, ...
+    // ── 展開シナリオ上位3を全艇×全決まり手から抽出（buildScenarioSection と同ロジック）──
+    const allScenPairs = [];
+    for(const winner of ranked2){
+      for(const k of kimariTypes){
+        const p = scenarioProb[winner.boat]?.[k];
+        if(p > 0.001) allScenPairs.push({ boat: winner.boat, name: winner.name, kimari: k, prob: p });
+      }
+    }
+    allScenPairs.sort((a, b) => b.prob - a.prob);
+    const seenK = new Set();
+    const top3Scen = [];
+    for(const pair of allScenPairs){
+      if(seenK.has(pair.kimari)) continue;
+      seenK.add(pair.kimari);
+      top3Scen.push(pair);
+      if(top3Scen.length >= 3) break;
+    }
 
+    // buy3/buy2 にシナリオグループ情報を付加するため拡張
+    // { c, lc, l, prob, scenarioGroup } の形で格納
+    // scenarioGroup: 0/1/2 (展開シナリオ1位/2位/3位)
+
+    // ── 上位3シナリオに沿って買い目を生成 ──
+    top3Scen.forEach((topScen, scenIdx) => {
+      const axisBoat = topScen.boat;
+      const kimari   = topScen.kimari;
+      const lc       = kimariToLc(kimari);
+      // ラベル: "決まり手名 ①" 形式（艇番はサークルで表示済みなので決まり手のみ）
+      const baseLabel = kimari;
+      const scenProb  = scenarioProb[axisBoat]?.[kimari] ?? 0;
+      const seconds   = pick2nd(axisBoat, kimari);
+
+      seconds.forEach(s2 => {
+        const place2List = scenarioPlace2[axisBoat]?.[kimari] || [];
+        const p2Item     = place2List.find(x => x.boat === s2);
+        const p2         = p2Item?.p2 ?? 0;
+        const prob2      = scenProb * p2;
+
+        const thirdList  = pick3rd(axisBoat, kimari, s2);
+        thirdList.forEach(t => {
+          const entry = tenkaiRem_buy?.[kimari]?.[String(axisBoat)]?.[String(t)];
+          const r3    = entry?.rate3 ?? null;
+          // 正順
+          const key3 = `${axisBoat}-${s2}-${t}`;
+          if(axisBoat!==s2 && s2!==t && axisBoat!==t && !buy3seen.has(key3) && buy3.length < 15){
+            buy3seen.add(key3);
+            buy3.push({ c:`${axisBoat}−${s2}−${t}`, l:baseLabel, lc, prob: r3 != null ? prob2 * r3 : null, scenarioGroup: scenIdx });
+          }
+          // 折り返し（ケースB対応）
+          addReverseIfNeeded(axisBoat, kimari, s2, t, baseLabel, lc, scenProb);
+        });
+        // 2連単
+        const key2 = `${axisBoat}-${s2}`;
+        if(axisBoat!==s2 && !buy2seen.has(key2)){
+          buy2seen.add(key2);
+          buy2.push({ c:`${axisBoat}−${s2}`, l:baseLabel, lc, prob: prob2, scenarioGroup: scenIdx });
+        }
+      });
+    });
+
+    // ── 上位3シナリオに含まれなかった軸艇への補完 ──
+    // 複数軸（boat1BelowAvg）の場合、axisBoats のうちまだ買い目が少ない艇を補完
+    axisBoats.forEach(axisBoat => {
+      const hasEntry = buy3.some(r => r.c.startsWith(String(axisBoat)+'−'));
+      if(hasEntry) return; // 既にシナリオ上位3で生成済み
       const axisScenarios = kimariTypes
         .filter(k => (scenarioProb[axisBoat]?.[k] ?? 0) > 0.001)
         .sort((a,b) => (scenarioProb[axisBoat][b]||0) - (scenarioProb[axisBoat][a]||0));
-
-      axisScenarios.slice(0, 3).forEach((kimari, idx) => {
-        const baseLabel    = axisLabel
-          ? `${axisLabel}${labels[idx]||'穴'}`
-          : (labels[idx]||'穴');
-        const baseLc       = lcMap[idx] || 'bl-ana';
-        const scenProb     = scenarioProb[axisBoat]?.[kimari] ?? 0;  // シナリオ発生確率
-        const seconds      = pick2nd(axisBoat, kimari);
+      axisScenarios.slice(0, 2).forEach(kimari => {
+        const lc       = kimariToLc(kimari);
+        const scenProb = scenarioProb[axisBoat]?.[kimari] ?? 0;
+        const seconds  = pick2nd(axisBoat, kimari);
         seconds.forEach(s2 => {
-          // 条件付き2着確率（place2List から取得）
           const place2List = scenarioPlace2[axisBoat]?.[kimari] || [];
           const p2Item     = place2List.find(x => x.boat === s2);
           const p2         = p2Item?.p2 ?? 0;
-
-          // 2連単確率 = シナリオ確率 × 2着確率
           const prob2      = scenProb * p2;
-
-          // 3連単: シナリオ別 rate3 で累積50%以上の艇を採用
           const thirdList  = pick3rd(axisBoat, kimari, s2);
           thirdList.forEach(t => {
             const entry = tenkaiRem_buy?.[kimari]?.[String(axisBoat)]?.[String(t)];
             const r3    = entry?.rate3 ?? null;
-            tryAdd3(axisBoat, s2, t, baseLabel, baseLc, r3 != null ? prob2 * r3 : null);
+            tryAdd3(axisBoat, s2, t, kimari, lc, r3 != null ? prob2 * r3 : null);
+            addReverseIfNeeded(axisBoat, kimari, s2, t, kimari, lc, scenProb);
           });
-          tryAdd2(axisBoat, s2, baseLabel, baseLc, prob2);
+          tryAdd2(axisBoat, s2, kimari, lc, prob2);
         });
       });
     });
 
-    // 対抗軸（全軸艇以外で最もシナリオ確率が高い艇）を追加
-    const otherTop = ranked2
-      .filter(b => !axisBoats.includes(b.boat))
-      .sort((a,b) => totalScenarioProb(b.boat) - totalScenarioProb(a.boat))[0];
-    if(otherTop && buy3.length < 15){
-      const otherScenarios = kimariTypes
-        .filter(k => (scenarioProb[otherTop.boat]?.[k] ?? 0) > 0.001)
-        .sort((a,b) => (scenarioProb[otherTop.boat][b]||0) - (scenarioProb[otherTop.boat][a]||0));
-      otherScenarios.slice(0,2).forEach(kimari => {
-        const scenProb   = scenarioProb[otherTop.boat]?.[kimari] ?? 0;
-        const seconds    = pick2nd(otherTop.boat, kimari);
-        seconds.forEach(s2 => {
-          const place2List = scenarioPlace2[otherTop.boat]?.[kimari] || [];
-          const p2Item     = place2List.find(x => x.boat === s2);
-          const p2         = p2Item?.p2 ?? 0;
-          const prob2      = scenProb * p2;
-
-          const thirdList = pick3rd(otherTop.boat, kimari, s2);
-          thirdList.forEach(t => {
-            const entry = tenkaiRem_buy?.[kimari]?.[String(otherTop.boat)]?.[String(t)];
-            const r3    = entry?.rate3 ?? null;
-            tryAdd3(otherTop.boat, s2, t, '対抗軸', 'bl-gyaku', r3 != null ? prob2 * r3 : null);
-          });
-          tryAdd2(otherTop.boat, s2, '対抗軸', 'bl-gyaku', prob2);
-        });
-      });
-    }
-
-    // ── 1号艇押さえ ──
-    //
-    // boat1BelowAvg（1号艇が会場平均を下回る）かつ
-    // その差が 5% 以内（boat1Gap <= 0.05）のとき、
-    // 1号艇を軸にした押さえ買い目を追加する。
-    //
+    // ── 1号艇押さえ（会場平均との差 5% 以内）──
     if(boat1BelowAvg && boat1Gap !== null && boat1Gap <= 0.05 && scenarioProb[1] != null){
       const boat1Scenarios = kimariTypes
         .filter(k => (scenarioProb[1]?.[k] ?? 0) > 0.001)
         .sort((a, b) => (scenarioProb[1][b]||0) - (scenarioProb[1][a]||0));
-
       boat1Scenarios.slice(0, 2).forEach(kimari => {
-        const scenProb  = scenarioProb[1]?.[kimari] ?? 0;
-        const seconds   = pick2nd(1, kimari);
+        const lc       = kimariToLc(kimari);
+        const scenProb = scenarioProb[1]?.[kimari] ?? 0;
+        const seconds  = pick2nd(1, kimari);
         seconds.forEach(s2 => {
           const place2List = scenarioPlace2[1]?.[kimari] || [];
           const p2Item     = place2List.find(x => x.boat === s2);
           const p2         = p2Item?.p2 ?? 0;
           const prob2      = scenProb * p2;
-
-          const thirdList = pick3rd(1, kimari, s2);
+          const thirdList  = pick3rd(1, kimari, s2);
           thirdList.forEach(t => {
             const entry = tenkaiRem_buy?.[kimari]?.['1']?.[String(t)];
             const r3    = entry?.rate3 ?? null;
-            tryAdd3(1, s2, t, '押さえ', 'bl-ana', r3 != null ? prob2 * r3 : null);
+            tryAdd3(1, s2, t, kimari, lc, r3 != null ? prob2 * r3 : null);
+            addReverseIfNeeded(1, kimari, s2, t, kimari, lc, scenProb);
           });
-          tryAdd2(1, s2, '押さえ', 'bl-ana', prob2);
+          tryAdd2(1, s2, kimari, lc, prob2);
         });
       });
     }
@@ -2439,28 +2555,30 @@ function renderBuy(rno){
     const p2A  = place2For(A.boat);
     const P2a_ = p2A[0]||B;
     const P2b_ = p2A[1]||C;
-    function tryAdd3fb(first,second,third,label,lc){
+    function tryAdd3fb(first,second,third,label,lc,sg){
       const key=`${first}-${second}-${third}`;
       if(first===second||second===third||first===third) return;
       if(buy3seen.has(key)) return;
       if(buy3.length>=10) return;
       buy3seen.add(key);
-      buy3.push({c:`${first}−${second}−${third}`,l:label,lc});
+      buy3.push({c:`${first}−${second}−${third}`,l:label,lc,prob:null,scenarioGroup:sg??0});
     }
-    function tryAdd2fb(first,second,label,lc){
+    function tryAdd2fb(first,second,label,lc,sg){
       const key=`${first}-${second}`;
       if(first===second) return;
       if(buy2seen.has(key)) return;
       buy2seen.add(key);
-      buy2.push({c:`${first}−${second}`,l:label,lc});
+      buy2.push({c:`${first}−${second}`,l:label,lc,prob:null,scenarioGroup:sg??0});
     }
-    pick3rd(A.boat, null, P2a_.boat).forEach(b=>tryAdd3fb(A.boat,P2a_.boat,b,'本命','bl-honmei'));
-    pick3rd(A.boat, null, P2b_.boat).forEach(b=>tryAdd3fb(A.boat,P2b_.boat,b,'対抗','bl-taikou'));
-    tryAdd2fb(A.boat, P2a_.boat, '本命', 'bl-honmei');
-    tryAdd2fb(A.boat, P2b_.boat, '対抗', 'bl-taikou');
+    const lbNige = arek < 40 ? '逃げ' : arek > 60 ? 'まくり' : '差し';
+    const lcNige = arek < 40 ? 'bl-nige' : arek > 60 ? 'bl-makuri' : 'bl-sashi';
+    pick3rd(A.boat, null, P2a_.boat).forEach(b=>tryAdd3fb(A.boat,P2a_.boat,b,lbNige,lcNige,0));
+    pick3rd(A.boat, null, P2b_.boat).forEach(b=>tryAdd3fb(A.boat,P2b_.boat,b,lbNige,lcNige,1));
+    tryAdd2fb(A.boat, P2a_.boat, lbNige, lcNige, 0);
+    tryAdd2fb(A.boat, P2b_.boat, lbNige, lcNige, 1);
     if(arek>=45){
-      pick3rd(P2a_.boat, null, A.boat).forEach(b=>tryAdd3fb(P2a_.boat,A.boat,b,'逆転','bl-gyaku'));
-      tryAdd2fb(P2a_.boat, A.boat, '逆転', 'bl-gyaku');
+      pick3rd(P2a_.boat, null, A.boat).forEach(b=>tryAdd3fb(P2a_.boat,A.boat,b,'差し','bl-sashi',2));
+      tryAdd2fb(P2a_.boat, A.boat, '差し', 'bl-sashi', 2);
     }
   }
 
@@ -2671,19 +2789,60 @@ function renderBuy(rno){
     </div>`;
   }
 
+  // ── シナリオグループ別に買い目をグループ化して表示 ──
+  function buildGroupedBuyRows(buyList, resultSet, isTriple){
+    // scenarioGroup でグループ化（undefined は最後にまとめる）
+    const groups = {};
+    buyList.forEach(r => {
+      const g = r.scenarioGroup ?? 99;
+      if(!groups[g]) groups[g] = [];
+      groups[g].push(r);
+    });
+    const rankLabel = ['①', '②', '③'];
+    const rankCls   = ['', 's2', 's3'];
+    let html = '';
+    Object.keys(groups).sort((a,b)=>Number(a)-Number(b)).forEach(gKey => {
+      const gIdx  = Number(gKey);
+      const items = groups[gKey];
+      if(items.length === 0) return;
+      const firstLabel = items[0].l;
+      const rl = rankLabel[gIdx] ?? '';
+      const rc = rankCls[gIdx]  ?? 's3';
+      html += `<div class="buy-scenario-header">
+        ${rl ? `<span class="buy-scenario-rank ${rc}">${rl}</span>` : ''}
+        <span style="font-size:11px;font-weight:700;color:var(--text2)">${firstLabel}</span>
+        <span style="font-size:10px;color:var(--text3)">${items.length}点</span>
+      </div>`;
+      items.forEach(r => {
+        const nc    = normalizeCombo(r.c);
+        const isHit = resultSet && resultSet.has(nc);
+        const probCell = r.prob != null
+          ? `<span style="font-size:10px;font-family:var(--mono);color:var(--text3);margin-left:auto;flex-shrink:0">${(r.prob*100).toFixed(1)}%</span>`
+          : '';
+        html += `<div class="buy-row${isHit?' hit':''}">
+          <span class="buy-label ${r.lc}">${r.l}</span>
+          <span class="buy-combo" style="display:inline-flex;align-items:center;gap:0;letter-spacing:0">${comboToBadges(r.c)}</span>
+          ${probCell}
+          ${isHit?hitBadge():''}
+        </div>`;
+      });
+    });
+    return html;
+  }
+
   document.getElementById('detail2-panel').innerHTML = `
     <div class="buy-grid" style="border-top:none">
       <div class="buy-card" style="grid-column:1/-1">
         <div class="buy-card-title" style="display:flex;align-items:center;justify-content:space-between">
           <span>3連単 <span style="font-weight:400;color:var(--text3);font-size:10px">${buy3.length}点</span></span>
         </div>
-        <div class="buy3-inner" style="display:grid;grid-template-columns:1fr 1fr;gap:0">
-          ${buy3.map(buy3Row).join('')}
+        <div class="buy3-inner">
+          ${buildGroupedBuyRows(buy3, resultSan3, true)}
         </div>
       </div>
       <div class="buy-card">
-        <div class="buy-card-title">2連単</div>
-        ${buy2.map(buy2Row).join('')}
+        <div class="buy-card-title">2連単 <span style="font-weight:400;color:var(--text3);font-size:10px">${buy2.length}点</span></div>
+        ${buildGroupedBuyRows(buy2, resultNiren, false)}
       </div>
     </div>
   `;
