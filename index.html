@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 07:56:05 --></head>
+<!-- auto_push_updated:2026-05-09 09:18:38 --></head>
 <body>
 
 <header class="site-header">
@@ -1847,12 +1847,12 @@ function calcScenarioData(ranked2, rawBoats){
     return blended;
   }
 
-  // 1着率上位3艇
+  // 1着率上位3艇（後方互換・表示タイトル用に保持）
   const top3 = ranked2.slice(0, 3);
 
-  // 各1着候補について決まり手別の発生確率を計算
+  // 各1着候補について決まり手別の発生確率を計算（全艇対象）
   const scenarioProb = {};
-  for(const winner of top3){
+  for(const winner of ranked2){
     scenarioProb[winner.boat] = {};
     const winnerVKimari = blendPersonalKimariScenario(winner, scenarioVKimari);
     const validKimariTotal = kimariTypes
@@ -1874,7 +1874,7 @@ function calcScenarioData(ranked2, rawBoats){
   const winnerCO = MASTER_EXT?.winner_course_order || {};
 
   const scenarioPlace2 = {};
-  for(const winner of top3){
+  for(const winner of ranked2){
     scenarioPlace2[winner.boat] = {};
     const wc = String(winner.boat);
     const othersTotal = ranked2
@@ -1943,74 +1943,70 @@ function calcScenarioData(ranked2, rawBoats){
 
 // ── 展開シナリオセクション生成 ──
 //
-// 1着率上位3艇 × 各決まり手の発生確率 × 条件付き2着率 を展開シナリオとして表示。
+// 全艇 × 全決まり手の発生確率から上位3シナリオを抽出して表示。
+// 「決まり手」を主軸にし、同じ決まり手の重複は最上位1件のみ残す。
 // 2着率: 逃げ展開(1コース1着)のみ inn_2place を使用、それ以外は tenkai_prob 相対値。
 //
 function buildScenarioSection(ranked2, place2Map, rawBoats){
   const sd = calcScenarioData(ranked2, rawBoats);
   if(!sd.valid) return '';
 
-  const { scenarioProb, scenarioPlace2, kimariTypes, top3 } = sd;
+  const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
 
-  // ── 以下は表示専用ロジック ──
-  const kimariLabel = { '逃げ':'逃げ', '差し':'差し', 'まくり':'まくり', 'まくり差し':'まくり差し', '抜き':'抜き' };
-  const inn2Place   = sd.inn2Place;
-
-  // 各シナリオのHTML生成
   const boatCircle = (n) =>
     `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
 
-  const scenarioBlocks = top3.map((winner, wi) => {
-    const medals = ['🥇','🥈','🥉'];
+  // ── 全艇×全決まり手 を確率順に並べ、決まり手ごとに重複排除して上位3を取得 ──
+  const allPairs = [];
+  for(const winner of ranked2){
+    for(const kimari of kimariTypes){
+      const prob = scenarioProb[winner.boat]?.[kimari];
+      if(prob > 0.001) allPairs.push({ boat: winner.boat, name: winner.name, final_prob: winner.final_prob, kimari, prob });
+    }
+  }
+  allPairs.sort((a, b) => b.prob - a.prob);
 
-    const scenarios = kimariTypes
-      .filter(k => scenarioProb[winner.boat]?.[k] > 0.001)
-      .sort((a,b) => (scenarioProb[winner.boat][b]||0) - (scenarioProb[winner.boat][a]||0));
+  // 決まり手ごとに上位1件のみ残す（同じ決まり手の重複を除去）
+  const seenKimari = new Set();
+  const top3Scenarios = [];
+  for(const pair of allPairs){
+    if(seenKimari.has(pair.kimari)) continue;
+    seenKimari.add(pair.kimari);
+    top3Scenarios.push(pair);
+    if(top3Scenarios.length >= 3) break;
+  }
 
-    if(scenarios.length === 0) return '';
+  if(top3Scenarios.length === 0) return '';
 
-    const scenarioRows = scenarios.map(kimari => {
-      const prob       = scenarioProb[winner.boat][kimari];
-      const place2List = scenarioPlace2[winner.boat]?.[kimari] || [];
+  const medals = ['🥇','🥈','🥉'];
 
-      const p2Cells = place2List.map(item =>
-        `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;white-space:nowrap">
-          ${boatCircle(item.boat)}
-          <span style="font-size:11px;font-family:var(--mono);color:var(--text)">${(item.p2*100).toFixed(0)}%</span>
-        </span>`
-      ).join('');
+  const scenarioBlocks = top3Scenarios.map((sc, wi) => {
+    const place2List = scenarioPlace2[sc.boat]?.[sc.kimari] || [];
+    const p2Cells = place2List.map(item =>
+      `<span style="display:inline-flex;align-items:center;gap:3px;margin-right:8px;white-space:nowrap">
+        ${boatCircle(item.boat)}
+        <span style="font-size:11px;font-family:var(--mono);color:var(--text)">${(item.p2*100).toFixed(0)}%</span>
+      </span>`
+    ).join('');
 
-      return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-        <span style="font-size:11px;font-weight:700;color:var(--text2);min-width:4.5em;flex-shrink:0">${kimariLabel[kimari]}</span>
-        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--accent2);min-width:3em;flex-shrink:0">${(prob*100).toFixed(1)}%</span>
-        <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow:hidden">
-          <span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">2着→</span>
-          <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow-x:auto;scrollbar-width:none">${p2Cells}</span>
-        </span>
-      </div>`;
-    }).join('');
-
-    if(!scenarioRows) return '';
-
-    return `<div style="margin-bottom:0.75rem">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span style="font-size:12px">${medals[wi]}</span>
-        ${boatCircle(winner.boat)}
-        <span style="font-size:13px;font-weight:700">${winner.name}</span>
-        <span style="font-size:12px;font-family:var(--mono);color:var(--accent2);font-weight:700">${(winner.final_prob*100).toFixed(1)}%</span>
-      </div>
-      <div style="padding-left:0.5rem">${scenarioRows}</div>
+    return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <span style="font-size:12px;flex-shrink:0">${medals[wi]}</span>
+      ${boatCircle(sc.boat)}
+      <span style="font-size:13px;font-weight:700;flex-shrink:0">${sc.name}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--text2);min-width:4.5em;flex-shrink:0">${sc.kimari}</span>
+      <span style="font-size:12px;font-family:var(--mono);font-weight:600;color:var(--accent2);min-width:3em;flex-shrink:0">${(sc.prob*100).toFixed(1)}%</span>
+      <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow:hidden">
+        <span style="font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0">2着→</span>
+        <span style="display:flex;align-items:center;flex-wrap:nowrap;gap:3px;overflow-x:auto;scrollbar-width:none">${p2Cells}</span>
+      </span>
     </div>`;
-  }).filter(Boolean).join('');
-
-  if(!scenarioBlocks) return '';
+  }).join('');
 
   return `<div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border)">
-    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ（1着上位3艇）</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ</div>
     ${scenarioBlocks}
   </div>`;
 }
-
 // ── renderBuy ──
 function renderBuy(rno){
   const rd = DATA.races[String(rno)];
@@ -2593,7 +2589,7 @@ function renderBuy(rno){
     ${venueStatsTable}
     <div style="padding:0.75rem 1.25rem 0.5rem;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">展開推定後 着順確率 <span style="font-weight:400;font-size:10px;letter-spacing:0;text-transform:none">（基準・展開・展示 均等1:1:1 / 合計100%）</span></div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)">独自補正 最終確率</div>
       </div>
       <div class="prob-table-wrap">
       <table class="prob-table" style="width:100%;border-collapse:collapse">
@@ -3256,29 +3252,6 @@ function updateEV(){
     // 初期化の成否に関わらずアラートを起動
     updateAlertStrip();
     setInterval(updateAlertStrip, 60 * 1000);
-
-    // ── 展示情報の自動更新（バナーと同様に定期実行） ──
-    // サーバーモード かつ 当日データの場合のみ fetch する。
-    // fetchTenjiAll はキャッシュ(_tenjiCache)を上書きするだけなので
-    // 完了後に現在表示中のタブを再レンダリングして画面へ反映する。
-    const TENJI_AUTO_INTERVAL = 3 * 60 * 1000; // 3分ごと
-    if(IS_SERVER){
-      setInterval(async () => {
-        if(!currentVenue || !DATA || !DATA.date) return;
-        try {
-          await fetchTenjiAll(currentVenue, DATA.date);
-          // 現在表示中のタブに応じて再レンダリング
-          const tab = currentTabName();
-          if(tab === 'detail')       renderDetail(selectedRace);
-          else if(tab === 'detail2') renderBuy(selectedRace);
-          else if(tab === 'buy')     renderBuy(selectedRace);
-          else if(tab === 'comment') renderComment(selectedRace);
-          console.log('[tenji-auto] refreshed:', currentVenue, DATA.date);
-        } catch(e) {
-          console.warn('[tenji-auto] error:', e);
-        }
-      }, TENJI_AUTO_INTERVAL);
-    }
   }
 })();
 </script>
