@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 09:18:38 --></head>
+<!-- auto_push_updated:2026-05-09 09:25:19 --></head>
 <body>
 
 <header class="site-header">
@@ -1978,8 +1978,6 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
 
   if(top3Scenarios.length === 0) return '';
 
-  const medals = ['🥇','🥈','🥉'];
-
   const scenarioBlocks = top3Scenarios.map((sc, wi) => {
     const place2List = scenarioPlace2[sc.boat]?.[sc.kimari] || [];
     const p2Cells = place2List.map(item =>
@@ -1990,7 +1988,6 @@ function buildScenarioSection(ranked2, place2Map, rawBoats){
     ).join('');
 
     return `<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-      <span style="font-size:12px;flex-shrink:0">${medals[wi]}</span>
       ${boatCircle(sc.boat)}
       <span style="font-size:13px;font-weight:700;flex-shrink:0">${sc.name}</span>
       <span style="font-size:12px;font-weight:700;color:var(--text2);min-width:4.5em;flex-shrink:0">${sc.kimari}</span>
@@ -2454,9 +2451,6 @@ function renderBuy(rno){
 
   // ─ STEP6: 確率テーブル生成
   const probRows = ranked2.map((bt,i)=>{
-    const medals=['🥇','🥈','🥉','','',''];
-    const medal  = medals[i]||'';
-
     // 基準列: probを6艇で正規化した相対確率（合計100%）
     const basePct = (bt.display_base * 100).toFixed(1);
 
@@ -2498,7 +2492,6 @@ function renderBuy(rno){
     const evCell = `<span class="ev-cell" data-boat="${bt.boat}" data-fp="${finalProb.toFixed(4)}" style="font-size:11px;color:var(--text3)">—</span>`;
 
     return `<tr>
-      <td style="text-align:center;padding:4px 3px">${medal}</td>
       <td style="text-align:center;padding:4px 3px"><span class="boat-circle b${bt.boat}" style="width:22px;height:22px;font-size:11px;line-height:22px;display:inline-flex;align-items:center;justify-content:center">${bt.boat}</span></td>
       <td class="col-name" style="padding:4px 4px;font-size:0.82rem;text-align:center">${bt.name}</td>
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${basePct}%</td>
