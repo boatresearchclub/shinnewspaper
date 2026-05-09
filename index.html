@@ -41,15 +41,12 @@ body {
 .site-header {
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
-  padding: 0 0.875rem;
+  padding: 0;
   min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: block;
   position: sticky;
   top: 0;
   z-index: 100;
-  gap: 6px;
 }
 .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.9rem; letter-spacing: .03em; flex-shrink: 0; }
 .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
@@ -58,6 +55,9 @@ body {
 .header-meta { font-size: 12px; color: var(--text2); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .header-meta strong { color: var(--text); }
 .container { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
+/* PC幅揃え用インナーラッパー */
+.nav-inner { max-width: 960px; margin: 0 auto; padding: 0 1rem; }
+.site-header .nav-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 6px; }
 
 /* TABS */
 .tab-bar { display: flex; gap: 0; margin-bottom: 1rem; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
@@ -68,7 +68,7 @@ body {
 
 
 /* VENUE TABS */
-.sticky-nav-venue { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; display: flex; border-bottom: 1px solid var(--border); touch-action: pan-x; }
+.sticky-nav-venue { overflow-x: visible; display: block; border-bottom: 1px solid var(--border); }
 .sticky-nav-venue::-webkit-scrollbar { display: none; }
 #venue-tabs { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; gap: 2px; display: flex; touch-action: pan-x; }
 #venue-tabs::-webkit-scrollbar { display: none; }
@@ -79,9 +79,9 @@ body {
 
 /* RACE BAR */
 .sticky-nav { position: sticky; top: 52px; z-index: 90; background: var(--bg2); border-bottom: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,40,90,0.06); }
-.sticky-nav-race { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.sticky-nav-race { overflow-x: visible; }
 .sticky-nav-race::-webkit-scrollbar { display: none; }
-.sticky-nav-race-inner { display: flex; gap: 4px; padding: 5px 10px; min-width: max-content; }
+.sticky-nav-race-inner { display: flex; gap: 4px; padding: 5px 0; min-width: max-content; }
 .race-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color .15s, background .15s; min-width: 48px; flex-shrink: 0; position: relative; }
 .race-btn::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: transparent; border-radius: var(--radius-sm) var(--radius-sm) 0 0; transition: background .15s; }
 .race-btn:hover { border-color: var(--border2); background: var(--bg3); }
@@ -267,9 +267,10 @@ body {
 #alert-strip {
   background: #fff8ee;
   border-bottom: 1px solid rgba(239,159,39,0.35);
-  padding: 7px 10px 8px;
+  padding: 0;
   display: block;
 }
+#alert-strip .nav-inner { padding-top: 7px; padding-bottom: 8px; }
 .alert-strip-title {
   font-size: 10px; font-weight: 700; letter-spacing: .09em;
   color: #854F0B; text-transform: uppercase;
@@ -323,6 +324,7 @@ body {
 
 /* ── MOBILE RESPONSIVE ── */
 @media (max-width: 600px) {
+  .nav-inner { padding-left: 0.5rem; padding-right: 0.5rem; }
   html { font-size: 14px; }
 
   .container { padding: 0.75rem 0.5rem; }
@@ -355,38 +357,46 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 12:55:54 --></head>
+<!-- auto_push_updated:2026-05-09 14:01:46 --></head>
 <body>
 
 <header class="site-header">
-  <div class="logo">
-    <div class="logo-icon">⛵</div>
-    <span>Boat Research Club</span>
-  </div>
-  <div class="header-right">
-    <div class="header-meta-area">
-      <div class="header-meta" id="header-meta"></div>
-      <div class="date-nav" id="date-nav" style="display:none">
-        <button class="date-nav-btn" id="date-prev" onclick="shiftDate(-1)" title="前日">‹</button>
-        <span class="date-nav-label" id="date-nav-label"></span>
-        <button class="date-nav-btn" id="date-next" onclick="shiftDate(+1)" title="翌日">›</button>
-      </div>
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-icon">⛵</div>
+      <span>Boat Research Club</span>
     </div>
-    <button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
+    <div class="header-right">
+      <div class="header-meta-area">
+        <div class="header-meta" id="header-meta"></div>
+        <div class="date-nav" id="date-nav" style="display:none">
+          <button class="date-nav-btn" id="date-prev" onclick="shiftDate(-1)" title="前日">‹</button>
+          <span class="date-nav-label" id="date-nav-label"></span>
+          <button class="date-nav-btn" id="date-next" onclick="shiftDate(+1)" title="翌日">›</button>
+        </div>
+      </div>
+      <button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
+    </div>
   </div>
 </header>
 
 <!-- sticky nav: 締め切りアラート + 会場タブ + レース選択バー -->
 <div class="sticky-nav">
   <div id="alert-strip">
-    <div class="alert-strip-title">⏱ まもなく締め切り</div>
-    <div class="alert-strip-cards" id="alert-cards"></div>
+    <div class="nav-inner">
+      <div class="alert-strip-title">⏱ まもなく締め切り</div>
+      <div class="alert-strip-cards" id="alert-cards"></div>
+    </div>
   </div>
   <div class="sticky-nav-venue">
-    <div id="venue-tabs"></div>
+    <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;display:flex">
+      <div id="venue-tabs"></div>
+    </div>
   </div>
   <div class="sticky-nav-race">
-    <div class="sticky-nav-race-inner" id="race-bar"></div>
+    <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto">
+      <div class="sticky-nav-race-inner" id="race-bar"></div>
+    </div>
   </div>
 </div>
 
