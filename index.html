@@ -356,13 +356,176 @@ body {
   .bt-head-simple, .bt-row { padding: 0.4rem 0.75rem !important; }
   .bt-row { font-size: 12px; }
 }
+
+/* ── TOP PAGE ── */
+.logo { cursor: pointer; }
+.logo:hover { opacity: 0.8; }
+
+#top-page {
+  display: none;
+  padding: 2rem 1rem 3rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+.top-hero {
+  text-align: center;
+  padding: 2.5rem 1rem 2rem;
+}
+.top-hero-icon {
+  font-size: 52px;
+  margin-bottom: 0.75rem;
+  line-height: 1;
+}
+.top-hero-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+  letter-spacing: .03em;
+}
+.top-hero-sub {
+  font-size: 0.875rem;
+  color: var(--text3);
+}
+
+.top-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.top-section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ナビゲーションカード */
+.top-nav-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+.top-nav-card {
+  background: var(--bg2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.25rem 1.1rem;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .12s;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 2px 8px rgba(0,40,90,0.06);
+  text-decoration: none;
+  color: inherit;
+}
+.top-nav-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 6px 20px rgba(0,102,255,0.13);
+  transform: translateY(-2px);
+}
+.top-nav-card:active { transform: translateY(0); }
+
+.top-nav-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.top-nav-card-icon.blue  { background: rgba(0,102,255,.12); }
+.top-nav-card-icon.green { background: rgba(0,184,107,.12); }
+.top-nav-card-icon.gold  { background: rgba(255,179,0,.15); }
+.top-nav-card-icon.red   { background: rgba(255,59,59,.10); }
+.top-nav-card-icon.gray  { background: var(--bg4); }
+
+.top-nav-card-body { flex: 1; min-width: 0; }
+.top-nav-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+.top-nav-card-desc {
+  font-size: 0.78rem;
+  color: var(--text3);
+  line-height: 1.5;
+}
+.top-nav-card-arrow {
+  font-size: 18px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+.top-nav-card:hover .top-nav-card-arrow { color: var(--accent); }
+
+/* 本日開催バッジ */
+.top-venues-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 2rem;
+}
+.top-venue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.top-venue-chip:hover {
+  border-color: var(--accent);
+  background: var(--bg3);
+  color: var(--accent);
+}
+.top-venue-chip .chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+/* 本日の注目レース */
+.top-info-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  font-size: 0.82rem;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 600px) {
+  .top-hero-title { font-size: 1.3rem; }
+  .top-nav-card { padding: 1rem; }
+  .top-nav-card-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 10px; }
+}
 </style>
-<!-- auto_push_updated:2026-05-10 07:11:55 --></head>
+<!-- auto_push_updated:2026-05-10 07:25:57 --></head>
 <body>
 
 <header class="site-header">
   <div class="nav-inner">
-    <div class="logo">
+    <div class="logo" onclick="showTopPage()" title="トップページへ">
       <div class="logo-icon">⛵</div>
       <span>Boat Research Club</span>
     </div>
@@ -397,6 +560,78 @@ body {
     <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto">
       <div class="sticky-nav-race-inner" id="race-bar"></div>
     </div>
+  </div>
+</div>
+
+<!-- ══ TOP PAGE ══ -->
+<div id="top-page">
+  <div class="top-hero">
+    <div class="top-hero-icon">⛵</div>
+    <div class="top-hero-title">Boat Research Club</div>
+    <div class="top-hero-sub">競艇レース分析・予想システム</div>
+  </div>
+
+  <!-- 会場クイックジャンプ -->
+  <div class="top-section-label">🏟 本日の開催場</div>
+  <div class="top-venues-row" id="top-venue-chips">
+    <!-- JS で動的生成 -->
+    <span style="color:var(--text3);font-size:12px">データを読み込み中...</span>
+  </div>
+
+  <!-- ナビゲーションカード -->
+  <div class="top-section-label">📋 メニュー</div>
+  <div class="top-nav-grid">
+
+    <div class="top-nav-card" onclick="goToRaceList()">
+      <div class="top-nav-card-icon blue">📋</div>
+      <div class="top-nav-card-body">
+        <div class="top-nav-card-title">出走表・レース分析</div>
+        <div class="top-nav-card-desc">会場を選んでレースの出走表・展開分析・AI予想を確認</div>
+      </div>
+      <div class="top-nav-card-arrow">›</div>
+    </div>
+
+    <div class="top-nav-card" onclick="goToRaceList('buy')">
+      <div class="top-nav-card-icon green">📈</div>
+      <div class="top-nav-card-body">
+        <div class="top-nav-card-title">展開分析・買い目</div>
+        <div class="top-nav-card-desc">シナリオ別の展開予測と推奨買い目を確認</div>
+      </div>
+      <div class="top-nav-card-arrow">›</div>
+    </div>
+
+    <div class="top-nav-card" onclick="goToRaceList('detail2')">
+      <div class="top-nav-card-icon gold">🤖</div>
+      <div class="top-nav-card-body">
+        <div class="top-nav-card-title">AI予想</div>
+        <div class="top-nav-card-desc">機械学習モデルによる3連単予測と期待値を確認</div>
+      </div>
+      <div class="top-nav-card-arrow">›</div>
+    </div>
+
+    <div class="top-nav-card" onclick="goToRaceList('odds')">
+      <div class="top-nav-card-icon red">💰</div>
+      <div class="top-nav-card-body">
+        <div class="top-nav-card-title">オッズ確認</div>
+        <div class="top-nav-card-desc">リアルタイムオッズと期待値を一覧表示</div>
+      </div>
+      <div class="top-nav-card-arrow">›</div>
+    </div>
+
+    <div class="top-nav-card" onclick="goToRaceList('comment')">
+      <div class="top-nav-card-icon gray">🏊</div>
+      <div class="top-nav-card-body">
+        <div class="top-nav-card-title">選手情報・コメント</div>
+        <div class="top-nav-card-desc">選手の直近コメント・展示タイム・モーター情報</div>
+      </div>
+      <div class="top-nav-card-arrow">›</div>
+    </div>
+
+  </div>
+
+  <div class="top-info-box">
+    💡 <strong>使い方：</strong>上の「本日の開催場」から会場を選ぶか、メニューカードをタップすると各機能へ進みます。<br>
+    左上の <strong>⛵ Boat Research Club</strong> をタップすると、いつでもこのページに戻れます。
   </div>
 </div>
 
@@ -3256,6 +3491,7 @@ function updateAlertStrip(){
 function jumpToAlert(venue, rno){
   const dataForDate = getDataForDate(viewDate);
   if(!dataForDate[venue]) return;
+  hideTopPage();
   currentVenue = venue;
   DATA = dataForDate[venue];
   selectedRace = rno;
@@ -3335,6 +3571,7 @@ function buildVenueTabs(){
     if(v === currentVenue) btn.classList.add('active');
     btn.onclick = () => {
       if(!dataForDate[v]) return;
+      hideTopPage();
       currentVenue = v;
       DATA = dataForDate[v];
       selectedRace = findCurrentRace(DATA.races);
@@ -3584,7 +3821,7 @@ function updateEV(){
     }
 
   } else {
-    // ── 通常起動: 何も選択しない ──
+    // ── 通常起動: TOPページを表示 ──
     currentVenue = '';
     DATA         = null;
     buildVenueTabs();
@@ -3592,6 +3829,7 @@ function updateEV(){
     document.getElementById('race-bar').innerHTML = '';
     document.getElementById('inline-detail').innerHTML =
       '<div style="padding:2rem;text-align:center;color:var(--text3)">会場を選択してください</div>';
+    showTopPage();
   }
 
   } catch(e) {
@@ -3607,6 +3845,69 @@ function updateEV(){
     }, 60 * 1000);
   }
 })();
+
+// ── TOP PAGE ──
+function showTopPage() {
+  document.getElementById('top-page').style.display = 'block';
+  document.querySelector('.container').style.display = 'none';
+  document.getElementById('header-meta').textContent = '';
+  // 会場チップを動的生成
+  buildTopVenueChips();
+}
+
+function hideTopPage() {
+  document.getElementById('top-page').style.display = 'none';
+  document.querySelector('.container').style.display = '';
+}
+
+function buildTopVenueChips() {
+  const area = document.getElementById('top-venue-chips');
+  if (!area) return;
+  // VENUE_LIST の順番を維持しつつ開催中の会場を取得
+  const venues = VENUE_LIST.filter(v => ALL_DATA && ALL_DATA[v] != null);
+  if (venues.length === 0) {
+    area.innerHTML = '<span style="color:var(--text3);font-size:12px">本日の開催情報なし</span>';
+    return;
+  }
+  area.innerHTML = venues.map(v => `
+    <span class="top-venue-chip" onclick="jumpToVenue('${v}')">
+      <span class="chip-dot"></span>${v}
+    </span>
+  `).join('');
+}
+
+function jumpToVenue(venue) {
+  if (!ALL_DATA[venue]) return;
+  hideTopPage();
+  currentVenue = venue;
+  DATA = ALL_DATA[venue];
+  buildVenueTabs();
+  buildRaceBar();
+  updateDateNav();
+  // 最初のレースを自動選択
+  if (DATA && DATA.races && DATA.races.length > 0) {
+    const firstRace = DATA.races[0].race_no || 1;
+    selectedRace = firstRace;
+    document.querySelectorAll('.race-btn').forEach(c => c.classList.remove('active'));
+    const btn = document.getElementById(`rc-${firstRace}`);
+    if (btn) { btn.classList.add('active'); btn.scrollIntoView({behavior:'auto',block:'nearest',inline:'center'}); }
+    document.getElementById('header-meta').innerHTML = `<strong>${venue}</strong> — ${DATA.date||''}`;
+    // detail タブをアクティブ化
+    switchTab('detail');
+    renderDetail(firstRace);
+  }
+}
+
+function goToRaceList(tab) {
+  hideTopPage();
+  // 会場が未選択ならそのままメイン画面へ（venue tabs が表示される）
+  if (tab && currentVenue && DATA) {
+    switchTab(tab);
+  } else if (tab) {
+    // 会場選択後にタブを切り替えるよう要求を記憶
+    sessionStorage.setItem('pending_tab', tab);
+  }
+}
 
 // ── 現在表示中のタブ・レースを再レンダリング（水面気象・展示・モーター情報の自動更新）──
 function autoRefreshCurrentView(){
