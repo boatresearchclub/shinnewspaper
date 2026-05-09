@@ -355,7 +355,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 12:51:19 --></head>
+<!-- auto_push_updated:2026-05-09 12:55:54 --></head>
 <body>
 
 <header class="site-header">
@@ -1994,7 +1994,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
 // 2着率: 逃げ(1コース1着)→inn_2place, それ以外→tenkai_remaining+winner_course_order
 // 3着率: tenkai_remaining.rate3 × winner_course_order.rate3 個人補正ブレンド
 //
-function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap){
+function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTenji){
   const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
   if(!sd.valid) return '';
 
@@ -2112,8 +2112,12 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap){
     </div>`;
   }).join('');
 
+  const tenjiBadge = hasTenji
+    ? `<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:4px;background:rgba(0,102,255,.12);color:var(--accent2);margin-left:8px;vertical-align:middle">展示情報込み</span>`
+    : '';
+
   return `<div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--border)">
-    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ</div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">展開シナリオ${tenjiBadge}</div>
     ${scenarioBlocks}
   </div>`;
 }
@@ -2736,7 +2740,7 @@ function renderBuy(rno){
       </table>
       </div>
     </div>
-    ${buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap)}
+    ${buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTenji)}
   `;
 
   // ── AI予想タブ: 買い目のみ ──
