@@ -357,7 +357,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 15:05:38 --></head>
+<!-- auto_push_updated:2026-05-09 15:08:39 --></head>
 <body>
 
 <header class="site-header">
@@ -1819,6 +1819,12 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
     'まくり差し': new Set(['1','2']),
     '抜き':       new Set(),
   };
+  function isValidFirst(boat, kimari){
+    const wc = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;
+    return !exc.has(wc);
+  }
 
   // ── 1コース被kimariでvKimariを補正 ──
   const boat1Scenario = rawBoats.find(b => b.boat === 1) || null;
