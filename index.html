@@ -357,7 +357,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 14:59:01 --></head>
+<!-- auto_push_updated:2026-05-09 15:05:38 --></head>
 <body>
 
 <header class="site-header">
@@ -2878,8 +2878,25 @@ function renderBuy(rno){
     </div>`;
   });
   return html;
-}  // buildGroupedBuyRows 終了
-}  // renderBuy 終了
+  } // buildGroupedBuyRows 終了
+
+  // ── AI予想タブ: detail2-panel に買い目を出力 ──
+  const buy3Html = buildGroupedBuyRows(buy3, resultSan3, true);
+  const buy2Html = buildGroupedBuyRows(buy2, resultNiren, false);
+
+  document.getElementById('detail2-panel').innerHTML = `
+    <div class="buy-grid">
+      <div class="buy-card">
+        <div class="buy-card-title">3連単 <span style="font-weight:400;color:var(--text3);font-size:10px;margin-left:6px">${buy3.length}点</span></div>
+        ${buy3Html || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目なし</div>'}
+      </div>
+      <div class="buy-card">
+        <div class="buy-card-title">2連単 <span style="font-weight:400;color:var(--text3);font-size:10px;margin-left:6px">${buy2.length}点</span></div>
+        ${buy2Html || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目なし</div>'}
+      </div>
+    </div>
+  `;
+} // renderBuy 終了
 
 
 // ── renderComment ──
@@ -3030,7 +3047,8 @@ function renderOdds(rno) {
       const oddsHigh   = e.odds >= 100;
       const oddsColor  = oddsHigh ? 'var(--red)' : 'var(--text)';
 
-      const badgesHtml = comboToBadges(e.combo);
+      // comboToBadges は "-" 区切りで動くので combo を正規化
+      const badgesHtml = comboToBadges(e.combo.replace(/-/g, '−'));
 
       return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
         <span style="font-size:10px;color:${ninkiColor};font-weight:700;min-width:18px;text-align:right;flex-shrink:0">${ninki}</span>
@@ -3048,7 +3066,7 @@ function renderOdds(rno) {
   }).join('');
 
   // fetched_at をファイルから埋め込む（あれば表示）
-  const updatedAt = raceOdds['fetched_at'] || raceOdds['__fetched_at'] || '';
+  const updatedAt = raceOdds['__fetched_at'] || '';
   const updatedHtml = updatedAt
     ? `<div style="padding:0.5rem 1.25rem;font-size:11px;color:var(--text3);border-bottom:1px solid var(--border)">取得: ${updatedAt}</div>`
     : '';
@@ -3065,7 +3083,8 @@ function renderOdds(rno) {
 
 function switchTab(name){
   ['detail','detail2','buy','comment','result','odds'].forEach(t=>{
-    document.getElementById(`tab-${t}`).style.display = t===name?'':'none';
+    const el = document.getElementById('tab-' + t);
+    if(el) el.style.display = t===name?'':'none';
   });
   document.querySelectorAll('.tab-btn').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===name);
@@ -3325,8 +3344,9 @@ function isRacePast(timeStr){
 
 function buildRaceBar(){
   const bar = document.getElementById('race-bar');
-  bar.innerHTML = '';
-  Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
+  if(!bar) return;
+  if(!DATA || !DATA.races){ bar.innerHTML = ''; return; }
+  bar.innerHTML = '';  Object.entries(DATA.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rno,rd])=>{
     const btn = document.createElement('button');
     const past = isRacePast(rd.time);
     const hasInsuf = rd.boats && rd.boats.some(b=>b.dq==='insufficient');
