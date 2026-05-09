@@ -343,7 +343,7 @@ body {
   .bt-row { font-size: 12px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-09 09:35:10 --></head>
+<!-- auto_push_updated:2026-05-09 09:45:35 --></head>
 <body>
 
 <header class="site-header">
@@ -2602,7 +2602,6 @@ function renderBuy(rno){
       <div class="prob-table-wrap">
       <table class="prob-table" style="width:100%;border-collapse:collapse">
         <thead><tr>
-          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px"></th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">枠</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center">選手名</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="6艇のprobを正規化した相対1着率（合計100%）">基準</th>
@@ -2632,11 +2631,16 @@ function renderBuy(rno){
 
   // 艇番文字列（例: "1−2−3"）を color-circle バッジ列に変換
   function comboToBadges(combo){
-    return combo.replace(/[0-9]/g, n =>
-      `<span class="boat-circle b${n}" style="width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`
-    ).replace(/[－−\-]/g,
-      `<span style="color:var(--text3);font-size:13px;margin:0 1px;font-weight:400">−</span>`
-    );
+    return (combo || '').split(/([－−\-])/).map(part => {
+      if (/^[－−\-]$/.test(part)) {
+        return `<span style="color:var(--text3);font-size:13px;margin:0 1px;font-weight:400">−</span>`;
+      }
+      const n = part.trim();
+      if (/^[1-6]$/.test(n)) {
+        return `<span class="boat-circle b${n}" style="width:22px;height:22px;font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
+      }
+      return part;
+    }).join('');
   }
 
   function buy3Row(r){
