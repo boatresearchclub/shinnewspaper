@@ -520,7 +520,7 @@ body {
   .top-nav-card-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 10px; }
 }
 </style>
-<!-- auto_push_updated:2026-05-10 07:25:57 --></head>
+<!-- auto_push_updated:2026-05-10 07:40:54 --></head>
 <body>
 
 <header class="site-header">
@@ -3850,30 +3850,39 @@ function updateEV(){
 function showTopPage() {
   document.getElementById('top-page').style.display = 'block';
   document.querySelector('.container').style.display = 'none';
+  document.querySelector('.sticky-nav').style.display = 'none';
   document.getElementById('header-meta').textContent = '';
-  // 会場チップを動的生成
   buildTopVenueChips();
 }
 
 function hideTopPage() {
   document.getElementById('top-page').style.display = 'none';
   document.querySelector('.container').style.display = '';
+  document.querySelector('.sticky-nav').style.display = '';
+}
+
+function isVenueFinished(vdata) {
+  if (!vdata || !vdata.races) return false;
+  const entries = Object.values(vdata.races);
+  if (entries.length === 0) return false;
+  return entries.every(rd => isRacePast(rd.time));
 }
 
 function buildTopVenueChips() {
   const area = document.getElementById('top-venue-chips');
   if (!area) return;
-  // VENUE_LIST の順番を維持しつつ開催中の会場を取得
   const venues = VENUE_LIST.filter(v => ALL_DATA && ALL_DATA[v] != null);
   if (venues.length === 0) {
     area.innerHTML = '<span style="color:var(--text3);font-size:12px">本日の開催情報なし</span>';
     return;
   }
-  area.innerHTML = venues.map(v => `
-    <span class="top-venue-chip" onclick="jumpToVenue('${v}')">
-      <span class="chip-dot"></span>${v}
-    </span>
-  `).join('');
+  area.innerHTML = venues.map(v => {
+    const finished = isVenueFinished(ALL_DATA[v]);
+    const style = finished
+      ? 'opacity:0.4;filter:grayscale(0.6);cursor:default;pointer-events:none;'
+      : '';
+    return `<span class="top-venue-chip" onclick="jumpToVenue('${v}')" style="${style}">${v}</span>`;
+  }).join('');
 }
 
 function jumpToVenue(venue) {
