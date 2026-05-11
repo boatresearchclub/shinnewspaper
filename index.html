@@ -4830,3 +4830,16 @@ function autoRefreshCurrentView(){
 </script>
 </body>
 </html>
+ab === 'odds'){
+      renderOdds(snapRace);
+    }
+    // 進入変更バナーも更新（odds タブ含む全タブ共通）
+    updatePersistentBanners(snapRace);
+    console.log('[autoRefresh] tab=' + tab + ' race=' + snapRace);
+  } catch(e) {
+    console.warn('[autoRefresh] error:', e);
+  }
+}
+</script>
+</body>
+</html>
