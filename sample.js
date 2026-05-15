@@ -85,6 +85,24 @@ async function fetchAndMergeJsonData() {
   // 全fetch並列実行（失敗しても続行）
   await Promise.allSettled([...resultFetches, ...historyFetches, masterFetch]);
   console.log('[fetchAndMergeJsonData] 完了');
+
+  // fetchで TENJI_DATA に追加されたデータをキャッシュに反映
+  _rebuildTenjiCache();
+
+  // トップページのAI予想成績を再集計
+  if (typeof calcTopAIStats === 'function') calcTopAIStats();
+
+  // 現在表示中のタブ・レースを再描画（fetchデータを即時反映）
+  if (DATA && selectedRace) {
+    const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
+    if      (activeTab === 'detail')   renderDetail(selectedRace);
+    else if (activeTab === 'buy')      renderBuy(selectedRace);
+    else if (activeTab === 'detail2')  renderBuy(selectedRace);
+    else if (activeTab === 'odds')     renderOdds(selectedRace);
+    else if (activeTab === 'result')   renderResult(selectedRace);
+    else if (activeTab === 'comment')  renderComment(selectedRace);
+    if (typeof updatePersistentBanners === 'function') updatePersistentBanners(selectedRace);
+  }
 }
 
 
@@ -112,12 +130,13 @@ function weightDots(w, max=3){
 }
 
 const _tenjiCache = {};
-(function(){
+function _rebuildTenjiCache() {
   for(const [key, val] of Object.entries(TENJI_DATA)){
     const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
     _tenjiCache[normalized] = val;
   }
-})();
+}
+_rebuildTenjiCache();
 function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
 
 function buildWeatherBar(rno){
