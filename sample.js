@@ -1,3 +1,38 @@
+// ============================================================
+const FINAL_PROB_WEIGHTS = {
+  base:   1.0,  // 基準1着率  （長期統計）  ← 変更可: 0.5〜2.0 推奨
+  tenkai: 1.0,  // 展開補正   （決まり手適性）← 変更可: 0.5〜2.0 推奨
+  tenji:  0.5,  // 展示補正   （当日展示タイム）← 変更可: 0.0〜2.0 推奨（0=無効化）
+  // [2026-05-13 修正] 1.0→0.3: wTenji=1.0 では展示ありで払戻が約20%低下していた
+  // 原因: 1号艇baseProb高いレースで展示スコアがさらに上乗せされ低配当組合せを優先
+  // バックテスト: 高配当1号艇 展示あり回収率 88.1%→推定103%台へ改善
+  // [2026-05-14 修正] 0.3→0.5: 枠別指数テーブル導入に合わせて底上げ
+};
+
+// ── 枠番別 展示補正指数テーブル ──
+// FINAL_PROB_WEIGHTS.tenji をベースに枠番ごとに調整する乗数。
+// 1〜2枠: コース優位が支配的なため展示の影響を抑制。
+// 3〜5枠: 差し・まくりの爆発力に直結するため強めに効かせる。
+// 6枠:    まくり一発狙いで展示差が出やすいが6枠自体の勝率が低いため中程度。
+// 最終的な指数 = FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
+const TENJI_WEIGHT_BY_COURSE = {
+  1: 0.6,  // イン有利はコース補正で十分、展示は補助的
+  2: 0.8,  // 差しに展示が絡むが1枠に次いで抑制
+  3: 1.3,  // 差し・まくり差しの主力、展示差が着順に直結
+  4: 1.4,  // まくり・まくり差し最多コース、展示最重要
+  5: 1.3,  // まくり一発、外枠でも展示良ければ上位に
+  6: 1.0,  // まくり狙いだが距離ロスが大きく控えめ
+};
+
+// ── 買い目確率フィルター閾値 ──
+// この確率（3連単推定）を下回る買い目を除外する。
+// スライダーUIから変更可能。単位: % (例: 2.0 → 2%)
+let BUY_PROB_THRESHOLD = 2.0;
+
+// フェーズ3: ALL_DATA_HISTORY は data/history_YYYYMMDD.json から fetch で取得
+// inject_history_to_html() による埋め込みを停止（HTMLを軽量化・30日分対応）
+let ALL_DATA_HISTORY = {};
+
 
 
 // ══════════════════════════════════════════════════════════════════
@@ -85,24 +120,6 @@ async function fetchAndMergeJsonData() {
   // 全fetch並列実行（失敗しても続行）
   await Promise.allSettled([...resultFetches, ...historyFetches, masterFetch]);
   console.log('[fetchAndMergeJsonData] 完了');
-
-  // fetchで TENJI_DATA に追加されたデータをキャッシュに反映
-  _rebuildTenjiCache();
-
-  // トップページのAI予想成績を再集計
-  if (typeof calcTopAIStats === 'function') calcTopAIStats();
-
-  // 現在表示中のタブ・レースを再描画（fetchデータを即時反映）
-  if (DATA && selectedRace) {
-    const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
-    if      (activeTab === 'detail')   renderDetail(selectedRace);
-    else if (activeTab === 'buy')      renderBuy(selectedRace);
-    else if (activeTab === 'detail2')  renderBuy(selectedRace);
-    else if (activeTab === 'odds')     renderOdds(selectedRace);
-    else if (activeTab === 'result')   renderResult(selectedRace);
-    else if (activeTab === 'comment')  renderComment(selectedRace);
-    if (typeof updatePersistentBanners === 'function') updatePersistentBanners(selectedRace);
-  }
 }
 
 
@@ -130,13 +147,12 @@ function weightDots(w, max=3){
 }
 
 const _tenjiCache = {};
-function _rebuildTenjiCache() {
+(function(){
   for(const [key, val] of Object.entries(TENJI_DATA)){
     const normalized = key.replace(/_(\d{4})(\d{2})(\d{2})_/, '_$1-$2-$3_');
     _tenjiCache[normalized] = val;
   }
-}
-_rebuildTenjiCache();
+})();
 function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
 
 function buildWeatherBar(rno){
@@ -2055,8 +2071,6 @@ function renderBuy(rno){
     // ── モード別採用数 ──
     // 的中重視: 広く拾う（上位4艇 or rate3あり→上位3艇）
     // 回収重視: 絞る（上位2〜3艇に限定）
-    // 【BUG FIX③】1号艇が軸の場合は3着カバレッジを+1枠拡張
-    const boat1AxisBonus = (winnerBoat === 1) ? 1 : 0;
     let pickN;
     if(buyMode === 'rec'){
       pickN = hasR3 ? 2 : 3;
@@ -2064,7 +2078,6 @@ function renderBuy(rno){
       // 'hit' or undefined → 的中重視
       pickN = hasR3 ? 3 : 4;
     }
-    pickN = Math.min(pickN + boat1AxisBonus, allBoats.length);
     return sorted.slice(0, pickN).map(x => x.boat);
   }
 
@@ -2135,15 +2148,6 @@ function renderBuy(rno){
           picked.push(item.boat);
           cum += item.p2;
           if(cum >= threshold) break;
-        }
-        // 【BUG FIX②】最低2艇確保（1艇止まりだと点数不足になるため）
-        if(picked.length < 2){
-          for(const item of sorted){
-            if(item.boat === winnerBoat) continue;
-            if(picked.includes(item.boat)) continue;
-            picked.push(item.boat);
-            if(picked.length >= 2) break;
-          }
         }
         return picked;
       }
@@ -2604,58 +2608,28 @@ function renderBuy(rno){
   // ── 合成オッズ不足時に低オッズから削って目標倍率以上にするトリム関数 ──
   // targetSynth: 目標合成オッズ（hit=2.5, rec=4.0）
   // maxPts: 点数上限
-  // protectedCombos: 絶対に削除しない組み合わせのSet（予想TOP3など）
-  function trimToTargetSynth(list, oddsMap, targetSynth, maxPts, protectedCombos){
+  function trimToTargetSynth(list, oddsMap, targetSynth, maxPts){
+    // オッズを付与してソート（オッズ低い順 = 合成分母への寄与が大きい = まず削る対象）
     const withOdds = list.map(r => {
       const ov = oddsMap[normalizeCombo(r.c)] ?? null;
       return { ...r, _odds: ov };
     });
+    // 点数上限まず適用
     let trimmed = withOdds.slice(0, maxPts);
 
-    // 【BUG FIX①】保護対象（予想TOP3）は削除しない
-    const isProtected = (r) => protectedCombos && protectedCombos.has(normalizeCombo(r.c));
-
+    // 合成オッズを満たすまで低オッズから1点ずつ削る
+    // 最低1点は残す
     while(trimmed.length > 1){
       const so = calcSynthOdds(trimmed, oddsMap);
       if(so == null || so >= targetSynth) break;
-      // 保護対象でない・かつオッズが取れているものだけを削除候補にする
-      const hasOdds = trimmed.filter(r => r._odds != null && !isProtected(r));
-      if(hasOdds.length === 0) break;
+      // オッズが取得できているものの中で最も低いものを削除
+      const hasOdds = trimmed.filter(r => r._odds != null);
+      if(hasOdds.length === 0) break; // オッズ情報なし→削れない
       hasOdds.sort((a, b) => a._odds - b._odds);
       const toRemove = hasOdds[0];
       trimmed = trimmed.filter(r => r.c !== toRemove.c);
     }
     return trimmed;
-  }
-
-  // ── 予想TOP3保護セット生成（全6順列）──
-  function buildTop3ProtectedSet(ranked2){
-    const t = ranked2.slice(0, 3).map(b => b.boat);
-    const s = new Set();
-    [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]].forEach(([a,b,c]) => {
-      s.add(normalizeCombo(`${t[a]}-${t[b]}-${t[c]}`));
-    });
-    return s;
-  }
-
-  // ── 【BUG FIX②】点数補完: トリム後に推奨点数を下回る場合、未追加候補で補完 ──
-  function fillUpBets(trimmedList, rawList, targetPts, protectedSet){
-    if(trimmedList.length >= targetPts) return trimmedList;
-    const existing = new Set(trimmedList.map(r => normalizeCombo(r.c)));
-    const candidates = rawList.filter(r => !existing.has(normalizeCombo(r.c)));
-    // TOP3保護対象を優先して補完
-    candidates.sort((a, b) => {
-      const aP = protectedSet && protectedSet.has(normalizeCombo(a.c)) ? 0 : 1;
-      const bP = protectedSet && protectedSet.has(normalizeCombo(b.c)) ? 0 : 1;
-      if(aP !== bP) return aP - bP;
-      return (a.scenarioGroup ?? 9) - (b.scenarioGroup ?? 9);
-    });
-    const result = [...trimmedList];
-    for(const cand of candidates){
-      if(result.length >= targetPts) break;
-      result.push(cand);
-    }
-    return result;
   }
 
   // ── 各買い目にオッズを付与するヘルパー（EV表示用に残す）──
@@ -2668,24 +2642,19 @@ function renderBuy(rno){
     });
   }
 
-  // 【BUG FIX①②】TOP3保護セット生成
-  const top3ProtectedSet = buildTop3ProtectedSet(ranked2);
-
   // ── 的中重視モード ──
-  // 生成済み buy3Hit_raw を最大opt_points点、合成2.5倍以上にトリム
-  const HIT_MAX_PTS     = optPoints;
+  // 生成済み buy3Hit_raw を最大10点、合成2.5倍以上にトリム
+  const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
-  const buy3Hit_trimmed_pre = trimToTargetSynth(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS, top3ProtectedSet);
-  const buy3Hit_trimmed = fillUpBets(buy3Hit_trimmed_pre, buy3Hit_raw, HIT_MAX_PTS, top3ProtectedSet);
+  const buy3Hit_trimmed = trimToTargetSynth(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
   const buy3Hit = attachEV(buy3Hit_trimmed, raceOdds3tEv);
   const buy2Hit = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
   // ── 回収重視モード ──
-  // 生成済み buy3Rec_raw を最大opt_points点、合成4.0倍以上にトリム
-  const REC_MAX_PTS     = optPoints;
+  // 生成済み buy3Rec_raw を最大10点、合成4.0倍以上にトリム
+  const REC_MAX_PTS     = 10;
   const REC_SYNTH_MIN   = 4.0;
-  const buy3Rec_trimmed_pre = trimToTargetSynth(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS, top3ProtectedSet);
-  const buy3Rec_trimmed = fillUpBets(buy3Rec_trimmed_pre, buy3Rec_raw, REC_MAX_PTS, top3ProtectedSet);
+  const buy3Rec_trimmed = trimToTargetSynth(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const buy3Rec = attachEV(buy3Rec_trimmed, raceOdds3tEv);
   const buy2Rec = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
@@ -3713,10 +3682,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         });
         const hasR3 = withScore.some(x => x.r3 != null);
         const sorted = [...withScore].sort((a, b) => b.score - a.score);
-        // モード別採用数（【BUG FIX③】1号艇軸は+1枠厚くカバー）
-        const boat1AxisBonus_local = (winnerBoat === 1) ? 1 : 0;
-        const pickN_base = (buyMode === 'rec') ? (hasR3 ? 2 : 3) : (hasR3 ? 3 : 4);
-        const pickN = Math.min(pickN_base + boat1AxisBonus_local, allBoats.length);
+        // モード別採用数
+        const pickN = (buyMode === 'rec') ? (hasR3 ? 2 : 3) : (hasR3 ? 3 : 4);
         return sorted.slice(0, pickN).map(x => x.boat);
       }
 
@@ -3756,15 +3723,6 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
             picked.push(item.boat);
             cum += item.p2;
             if (cum >= threshold) break;
-          }
-          // 【BUG FIX②】最低2艇確保
-          if (picked.length < 2) {
-            for (const item of sorted) {
-              if (item.boat === winnerBoat) continue;
-              if (picked.includes(item.boat)) continue;
-              picked.push(item.boat);
-              if (picked.length >= 2) break;
-            }
           }
           return picked;
         }
@@ -3824,14 +3782,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     try {
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
       const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
-      const maxPts_trim     = (rd.opt_points != null) ? rd.opt_points : 10; // 【BUG FIX②】opt_points参照
-
-      // 【BUG FIX①】TOP3保護セット（バックテスト版）
-      const top3boats_bt = ranked2.slice(0, 3).map(b => b.boat);
-      const top3Protected_bt = new Set();
-      [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]].forEach(([a,b,c]) => {
-        top3Protected_bt.add(normalizeCombo(`${top3boats_bt[a]}-${top3boats_bt[b]}-${top3boats_bt[c]}`));
-      });
+      const maxPts_trim     = 10;
 
       function calcSynth_trim(list) {
         let d = 0, c = 0;
@@ -3845,35 +3796,18 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       // 点数上限適用
       let trimmed = buy3.slice(0, maxPts_trim);
 
-      // 合成オッズが目標未満の間、低オッズ点から削る（保護対象は削らない）
+      // 合成オッズが目標未満の間、低オッズ点から1点ずつ削る（最低1点は残す）
       while (trimmed.length > 1) {
         const so = calcSynth_trim(trimmed);
         if (so == null || so >= synthMin_trim) break;
         const withOdds = trimmed
           .map(r => ({ ...r, _o: raceOdds3t_trim[normalizeCombo(r.c)] ?? null }))
-          .filter(r => r._o != null && !top3Protected_bt.has(normalizeCombo(r.c))); // 【BUG FIX①】
+          .filter(r => r._o != null);
         if (withOdds.length === 0) break;
         withOdds.sort((a, b) => a._o - b._o);
         const removeC = withOdds[0].c;
         trimmed = trimmed.filter(r => r.c !== removeC);
       }
-
-      // 【BUG FIX②】点数補完: 推奨点数に足りなければ未追加候補から補完（TOP3優先）
-      if (trimmed.length < maxPts_trim) {
-        const existingSet = new Set(trimmed.map(r => normalizeCombo(r.c)));
-        const candidates = buy3.filter(r => !existingSet.has(normalizeCombo(r.c)));
-        candidates.sort((a, b) => {
-          const aP = top3Protected_bt.has(normalizeCombo(a.c)) ? 0 : 1;
-          const bP = top3Protected_bt.has(normalizeCombo(b.c)) ? 0 : 1;
-          if (aP !== bP) return aP - bP;
-          return (a.scenarioGroup ?? 9) - (b.scenarioGroup ?? 9);
-        });
-        for (const cand of candidates) {
-          if (trimmed.length >= maxPts_trim) break;
-          trimmed.push(cand);
-        }
-      }
-
       buy3 = trimmed;
     } catch(e) {
       console.warn('[computeBuy3] trim error:', e);
