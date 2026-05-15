@@ -29,9 +29,6 @@ const TENJI_WEIGHT_BY_COURSE = {
 // スライダーUIから変更可能。単位: % (例: 2.0 → 2%)
 let BUY_PROB_THRESHOLD = 2.0;
 
-// フェーズ3: ALL_DATA_HISTORY は data/history_YYYYMMDD.json から fetch で取得
-// inject_history_to_html() による埋め込みを停止（HTMLを軽量化・30日分対応）
-let ALL_DATA_HISTORY = {};
 
 
 
