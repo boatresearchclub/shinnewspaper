@@ -4405,8 +4405,18 @@ function exportBacktestCSV(buyMode) {
   }
 
   const headers = Object.keys(output[0]);
+  const modeLabel = buyMode === 'hit' ? '的中重視' : '回収重視';
+  const dateTag   = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const modeTag   = buyMode === 'hit' ? 'hit' : 'rec';
+
+  // CSV先頭にタイトル行を追加（開いた瞬間に何のファイルか分かるように）
+  const titleRow1 = `"Boat Research Club - バックテスト結果 [${modeLabel}]"`;
+  const titleRow2 = `"出力日: ${new Date().toLocaleDateString('ja-JP')}"`;
 
   const csvRows = [
+    titleRow1,
+    titleRow2,
+    '',
     headers.join(','),
     ...output.map(row =>
       headers.map(header => {
@@ -4424,8 +4434,6 @@ function exportBacktestCSV(buyMode) {
   });
 
   const url = URL.createObjectURL(blob);
-  const dateTag = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const modeTag = buyMode === 'hit' ? 'hit' : 'rec';
 
   const a = document.createElement('a');
   a.href = url;
