@@ -2545,7 +2545,8 @@ function renderBuy(rno){
   function normalizeCombo(s){ return (s||'').replace(/[－−\-]/g,'-'); }
   // sanrentan[0] が確定着順（1着-2着-3着）。全件Setにすると払戻データの他組み合わせと誤マッチする
   const resultSan3  = hasResult && resultRd.sanrentan[0] ? new Set([normalizeCombo(resultRd.sanrentan[0].combo)]) : null;
-  const resultNiren = hasResult && resultRd.nirentan?.[0] ? new Set([normalizeCombo(resultRd.nirentan[0].combo)])  : null;
+  // nirentan は sanrentan と独立してチェック（sanrentan がなくても 2連単的中を正しく判定する）
+  const resultNiren = resultRd?.nirentan?.[0] ? new Set([normalizeCombo(resultRd.nirentan[0].combo)]) : null;
 
   function hitBadge(){ return `<span class="hit-badge">🎯 的中</span>`; }
 
@@ -2795,8 +2796,10 @@ function renderBuy(rno){
   // ── 各モードのHTML生成 ──
   // underSynth=true のとき: 買い目はそのまま表示し、合成オッズ未達の注意書きを添える
   function buildModePanel(buy3list, buy2list, modeId, underSynth, synthMin){
-    const b3html = buildBuyRows(buy3list, resultSan3, true);
-    const b2html = buildBuyRows(buy2list, resultNiren, false);
+    // 合成オッズ未達（見送り扱い）のときは的中バッジを表示しない
+    // collectResultsForDate でも見送りレースは除外されるため、画面表示と成績集計を一致させる
+    const b3html = buildBuyRows(buy3list, underSynth ? null : resultSan3, true);
+    const b2html = buildBuyRows(buy2list, underSynth ? null : resultNiren, false);
     const so3    = synthOddsHtml(buy3list, raceOdds3tEv);
     const _soVal = calcSynthOdds(buy3list, raceOdds3tEv);
     const _soStr = _soVal != null ? _soVal.toFixed(2) + '倍' : '取得中';
