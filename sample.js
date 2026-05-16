@@ -2666,7 +2666,17 @@ function renderBuy(rno){
   // オッズ取得
   const _oddsDateEv = viewDate || (DATA?.date) || todayDate;
   const raceOdds3tEv = ODDS_DATA?.[_oddsDateEv]?.[DATA?.venue]?.[String(rno)]?.['3t'] || {};
-  const raceOdds2tEv = ODDS_DATA?.[_oddsDateEv]?.[DATA?.venue]?.[String(rno)]?.['2t'] || {};
+  const _raceOdds2tRaw = ODDS_DATA?.[_oddsDateEv]?.[DATA?.venue]?.[String(rno)]?.['2t'] || {};
+  // ODDS_DATAに '2t' がない場合は RESULT_DATA.nirentan の払戻オッズをフォールバックとして使用
+  const raceOdds2tEv = (Object.keys(_raceOdds2tRaw).length > 0)
+    ? _raceOdds2tRaw
+    : (() => {
+        const fb = {};
+        (resultRd?.nirentan || []).forEach(r => {
+          if (r.combo != null && r.odds != null) fb[normalizeCombo(r.combo)] = r.odds;
+        });
+        return fb;
+      })();
 
   // ── 合成オッズ計算ヘルパー ──
   function calcSynthOdds(list, oddsMap){
@@ -2808,7 +2818,7 @@ function renderBuy(rno){
                      background:rgba(255,180,0,0.10);border:1px solid rgba(255,180,0,0.35);
                      border-radius:6px;font-size:11px;color:var(--orange)">
            <span style="font-size:14px;flex-shrink:0">⚠️</span>
-           <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）</span>
+           <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）。参考買い目として表示していますが、購入は自己判断でお願いします。</span>
          </div>`
       : '';
     return `
