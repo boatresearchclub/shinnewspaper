@@ -1729,6 +1729,32 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 
   if(top3Scenarios.length === 0) return '';
 
+  // ── 同一1着艇が複数シナリオに登場する場合、艇でグループ化して確率を合算 ──
+  //
+  // 例: ②坪井 まくり 22.3% / ②坪井 差し 13.3%
+  //   → ②坪井グループ 合計35.6% として2着・3着を加重平均で合算表示
+  //
+  // 複数艇が登場する場合は従来通り艇ごとに独立表示。
+  //
+  const boatGroups = new Map(); // boat番号 → { name, scenarios: [{kimari, prob, place2List}] }
+  for(const sc of top3Scenarios){
+    if(!boatGroups.has(sc.boat)){
+      boatGroups.set(sc.boat, { boat: sc.boat, name: sc.name, scenarios: [] });
+    }
+    boatGroups.get(sc.boat).scenarios.push({
+      kimari: sc.kimari,
+      prob:   sc.prob,
+      place2List: scenarioPlace2[sc.boat]?.[sc.kimari] || [],
+    });
+  }
+
+  // グループを合計確率の降順でソート
+  const groupList = [...boatGroups.values()]
+    .sort((a, b) =>
+      b.scenarios.reduce((s, x) => s + x.prob, 0) -
+      a.scenarios.reduce((s, x) => s + x.prob, 0)
+    );
+
   // 決まり手→カラー
   const KIMARI_COLOR = {
     '逃げ': 'var(--accent2)', '差し': 'var(--green)',
@@ -1739,13 +1765,61 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
     'まくり': 'rgba(255,59,59,.1)', 'まくり差し': 'rgba(255,122,0,.1)', '抜き': 'rgba(108,122,148,.1)'
   };
 
-  const scenarioBlocks = top3Scenarios.map((sc, wi) => {
-    const place2List = scenarioPlace2[sc.boat]?.[sc.kimari] || [];
-    const top4Place  = place2List.slice(0, 4);
+  const scenarioBlocks = groupList.map((grp) => {
+    const totalProb = grp.scenarios.reduce((s, x) => s + x.prob, 0);
+    const isMulti   = grp.scenarios.length > 1;
 
-    // 各2着候補 → 「2着➌42% ー 3着➍31%/➋25%」の1行
+    // ── 2着確率を加重平均で合算 ──
+    // 各シナリオの place2List を prob で重み付けして同一艇番ごとに合算し正規化する
+    const mergedP2Map = {}; // boat番号 → { boat, name, p2sum }
+    for(const scen of grp.scenarios){
+      const w = scen.prob / (totalProb || 1); // シナリオ重み（合計1.0）
+      for(const item of scen.place2List){
+        if(!mergedP2Map[item.boat]){
+          mergedP2Map[item.boat] = { boat: item.boat, name: item.name, p2sum: 0 };
+        }
+        mergedP2Map[item.boat].p2sum += item.p2 * w;
+      }
+    }
+    // p2sum を正規化（合計が1.0になるよう）
+    const p2Total = Object.values(mergedP2Map).reduce((s, x) => s + x.p2sum, 0) || 1;
+    const mergedPlace2 = Object.values(mergedP2Map)
+      .map(x => ({ boat: x.boat, name: x.name, p2: x.p2sum / p2Total }))
+      .sort((a, b) => b.p2 - a.p2);
+
+    const top4Place = mergedPlace2.slice(0, 4);
+
+    // ── 3着確率も加重平均で合算 ──
+    // 各2着候補に対して、複数シナリオ分の3着スコアをシナリオ確率で加重平均する
+    function calcMerged3rd(secondBoat){
+      const r3Map = {}; // boat番号 → { boat, r3sum, scoreSum, weight }
+      for(const scen of grp.scenarios){
+        const w = scen.prob / (totalProb || 1);
+        const thirds = calc3rdScores(grp.boat, scen.kimari, secondBoat);
+        for(const t3 of thirds){
+          if(!r3Map[t3.boat]){
+            r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
+          }
+          if(t3.r3 != null){
+            r3Map[t3.boat].r3sum   += t3.r3 * w;
+            r3Map[t3.boat].r3Count += w;
+          }
+          r3Map[t3.boat].scoreSum   += t3.score * w;
+          r3Map[t3.boat].scoreCount += w;
+        }
+      }
+      return Object.values(r3Map)
+        .map(x => ({
+          boat:  x.boat,
+          r3:    x.r3Count > 0 ? x.r3sum / x.r3Count : null,
+          score: x.scoreCount > 0 ? x.scoreSum / x.scoreCount : 0,
+        }))
+        .sort((a, b) => b.score - a.score);
+    }
+
+    // 各2着候補の行を生成
     const p2Lines = top4Place.map(item => {
-      const third3 = calc3rdScores(sc.boat, sc.kimari, item.boat).slice(0, 3);
+      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScores(grp.boat, grp.scenarios[0].kimari, item.boat)).slice(0, 3);
       const third3html = third3.map(t3 =>
         `<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap">
           ${boatCircle(t3.boat)}
@@ -1762,15 +1836,19 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
       </div>`;
     }).join('');
 
-    const kimariColor = KIMARI_COLOR[sc.kimari] || 'var(--accent2)';
-    const kBg = KIMARI_BG[sc.kimari] || 'rgba(108,122,148,.1)';
+    // ── ヘッダー部分: 複数決まり手の場合はバッジを並べて内訳を表示 ──
+    const kimariBadges = grp.scenarios.map(scen => {
+      const kColor = KIMARI_COLOR[scen.kimari] || 'var(--accent2)';
+      const kBg    = KIMARI_BG[scen.kimari]    || 'rgba(108,122,148,.1)';
+      return `<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:${kBg};color:${kColor};flex-shrink:0">${scen.kimari}<span style="font-weight:400;font-size:10px;margin-left:3px">${(scen.prob*100).toFixed(1)}%</span></span>`;
+    }).join('');
 
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
-        ${boatCircle(sc.boat)}
-        <span style="font-size:13px;font-weight:700;flex-shrink:0">${sc.name}</span>
-        <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:${kBg};color:${kimariColor};flex-shrink:0">${sc.kimari}</span>
-        <span style="font-size:13px;font-family:var(--mono);font-weight:700;color:var(--text);margin-left:auto;flex-shrink:0">${(sc.prob*100).toFixed(1)}%</span>
+        ${boatCircle(grp.boat)}
+        <span style="font-size:13px;font-weight:700;flex-shrink:0">${grp.name}</span>
+        ${kimariBadges}
+        <span style="font-size:13px;font-family:var(--mono);font-weight:700;color:var(--text);margin-left:auto;flex-shrink:0">${(totalProb*100).toFixed(1)}%</span>
       </div>
       <div style="padding-left:4px">${p2Lines}</div>
     </div>`;
