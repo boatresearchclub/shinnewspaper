@@ -3915,7 +3915,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     try {
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
       const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
-      const maxPts_trim     = 10;
+      const maxPts_trim     = BUY_MAX_POINTS_BT; // opt_points を反映（旧: ハードコード10固定）
 
       function calcSynth_trim(list) {
         let d = 0, c = 0;
@@ -4267,24 +4267,15 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
 
       const buy3 = computeBuy3(venue, vdata, rno, buyMode);
 
-      // ── 合成オッズフィルター: 的中重視モードの目標（2.5倍）未満は除外 ──
-      const _oddsDate3t_bt = vdata.date;
-      const raceOdds3t_bt  = ODDS_DATA?.[_oddsDate3t_bt]?.[venue]?.[String(rno)]?.['3t'] || {};
-      let synthDenom_bt = 0, synthCount_bt = 0;
-      buy3.forEach(r => {
-        const nc = normalizeCombo(r.c);
-        const ov = raceOdds3t_bt[nc] ?? null;
-        if (ov != null && ov > 0) { synthDenom_bt += 1 / ov; synthCount_bt++; }
-      });
-      if (synthCount_bt > 0 && synthDenom_bt > 0) {
-        const synthOdds_bt = 1 / synthDenom_bt;
-        const synthMin = buyMode === 'rec' ? 4.0 : 2.5;
-        if (synthOdds_bt < synthMin) {
-          excludedList.push({ venue, rno, reason: `合成オッズ${synthMin}倍未満` });
-          return;
-        }
+      // ── 見送りレース除外: computeBuy3 が空配列 = 合成オッズ未達または買い目なし ──
+      // computeBuy3 は内部で trimToTargetSynth を実行済みであり、
+      // 合成オッズ未達の場合は空配列を返す。ここで改めて合成オッズを再計算すると
+      // 「合成オッズを満たしたレースだけ集計する」サバイバーシップバイアスが生じる。
+      // → buy3 が空 = 見送り として除外し、非空 = 参加 として集計するだけでよい。
+      if (buy3.length === 0) {
+        excludedList.push({ venue, rno, reason: `合成オッズ未達（見送り）` });
+        return;
       }
-      // オッズデータが取得できない場合は除外しない（集計対象として扱う）
 
       const resultSan3 = new Set((resultRd.sanrentan || []).map(r => normalizeCombo(r.combo)));
       let isHit = false;
