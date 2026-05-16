@@ -3986,6 +3986,13 @@ function buildDateCard(dateStr, label) {
         const raceLabel  = r.isHit
           ? `<span class="ai-venue-race-hit">🎯 的中</span><span class="ai-venue-race-odds">${hitOddsStr}</span>`
           : `<span class="ai-venue-race-miss">—</span>`;
+        // combo文字列（例: "1-2-4"）を枠番バッジ列に変換するローカルヘルパー
+        const comboBadges = combo => (combo || '').split(/[-－−]/).map(n =>
+          /^[1-6]$/.test(n.trim()) ? `<span class="boat-circle b${n.trim()}" style="width:20px;height:20px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n.trim()}</span>` : ''
+        ).join('<span style="color:var(--text3);font-size:11px;margin:0 1px">−</span>');
+        const resultBadge = r.actualResult
+          ? `<br><span class="ai-race-body-label">出目</span><span class="ai-race-body-val" style="display:inline-flex;align-items:center;gap:2px">${comboBadges(r.actualResult)}</span>`
+          : '';
         return `<details class="ai-race-details">
           <summary class="ai-race-summary">
             <span class="ai-race-summary-arrow">▶</span>
@@ -3997,6 +4004,7 @@ function buildDateCard(dateStr, label) {
             <span class="ai-race-body-label">購入点数</span>
             <span class="ai-race-body-val">${r.buy3cnt}点（3連単）</span>
             ${r.isHit ? `<br><span class="ai-race-body-label">払戻金</span><span class="ai-race-body-val" style="color:var(--red);font-weight:700">${hitOddsStr}</span>` : ''}
+            ${resultBadge}
           </div>
         </details>`;
       }).join('');
