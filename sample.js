@@ -2733,10 +2733,14 @@ function renderBuy(rno){
   const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
   const buy3Hit_checked  = checkSynthOdds(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
-  // 合成オッズ未達フラグ: 未達でも買い目は表示し、注意書きを添える
-  // buy3Hit は「確率順に生成した買い目」をそのまま表示用に使う（合成オッズ判定とは独立）
+  // 合成オッズ未達フラグ
   const hitUnderSynth    = buy3Hit_checked.length === 0;
-  const buy3Hit          = attachEV(buy3Hit_raw.slice(0, HIT_MAX_PTS), raceOdds3tEv);
+  // 表示用買い目: 合成オッズ達成時は checked（成績集計と同一セット）を使用。
+  // 未達（参考表示）時のみ raw を使う → 画面表示と成績集計の買い目を一致させる
+  const buy3Hit          = attachEV(
+    hitUnderSynth ? buy3Hit_raw.slice(0, HIT_MAX_PTS) : buy3Hit_checked,
+    raceOdds3tEv
+  );
   const buy2Hit          = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
   // ── 【改修】回収重視モード ──
@@ -2746,7 +2750,12 @@ function renderBuy(rno){
   const REC_SYNTH_MIN   = 4.0;
   const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const recUnderSynth    = buy3Rec_checked.length === 0;
-  const buy3Rec          = attachEV(buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
+  // 表示用買い目: 合成オッズ達成時は checked（成績集計と同一セット）を使用。
+  // 未達（参考表示）時のみ raw を使う → 画面表示と成績集計の買い目を一致させる
+  const buy3Rec          = attachEV(
+    recUnderSynth ? buy3Rec_raw.slice(0, REC_MAX_PTS) : buy3Rec_checked,
+    raceOdds3tEv
+  );
   const buy2Rec          = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
   // ── パターンバッジ ──
