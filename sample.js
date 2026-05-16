@@ -3894,10 +3894,9 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
           top3Scen.push(pair);
           if (top3Scen.length >= 3) break;
         }
-        // 【改修】2着閾値: 両モード共通 70%
+        // 【改修】2着閾値: hit=75% / rec=70%（renderBuy の PICK2_PROB_TARGET_HIT2/REC2 と統一）
         function pick2nd_local(winnerBoat, kimari, buyMode) {
-          // 2着累積目標: 両モード共通 70%（2着拡張は10点上限圧迫を招くため固定）
-          const p2Target = 0.70;
+          const p2Target = (buyMode === 'hit') ? 0.75 : 0.70;
           const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
           if (list.length === 0) return [];
           // renderBuy の pick2nd と同一: 逃げ1号艇は inn2Place_buy で特殊ソート
@@ -3924,33 +3923,47 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
           }
           return picked;
         }
-        // 【改修】バックテスト: モード別1着軸決定（renderBuy と同一仕様）
+        // 【改修】バックテスト: モード別1着軸決定（renderBuy と完全同一仕様）
         const BT_MODE = buyMode;
+        // isDualAxis: final_prob 1・2位の差が ≤5% なら僅差とみなす
+        const probDiff_bt = (ranked2[0]?.final_prob ?? 0) - (ranked2[1]?.final_prob ?? 0);
+        const isDualAxis_bt = probDiff_bt <= 0.05;
         let btScenariosToProcess;
         if(BT_MODE === 'hit'){
           if(axisReliable){
-            const boat1Scens = top3Scen.filter(s => s.boat === 1);
-            if(boat1Scens.length === 0){
-              const boat1Best = allScenPairs.find(p => p.boat === 1);
-              btScenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+            if(isDualAxis_bt){
+              // 僅差2頭軸: 1号艇＋final_prob 2位艇の両シナリオを処理
+              const fp2ndBoat_bt = ranked2.filter(b => b.boat !== 1)[0];
+              const dualAxes_bt  = [1, fp2ndBoat_bt?.boat].filter(Boolean);
+              const dualScens_bt = dualAxes_bt.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
+              const dualRest_bt  = top3Scen.filter(s => !dualAxes_bt.includes(s.boat)).slice(0, 1);
+              btScenariosToProcess = [...dualScens_bt, ...dualRest_bt];
             } else {
-              btScenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+              // 通常1号艇固定軸
+              const boat1Scens = top3Scen.filter(s => s.boat === 1);
+              if(boat1Scens.length === 0){
+                const boat1Best = allScenPairs.find(p => p.boat === 1);
+                btScenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+              } else {
+                btScenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+              }
             }
           } else {
-            btScenariosToProcess = top3Scen;
+            // axisReliable 偽: final_prob 1位を必ず先頭に強制
+            const fp1stBoat_bt = ranked2[0]?.boat;
+            const fp1stScen_bt = allScenPairs.find(p => p.boat === fp1stBoat_bt)
+                                 ?? top3Scen.find(s => s.boat === fp1stBoat_bt);
+            if(fp1stScen_bt){
+              btScenariosToProcess = [fp1stScen_bt, ...top3Scen.filter(s => s.boat !== fp1stBoat_bt)];
+            } else {
+              btScenariosToProcess = top3Scen;
+            }
           }
         } else {
-          // rec: 1号艇場平均以下なら1号艇以外を優先、累積50%未満なら1号艇を3番手追加
+          // rec: allScenPairs ベースで穴軸を選出（renderBuy と統一）
           if(!boat1AboveAvg_bt){
-            const nonBoat1 = [...ranked2]
-              .filter(b => b.boat !== 1)
-              .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0));
-            const recAxes = [];
-            let cumP = 0;
-            for(const c of nonBoat1){ recAxes.push(c); cumP += c.final_prob ?? 0; if(recAxes.length >= 2) break; }
-            if(cumP < 0.50 && boat1ForAxis_bt) recAxes.push(boat1ForAxis_bt);
-            const recScens = recAxes.map(c => allScenPairs.find(p => p.boat === c.boat)).filter(Boolean);
-            btScenariosToProcess = recScens.length > 0 ? recScens : top3Scen;
+            const recScens_bt = allScenPairs.filter(p => p.boat !== 1).slice(0, 3);
+            btScenariosToProcess = recScens_bt.length > 0 ? recScens_bt : top3Scen;
           } else {
             btScenariosToProcess = top3Scen;
           }
@@ -4007,7 +4020,10 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     // 買い目は削らず、合成オッズが目標未満なら見送り（空配列）とする
     try {
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
-      const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
+      // rec合成オッズ基準: arek 連動（renderBuy の REC_SYNTH_MIN と統一）
+      const synthMin_trim   = buyMode === 'rec'
+        ? (arek < 40 ? 3.0 : arek > 60 ? 5.0 : 4.0)
+        : 2.5;
       const maxPts_trim     = BUY_MAX_POINTS_BT;
 
       const candidates = buy3.slice(0, maxPts_trim);
