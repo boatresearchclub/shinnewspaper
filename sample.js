@@ -4012,24 +4012,14 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     // 買い目は削らず、合成オッズが目標未満なら見送り（空配列）とする
     try {
       // ── オッズソース選択 ──
-      // レース確定済み（RESULT_DATA あり）の場合は ODDS_DATA に暫定オッズが残っていても
-      // 最終払戻オッズ（RESULT_DATA.sanrentan）を優先する。
-      // 暫定オッズ（締切前）と最終オッズ（確定後）が乖離すると合成オッズ判定がずれるため。
-      const rResultKey = resultKey(slug, vdata.date, rno);
-      const rResultRd  = RESULT_DATA[rResultKey];
-      const confirmedOdds3t = (() => {
-        if (!rResultRd?.sanrentan?.length) return null;
-        const fb = {};
-        rResultRd.sanrentan.forEach(r => {
-          if (r.combo != null && r.odds != null) fb[normalizeCombo(r.combo)] = r.odds;
-        });
-        return Object.keys(fb).length > 0 ? fb : null;
-      })();
-
-      // 確定済みなら払戻オッズを使用。未確定なら ODDS_DATA（暫定）を使用。
-      const raceOdds3t_trim = confirmedOdds3t
-        ?? ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t']
-        ?? {};
+      // ODDS_DATA には締切前の暫定オッズが残る場合があり、
+      // 最終オッズ（確定後）と乖離することがある。
+      // ただし RESULT_DATA.sanrentan には的中組み合わせのオッズしか含まれないため、
+      // 全買い目の合成オッズは計算できない。
+      // → ODDS_DATA を引き続き使用しつつ、
+      //    オッズが1点しか取れない（synthCount が極端に少ない）場合は
+      //    判定を信頼せず ODDS_DATA 不完全として見送りにする。
+      const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] ?? {};
 
       // rec合成オッズ基準: arek 連動（renderBuy の REC_SYNTH_MIN と統一）
       const synthMin_trim   = buyMode === 'rec'
@@ -4044,30 +4034,16 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         if (ov != null && ov > 0) { synthDenom += 1 / ov; synthCount++; }
       });
 
-      if (confirmedOdds3t) {
-        // ── 確定済みレースの合成オッズ判定 ──
-        // 払戻オッズには的中組み合わせのオッズしか含まれない。
-        // 買い目10点中1点しかマッチしなければ合成オッズは的中オッズ単体になり
-        // 「見かけ上通過」してしまう。
-        // → 全買い目がオッズテーブルに存在しない場合は見送り扱いとする。
-        // （的中した場合のみ sanrentan[0] のオッズが入るため、
-        //   synthCount < candidates.length → 未的中組み合わせのオッズ欠損 → 見送り）
-        if (synthCount < candidates.length) {
-          buy3 = []; // 全買い目分のオッズが揃わない = 合成オッズ算出不能 → 見送り
-        } else if (synthCount > 0 && synthDenom > 0) {
-          const so = 1 / synthDenom;
-          buy3 = so >= synthMin_trim ? candidates : [];
-        } else {
-          buy3 = [];
-        }
+      // オッズ取得数が買い目の半数未満の場合はデータ不足として見送り
+      // （暫定オッズが極端に少ない場合の誤判定を防ぐ）
+      const minRequiredOdds = Math.ceil(candidates.length / 2);
+      if (synthCount < minRequiredOdds) {
+        buy3 = []; // オッズデータ不足 → 合成オッズ判定不能のため見送り扱い
+      } else if (synthCount > 0 && synthDenom > 0) {
+        const so = 1 / synthDenom;
+        buy3 = so >= synthMin_trim ? candidates : []; // 未達なら見送り
       } else {
-        // ── 未確定レース（ODDS_DATA 使用）──
-        if (synthCount > 0 && synthDenom > 0) {
-          const so = 1 / synthDenom;
-          buy3 = so >= synthMin_trim ? candidates : []; // 未達なら見送り
-        } else {
-          buy3 = []; // オッズデータ未取得 → 合成オッズ判定不能のため見送り扱い
-        }
+        buy3 = []; // オッズデータ未取得 → 合成オッズ判定不能のため見送り扱い
       }
     } catch(e) {
       console.warn('[computeBuy3] synth check error:', e);
