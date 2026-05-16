@@ -95,9 +95,15 @@
   <div id="top-ai-stats-history-summary">
     <span style="color:var(--text3);font-size:12px">集計中...</span>
   </div>
-  <div style="margin-bottom:0.7rem;padding:0 0.1rem">
+  <div style="margin-bottom:0.7rem;padding:0 0.1rem;display:flex;flex-wrap:wrap;gap:6px">
+    <button onclick="exportBacktestCSV('hit')" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 🎯 的中重視 CSV
+    </button>
+    <button onclick="exportBacktestCSV('rec')" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 💰 回収重視 CSV
+    </button>
     <button onclick="exportBacktestCSV()" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
-      ⬇ CSVダウンロード（指数値付き）
+      ⬇ 両方ダウンロード
     </button>
   </div>
 

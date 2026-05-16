@@ -4347,7 +4347,15 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
 }
 
 // ── バックテスト CSV エクスポート ──
-function exportBacktestCSV() {
+// buyMode: 'hit'=的中重視, 'rec'=回収重視, null=両方（ファイル2本）
+function exportBacktestCSV(buyMode) {
+  // 引数なし or null → 両モードを別々にダウンロード
+  if (buyMode == null) {
+    exportBacktestCSV('hit');
+    exportBacktestCSV('rec');
+    return;
+  }
+
   const allDates  = getAvailableDates().slice().reverse();
   const todayDate = getAvailableDates().slice(-1)[0];
 
@@ -4359,10 +4367,11 @@ function exportBacktestCSV() {
   const output = [];
 
   allDates.forEach(dateStr => {
-    const { results } = collectResultsForDate(dateStr);
+    const { results } = collectResultsForDate(dateStr, buyMode);
 
     results.forEach(r => {
       output.push({
+        モード: buyMode === 'hit' ? '的中重視' : '回収重視',
         日付: dateStr,
         日前: dateLabels[dateStr] || '',
         会場: r.venue,
@@ -4391,7 +4400,7 @@ function exportBacktestCSV() {
   });
 
   if (output.length === 0) {
-    alert('エクスポートできるデータがありません。');
+    alert(`エクスポートできるデータがありません（${buyMode === 'hit' ? '的中重視' : '回収重視'}）。`);
     return;
   }
 
@@ -4415,10 +4424,12 @@ function exportBacktestCSV() {
   });
 
   const url = URL.createObjectURL(blob);
+  const dateTag = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const modeTag = buyMode === 'hit' ? 'hit' : 'rec';
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `backtest_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.csv`;
+  a.download = `backtest_${modeTag}_${dateTag}.csv`;
 
   document.body.appendChild(a);
   a.click();
