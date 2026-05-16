@@ -1869,8 +1869,8 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 // renderBuy は DATA/currentVenue がセット済みの状態で呼ぶため
 // venue=''/vdata=null を渡すと DATA/currentVenue を使うモードで動作する。
 function calcBuyInputs(venue, vdata, rno) {
-  const _venue    = venue    || currentVenue;
-  const _vdata    = vdata    || DATA;
+  const _venue    = (venue  != null && venue  !== '') ? venue  : currentVenue;
+  const _vdata    = (vdata  != null)                  ? vdata  : DATA;
   const rd        = _vdata.races[String(rno)];
   if (!rd) return null;
   const arek      = rd.arek ?? 54.7;
