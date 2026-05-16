@@ -3877,11 +3877,12 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         return (c > 0 && d > 0) ? 1 / d : null;
       }
 
-      // 点数上限適用
+      // 【改修】点数上限適用
       let trimmed = buy3.slice(0, maxPts_trim);
 
-      // 合成オッズが目標未満の間、低オッズ点から1点ずつ削る（最低1点は残す）
-      while (trimmed.length > 1) {
+      // 合成オッズが目標未満の間、低オッズ点から1点ずつ削る
+      // renderBuy と同一: 未達なら空配列（見送り）= 最低1点残しを廃止
+      while (trimmed.length > 0) {
         const so = calcSynth_trim(trimmed);
         if (so == null || so >= synthMin_trim) break;
         const withOdds = trimmed
@@ -3891,6 +3892,11 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         withOdds.sort((a, b) => a._o - b._o);
         const removeC = withOdds[0].c;
         trimmed = trimmed.filter(r => r.c !== removeC);
+      }
+      // 最終確認: 削り終えても合成オッズ未達なら空配列（見送り）
+      if (trimmed.length > 0) {
+        const soFinal = calcSynth_trim(trimmed);
+        if (soFinal != null && soFinal < synthMin_trim) trimmed = [];
       }
       buy3 = trimmed;
     } catch(e) {
