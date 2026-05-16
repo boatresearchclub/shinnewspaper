@@ -2746,11 +2746,10 @@ function renderBuy(rno){
   function checkSynthOdds(list, oddsMap, targetSynth, maxPts){
     const candidates = list.slice(0, maxPts);
     const so = calcSynthOdds(candidates, oddsMap);
-    // オッズデータが1点も取得できていない場合は判定スキップ（参加扱い）
-    // ※ この場合 synthOddsHtml でも「—」表示になるため画面上で識別可能
+    // オッズが1点も取得できていない場合は見送り（参加しない）
     if(so == null){
-      console.warn('[checkSynthOdds] オッズ未取得のため合成オッズ判定スキップ', { targetSynth, candidates: candidates.map(r=>r.c) });
-      return candidates;
+      console.warn('[checkSynthOdds] オッズ未取得のため見送り', { targetSynth, candidates: candidates.map(r=>r.c) });
+      return [];
     }
     // 合成オッズ未達 → 空配列（見送り扱い）
     if(so < targetSynth){
@@ -2787,11 +2786,8 @@ function renderBuy(rno){
   // 生成済み buy3Rec_raw を最大10点、合成4.0倍以上にトリム
   // 合成オッズ未達の場合は空配列（見送り）
   const REC_MAX_PTS     = 10;
-  // rec合成オッズ基準: arek（荒れ指標）連動で動的設定
-  //   arek < 40: 逃げ展開濃厚 → 低配当でも旨みあり（基準下げ）
-  //   arek 40-60: 混戦展開   → 標準基準
-  //   arek > 60: 荒れ展開   → 高配当狙い（基準上げ）
-  const REC_SYNTH_MIN   = arek < 40 ? 3.0 : arek > 60 ? 5.0 : 4.0;
+  // rec合成オッズ基準: 4.0倍固定
+  const REC_SYNTH_MIN   = 4.0;
   const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const recUnderSynth    = buy3Rec_checked.length === 0;
   const buy3Rec          = attachEV(buy3Rec_checked.length > 0 ? buy3Rec_checked : buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
@@ -4021,10 +4017,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       //    判定を信頼せず ODDS_DATA 不完全として見送りにする。
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] ?? {};
 
-      // rec合成オッズ基準: arek 連動（renderBuy の REC_SYNTH_MIN と統一）
-      const synthMin_trim   = buyMode === 'rec'
-        ? (arek < 40 ? 3.0 : arek > 60 ? 5.0 : 4.0)
-        : 2.5;
+      // rec合成オッズ基準: 4.0倍固定（hit: 2.5倍固定）
+      const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
       const maxPts_trim     = BUY_MAX_POINTS_BT;
 
       const candidates = buy3.slice(0, maxPts_trim);
@@ -4034,16 +4028,12 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         if (ov != null && ov > 0) { synthDenom += 1 / ov; synthCount++; }
       });
 
-      // オッズ取得数が買い目の半数未満の場合はデータ不足として見送り
-      // （暫定オッズが極端に少ない場合の誤判定を防ぐ）
-      const minRequiredOdds = Math.ceil(candidates.length / 2);
-      if (synthCount < minRequiredOdds) {
-        buy3 = []; // オッズデータ不足 → 合成オッズ判定不能のため見送り扱い
-      } else if (synthCount > 0 && synthDenom > 0) {
+      // オッズが1点も取得できていない場合は見送り（参加しない）
+      if (synthCount === 0 || synthDenom === 0) {
+        buy3 = []; // オッズ未取得 → 見送り扱い
+      } else {
         const so = 1 / synthDenom;
         buy3 = so >= synthMin_trim ? candidates : []; // 未達なら見送り
-      } else {
-        buy3 = []; // オッズデータ未取得 → 合成オッズ判定不能のため見送り扱い
       }
     } catch(e) {
       console.warn('[computeBuy3] synth check error:', e);
