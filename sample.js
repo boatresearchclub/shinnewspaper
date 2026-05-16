@@ -3823,7 +3823,20 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         function pick2nd_local(winnerBoat, kimari, buyMode) {
           const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
           if (list.length === 0) return [];
-          const sorted = [...list].sort((a, b) => b.p2 - a.p2);
+          // renderBuy の pick2nd と同一: 逃げ1号艇は inn2Place_buy で特殊ソート
+          const isNige = (kimari === '逃げ' && winnerBoat === 1);
+          let sorted;
+          if (isNige && Object.keys(inn2Place_buy).length > 0) {
+            const avgRate = Object.values(inn2Place_buy).reduce((s, v) => s + v, 0) / Object.keys(inn2Place_buy).length;
+            sorted = [...list].sort((a, b) => {
+              const aAbove = (inn2Place_buy[String(a.boat)] ?? 0) >= avgRate ? 1 : 0;
+              const bAbove = (inn2Place_buy[String(b.boat)] ?? 0) >= avgRate ? 1 : 0;
+              if (bAbove !== aAbove) return bAbove - aAbove;
+              return b.p2 - a.p2;
+            });
+          } else {
+            sorted = [...list].sort((a, b) => b.p2 - a.p2);
+          }
           const picked = [];
           let cum = 0;
           for (const item of sorted) {
@@ -3983,30 +3996,21 @@ function buildDateCard(dateStr, label) {
 
       const raceDetails = vRaces.map(r => {
         const hitOddsStr = r.isHit && r.hitOdds ? `￥${r.hitOdds.toLocaleString()}` : '';
-        const raceLabel  = r.isHit
-          ? `<span class="ai-venue-race-hit">🎯 的中</span><span class="ai-venue-race-odds">${hitOddsStr}</span>`
-          : `<span class="ai-venue-race-miss">—</span>`;
         // combo文字列（例: "1-2-4"）を枠番バッジ列に変換するローカルヘルパー
         const comboBadges = combo => (combo || '').split(/[-－−]/).map(n =>
           /^[1-6]$/.test(n.trim()) ? `<span class="boat-circle b${n.trim()}" style="width:20px;height:20px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n.trim()}</span>` : ''
         ).join('<span style="color:var(--text3);font-size:11px;margin:0 1px">−</span>');
-        const resultBadge = r.actualResult
-          ? `<br><span class="ai-race-body-label">出目</span><span class="ai-race-body-val" style="display:inline-flex;align-items:center;gap:2px">${comboBadges(r.actualResult)}</span>`
+        const resultStr = r.actualResult
+          ? `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px">${comboBadges(r.actualResult)}</span>`
           : '';
-        return `<details class="ai-race-details">
-          <summary class="ai-race-summary">
-            <span class="ai-race-summary-arrow">▶</span>
-            <span class="ai-venue-race-no">${r.rno}R</span>
-            <span class="ai-venue-race-cnt">${r.buy3cnt}点</span>
-            ${raceLabel}
-          </summary>
-          <div class="ai-race-body">
-            <span class="ai-race-body-label">購入点数</span>
-            <span class="ai-race-body-val">${r.buy3cnt}点（3連単）</span>
-            ${r.isHit ? `<br><span class="ai-race-body-label">払戻金</span><span class="ai-race-body-val" style="color:var(--red);font-weight:700">${hitOddsStr}</span>` : ''}
-            ${resultBadge}
-          </div>
-        </details>`;
+        const hitPart = r.isHit
+          ? `<span class="ai-venue-race-hit" style="flex-shrink:0">🎯 的中</span>${resultStr}<span class="ai-venue-race-odds" style="flex-shrink:0">${hitOddsStr}</span>`
+          : `<span class="ai-venue-race-miss" style="flex-shrink:0">—</span>${resultStr}`;
+        return `<div class="ai-race-row" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border)">
+          <span class="ai-venue-race-no" style="flex-shrink:0">${r.rno}R</span>
+          <span class="ai-venue-race-cnt" style="flex-shrink:0">${r.buy3cnt}点</span>
+          ${hitPart}
+        </div>`;
       }).join('');
 
       return `<details class="ai-venue-details">
