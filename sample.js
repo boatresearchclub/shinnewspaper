@@ -2808,7 +2808,7 @@ function renderBuy(rno){
                      background:rgba(255,180,0,0.10);border:1px solid rgba(255,180,0,0.35);
                      border-radius:6px;font-size:11px;color:var(--orange)">
            <span style="font-size:14px;flex-shrink:0">⚠️</span>
-           <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）。参考買い目として表示していますが、購入は自己判断でお願いします。</span>
+           <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）</span>
          </div>`
       : '';
     return `
