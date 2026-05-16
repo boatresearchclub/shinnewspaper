@@ -1715,44 +1715,41 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
   const boatCircle = (n) =>
     `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
 
-  // ── 全艇×全決まり手 を確率順に並べ、決まり手ごとに重複排除して上位3を取得 ──
-  const allPairs = [];
-  for(const winner of ranked2){
-    for(const kimari of kimariTypes){
-      const prob = scenarioProb[winner.boat]?.[kimari];
-      if(prob > 0.001) allPairs.push({ boat: winner.boat, name: winner.name, final_prob: winner.final_prob, kimari, prob });
-    }
-  }
-  allPairs.sort((a, b) => b.prob - a.prob);
-
-  // 決まり手ごとに上位1件のみ残す
-  const seenKimari = new Set();
-  const top3Scenarios = [];
-  for(const pair of allPairs){
-    if(seenKimari.has(pair.kimari)) continue;
-    seenKimari.add(pair.kimari);
-    top3Scenarios.push(pair);
-    if(top3Scenarios.length >= 3) break;
-  }
+  // ── 艇ごとに全決まり手の確率を合算し、final_prob上位3艇を選出 ──
+  // 各艇の「代表決まり手」= その艇のscenarioProbが最大のkimari
+  // 右端合計 = final_prob と一致する
+  const top3Scenarios = ranked2
+    .filter(winner => {
+      const total = kimariTypes.reduce((s, k) => s + (scenarioProb[winner.boat]?.[k] ?? 0), 0);
+      return total > 0.001;
+    })
+    .slice(0, 3)
+    .map(winner => {
+      // 代表決まり手: このwinner艇でscenarioProbが最大のkimari
+      let bestKimari = kimariTypes[0];
+      let bestProb = 0;
+      for(const k of kimariTypes){
+        const p = scenarioProb[winner.boat]?.[k] ?? 0;
+        if(p > bestProb){ bestProb = p; bestKimari = k; }
+      }
+      return { boat: winner.boat, name: winner.name, final_prob: winner.final_prob, kimari: bestKimari, prob: bestProb };
+    });
 
   if(top3Scenarios.length === 0) return '';
 
-  // ── 同一1着艇が複数シナリオに登場する場合、艇でグループ化して確率を合算 ──
-  //
-  // 例: ②坪井 まくり 22.3% / ②坪井 差し 13.3%
-  //   → ②坪井グループ 合計35.6% として2着・3着を加重平均で合算表示
-  //
-  // 複数艇が登場する場合は従来通り艇ごとに独立表示。
-  //
-  const boatGroups = new Map(); // boat番号 → { name, scenarios: [{kimari, prob, place2List}] }
+  // ── 艇ごとに全決まり手をscenariosに格納（2着・3着の加重平均に全kimariを使う）──
+  // totalProb = final_prob と一致する
+  const boatGroups = new Map();
   for(const sc of top3Scenarios){
-    if(!boatGroups.has(sc.boat)){
-      boatGroups.set(sc.boat, { boat: sc.boat, name: sc.name, scenarios: [] });
-    }
-    boatGroups.get(sc.boat).scenarios.push({
-      kimari: sc.kimari,
-      prob:   sc.prob,
-      place2List: scenarioPlace2[sc.boat]?.[sc.kimari] || [],
+    // 全kimariをscenariosに追加
+    const allScens = kimariTypes
+      .map(k => ({ kimari: k, prob: scenarioProb[sc.boat]?.[k] ?? 0, place2List: scenarioPlace2[sc.boat]?.[k] || [] }))
+      .filter(x => x.prob > 0.001);
+    boatGroups.set(sc.boat, {
+      boat: sc.boat,
+      name: sc.name,
+      bestKimari: sc.kimari,  // 代表決まり手（バッジ表示用）
+      scenarios: allScens,
     });
   }
 
@@ -1775,7 +1772,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 
   const scenarioBlocks = groupList.map((grp) => {
     const totalProb = grp.scenarios.reduce((s, x) => s + x.prob, 0);
-    const isMulti   = grp.scenarios.length > 1;
+    const isMulti = true; // 全kimariを加重平均するため常にtrue
 
     // ── 2着確率を加重平均で合算 ──
     // 各シナリオの place2List を prob で重み付けして同一艇番ごとに合算し正規化する
@@ -1844,12 +1841,12 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
       </div>`;
     }).join('');
 
-    // ── ヘッダー部分: 複数決まり手の場合はバッジを並べて内訳を表示 ──
-    const kimariBadges = grp.scenarios.map(scen => {
-      const kColor = KIMARI_COLOR[scen.kimari] || 'var(--accent2)';
-      const kBg    = KIMARI_BG[scen.kimari]    || 'rgba(108,122,148,.1)';
-      return `<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:${kBg};color:${kColor};flex-shrink:0">${scen.kimari}<span style="font-weight:400;font-size:10px;margin-left:3px">${(scen.prob*100).toFixed(1)}%</span></span>`;
-    }).join('');
+    // ── ヘッダー部分: 代表決まり手バッジ（bestKimari）のみ表示 ──
+    const bestK     = grp.bestKimari;
+    const bestKProb = grp.scenarios.find(s => s.kimari === bestK)?.prob ?? 0;
+    const kColor    = KIMARI_COLOR[bestK] || 'var(--accent2)';
+    const kBg       = KIMARI_BG[bestK]    || 'rgba(108,122,148,.1)';
+    const kimariBadges = `<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:${kBg};color:${kColor};flex-shrink:0">${bestK}<span style="font-weight:400;font-size:10px;margin-left:3px">${(bestKProb*100).toFixed(1)}%</span></span>`;
 
     return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
