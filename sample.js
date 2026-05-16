@@ -2003,21 +2003,38 @@ function renderBuy(rno){
   // ── 軸信頼度判定（if(sd.valid)の外で定義しないと参照エラーになる）──
   const venueAvg1_buy = cRates_buy[1] ?? 0.45;
   const top1FinalProb = ranked2[0]?.final_prob ?? 0;
-  const axisReliable  = top1FinalProb >= venueAvg1_buy * 0.85;
 
-  // ── 3着候補絞り込み関数（精度向上版）──
+  // ── 【改修】的中重視モード: 1号艇固定軸の採用条件 ──
+  // 仕様:
+  //   ① 1号艇の1着率（final_prob）が場平均以上
+  //   ② 最終確率順位が上位2艇以内
+  //   ③ 上位2艇には必ず1号艇を含む（=②と同義）
+  // すべて満たす場合のみ1号艇を1着固定軸として採用する。
+  const boat1ForAxis   = ranked2.find(b => b.boat === 1);
+  const boat1FinalProb = boat1ForAxis?.final_prob ?? 0;
+  const boat1RankAmongFinal = [...ranked2]
+    .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+    .findIndex(b => b.boat === 1); // 0始まり（0=1位、1=2位…）
+  // 条件①: 1号艇final_prob ≥ 場平均1コース1着率
+  const boat1AboveAvg  = boat1FinalProb >= venueAvg1_buy;
+  // 条件②③: 1号艇の最終確率順位が上位2艇以内（0か1）
+  const boat1InTop2    = boat1RankAmongFinal <= 1;
+  // hit軸信頼フラグ（旧: axisReliable）
+  const axisReliable   = boat1AboveAvg && boat1InTop2;
+
+  // ── 【改修】3着候補絞り込み関数（累積確率70%ベース）──
   //
-  // 旧: 最下位1艇除外の全流し（点数多・精度低）
-  // 新: rate3スコア降順で上位N艇を採用（点数制御・精度向上）
-  //
-  // 採用基準:
-  //   N=3: rate3データがある場合 → 上位3艇を採用
-  //   N=4: rate3データ不足（全艇nullが多い）→ final_prob降順で上位4艇
+  // 仕様: 各「1着→2着展開シナリオ」ごとに、3着候補の合計確率が70%以上に
+  //       なるまで候補を追加する（両モード共通）。
   //
   // 統合スコア = r3_blend × tenjiCoef（展示補正）
   //   r3_blend = winner_course_order.rate3 × trust + tenkai_remaining.rate3 × (1-trust)
+  // スコアを確率として扱い、スコア合計が PICK3_PROB_TARGET(=0.70) に達するまで追加。
+  // スコアデータ不足時は final_prob を代替として使用。
   //
   // buyMode: 'hit'（的中重視）または 'rec'（回収重視）
+  const PICK3_PROB_TARGET = 0.70; // 3着累積確率目標: 70%
+
   function pick3rd(winnerBoat, kimari, secondBoat, buyMode){
     const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
     if(allBoats.length === 0) return [];
@@ -2060,22 +2077,20 @@ function renderBuy(rno){
       return { boat: b, r3, score };
     });
 
-    const hasR3 = withScore.some(x => x.r3 != null);
-
     // スコア降順ソート
     const sorted = [...withScore].sort((a, b) => b.score - a.score);
 
-    // ── モード別採用数 ──
-    // 的中重視: 広く拾う（上位4艇 or rate3あり→上位3艇）
-    // 回収重視: 絞る（上位2〜3艇に限定）
-    let pickN;
-    if(buyMode === 'rec'){
-      pickN = hasR3 ? 2 : 3;
-    } else {
-      // 'hit' or undefined → 的中重視
-      pickN = hasR3 ? 3 : 4;
+    // ── 累積確率70%以上になるまで追加（両モード共通） ──
+    // スコア合計を正規化して確率として扱う
+    const totalScore = sorted.reduce((s, x) => s + x.score, 0);
+    const picked = [];
+    let cum = 0;
+    for(const item of sorted){
+      picked.push(item.boat);
+      cum += totalScore > 0 ? item.score / totalScore : 1 / sorted.length;
+      if(cum >= PICK3_PROB_TARGET) break;
     }
-    return sorted.slice(0, pickN).map(x => x.boat);
+    return picked;
   }
 
   // ── モード別買い目生成関数 ──
@@ -2113,13 +2128,11 @@ function renderBuy(rno){
                  'まくり差し':'bl-makusas', '抜き':'bl-nuki' }[kimari] || 'bl-nuki';
       }
 
-      // ── モード別 2着閾値 ──
-      const PICK2_THRESHOLD_HIT = {
-        '逃げ': 0.55, '差し': 0.65, 'まくり': 0.75, 'まくり差し': 0.75, '抜き': 0.65,
-      };
-      const PICK2_THRESHOLD_REC = {
-        '逃げ': 0.35, '差し': 0.40, 'まくり': 0.50, 'まくり差し': 0.50, '抜き': 0.40,
-      };
+      // ── 【改修】2着閾値: 両モード共通 70% ──
+      // 仕様: 各「1着展開シナリオ」ごとに、2着候補の合計確率が70%以上に
+      //       なるまで買い目を追加する（hit・rec 共通）。
+      const PICK2_PROB_TARGET = 0.70;
+
       function pick2nd(winnerBoat, kimari, bMode){
         const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
         if(list.length === 0) return [];
@@ -2136,15 +2149,14 @@ function renderBuy(rno){
         } else {
           sorted = [...list].sort((a,b) => b.p2 - a.p2);
         }
-        const threshMap = (bMode === 'rec') ? PICK2_THRESHOLD_REC : PICK2_THRESHOLD_HIT;
-        const threshold = threshMap[kimari] ?? (bMode === 'rec' ? 0.40 : 0.55);
+        // 累積 p2 が 70% 以上になるまで追加（モード共通）
         const picked = [];
         let cum = 0;
         for(const item of sorted){
           if(item.boat === winnerBoat) continue;
           picked.push(item.boat);
           cum += item.p2;
-          if(cum >= threshold) break;
+          if(cum >= PICK2_PROB_TARGET) break;
         }
         return picked;
       }
@@ -2166,25 +2178,62 @@ function renderBuy(rno){
         if(top3Scen.length >= 3) break;
       }
 
-      // ── 1着軸の決定（モード別）──
-      // hit: axisReliable なら final_prob 1位を固定軸として使う
-      //      （top3Scen に1位艇が入っていない場合でも1位を先頭に補完）
-      // rec: 穴も許容するため top3Scen そのままを軸候補とする
+      // ── 【改修】1着軸の決定（モード別）──
+      //
+      // ① 的中重視(hit):
+      //   axisReliable（1号艇final_prob≥場平均 かつ 最終確率順位上位2艇以内）
+      //   が真なら1号艇を1着固定軸とし、1号艇のシナリオのみを処理する。
+      //   偽なら top3Scen 順で処理（従来動作）。
+      //
+      // ② 回収重視(rec):
+      //   1号艇の final_prob が場平均以下 → 1号艇以外を優先評価。
+      //   1号艇以外の艇を final_prob 降順で評価し、累積50%以上になるまで
+      //   最大2艇を1着候補として採用。
+      //   その2艇の累積確率が50%未満の場合は1号艇を3番手として追加。
       let scenariosToProcess;
       if(buyMode === 'hit'){
-        const top1Boat = ranked2[0].boat;
-        // hit では top1Boat を最初に処理する
-        const top1Scens = top3Scen.filter(s => s.boat === top1Boat);
-        const otherScens = top3Scen.filter(s => s.boat !== top1Boat);
         if(axisReliable){
-          // 1位固定: top1BoatのシナリオをすべてotherScensの前に
-          scenariosToProcess = [...top1Scens, ...otherScens];
+          // 1号艇固定軸: 1号艇のシナリオのみ処理（仕様①）
+          const boat1Scens = top3Scen.filter(s => s.boat === 1);
+          // 1号艇シナリオが top3Scen に入っていない場合は allScenPairs から補完
+          if(boat1Scens.length === 0){
+            const boat1Best = allScenPairs.find(p => p.boat === 1);
+            scenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+          } else {
+            scenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+          }
         } else {
           scenariosToProcess = top3Scen;
         }
       } else {
-        // rec: top3Scen 順（確率2〜3位も自然に入る）
-        scenariosToProcess = top3Scen;
+        // 回収重視: 1号艇 final_prob が場平均以下なら1号艇以外を優先（仕様②）
+        if(!boat1AboveAvg){
+          // 1号艇以外を final_prob 降順で評価
+          const nonBoat1ByProb = [...ranked2]
+            .filter(b => b.boat !== 1)
+            .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0));
+          const recAxes = [];
+          let cumProb = 0;
+          for(const candidate of nonBoat1ByProb){
+            recAxes.push(candidate);
+            cumProb += candidate.final_prob ?? 0;
+            if(recAxes.length >= 2) break; // 最大2艇
+          }
+          // 2艇での累積50%未満なら1号艇を3番手として追加（仕様「条件2」）
+          if(cumProb < 0.50 && boat1ForAxis){
+            recAxes.push(boat1ForAxis);
+          }
+          // 採用した1着候補軸に対して最もスコアの高いシナリオを取得
+          const recScenarios = [];
+          for(const axisCandidate of recAxes){
+            const bestForAxis = allScenPairs.find(p => p.boat === axisCandidate.boat);
+            if(bestForAxis) recScenarios.push(bestForAxis);
+          }
+          scenariosToProcess = recScenarios.length > 0 ? recScenarios : top3Scen;
+        } else {
+          // 1号艇が場平均以上なら top3Scen 順（1号艇も自然に候補に入る）
+          scenariosToProcess = top3Scen;
+        }
       }
 
       scenariosToProcess.forEach((topScen, scenIdx) => {
@@ -2245,30 +2294,6 @@ function renderBuy(rno){
           tryAdd2m(axisBoat, s2, baseLabel, lc, prob2, scenIdx);
         });
       });
-
-      // 複数軸モード（axisReliable === false）: 追加軸を補完
-      if(!axisReliable){
-        const addedAxes = scenariosToProcess.map(s => s.boat);
-        const extraAxes = ranked2.slice(0, 2).map(b => b.boat).filter(b => !addedAxes.includes(b));
-        for(const axisB of extraAxes){
-          const bestScen = allScenPairs.find(p => p.boat === axisB);
-          if(!bestScen) continue;
-          const kimari2 = bestScen.kimari;
-          const lc2     = kimariToLc(kimari2);
-          const scenP2  = scenarioProb[axisB]?.[kimari2] ?? 0;
-          const secs2   = pick2nd(axisB, kimari2, buyMode);
-          secs2.forEach(s2 => {
-            const pl2  = scenarioPlace2[axisB]?.[kimari2] || [];
-            const p2i  = pl2.find(x => x.boat === s2);
-            const p2v  = p2i?.p2 ?? 0;
-            const thirds2 = pick3rd(axisB, kimari2, s2, buyMode);
-            thirds2.forEach(t => {
-              tryAdd3m(axisB, s2, t, kimari2+'(副軸)', lc2, null, 3);
-            });
-            tryAdd2m(axisB, s2, kimari2+'(副軸)', lc2, scenP2*p2v, 3);
-          });
-        }
-      }
 
     } else {
       // MASTERなし: 旧ロジックにフォールバック
@@ -2615,8 +2640,8 @@ function renderBuy(rno){
     let trimmed = withOdds.slice(0, maxPts);
 
     // 合成オッズを満たすまで低オッズから1点ずつ削る
-    // 最低1点は残す
-    while(trimmed.length > 1){
+    // 【改修】最低1点残しを廃止 → 合成オッズ未達なら空配列を返す（見送り）
+    while(trimmed.length > 0){
       const so = calcSynthOdds(trimmed, oddsMap);
       if(so == null || so >= targetSynth) break;
       // オッズが取得できているものの中で最も低いものを削除
@@ -2625,6 +2650,11 @@ function renderBuy(rno){
       hasOdds.sort((a, b) => a._odds - b._odds);
       const toRemove = hasOdds[0];
       trimmed = trimmed.filter(r => r.c !== toRemove.c);
+    }
+    // 最終確認: 削り終えても合成オッズ未達なら空配列（見送り）
+    if(trimmed.length > 0){
+      const soFinal = calcSynthOdds(trimmed, oddsMap);
+      if(soFinal != null && soFinal < targetSynth) return [];
     }
     return trimmed;
   }
@@ -2639,19 +2669,23 @@ function renderBuy(rno){
     });
   }
 
-  // ── 的中重視モード ──
+  // ── 【改修】的中重視モード ──
   // 生成済み buy3Hit_raw を最大10点、合成2.5倍以上にトリム
+  // 合成オッズ未達の場合は空配列（見送り）
   const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
   const buy3Hit_trimmed = trimToTargetSynth(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
+  const hitIsPass       = buy3Hit_trimmed.length === 0; // 見送りフラグ
   const buy3Hit = attachEV(buy3Hit_trimmed, raceOdds3tEv);
   const buy2Hit = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
-  // ── 回収重視モード ──
+  // ── 【改修】回収重視モード ──
   // 生成済み buy3Rec_raw を最大10点、合成4.0倍以上にトリム
+  // 合成オッズ未達の場合は空配列（見送り）
   const REC_MAX_PTS     = 10;
   const REC_SYNTH_MIN   = 4.0;
   const buy3Rec_trimmed = trimToTargetSynth(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
+  const recIsPass       = buy3Rec_trimmed.length === 0; // 見送りフラグ
   const buy3Rec = attachEV(buy3Rec_trimmed, raceOdds3tEv);
   const buy2Rec = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
@@ -2709,8 +2743,22 @@ function renderBuy(rno){
     return html || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目なし</div>';
   }
 
-  // ── 各モードのHTML生成 ──
-  function buildModePanel(buy3list, buy2list, modeId){
+  // ── 【改修】各モードのHTML生成（見送りフラグ対応）──
+  function buildModePanel(buy3list, buy2list, modeId, isPass, synthMin){
+    // 見送りの場合: 合成オッズ未達を明示してカード全体を見送り表示
+    if(isPass){
+      const b3html = `<div style="padding:12px 8px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:6px">🚫</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:4px">このレースは見送り</div>
+        <div style="font-size:11px;color:var(--text3)">合成オッズが${synthMin}倍未満のため参加条件を満たしません</div>
+      </div>`;
+      return `
+        <div id="${modeId}" style="display:none">
+          <div class="buy-grid">
+            <div class="buy-card">${b3html}</div>
+          </div>
+        </div>`;
+    }
     const b3html = buildBuyRows(buy3list, resultSan3, true);
     const b2html = buildBuyRows(buy2list, resultNiren, false);
     const so3    = synthOddsHtml(buy3list, raceOdds3tEv);
@@ -2734,8 +2782,8 @@ function renderBuy(rno){
       </div>`;
   }
 
-  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit');
-  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec');
+  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitIsPass, HIT_SYNTH_MIN);
+  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recIsPass, REC_SYNTH_MIN);
 
   // ── タブUI ──
   const modeTabs = `
@@ -3643,8 +3691,15 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         return MASTER_EXT?.venue_stats?.[venue]?.inn_2place || {};
       })();
       const venueAvg1_buy = cRates_buy[1] ?? 0.45;
-      const top1FinalProb = ranked2[0]?.final_prob ?? 0;
-      const axisReliable = top1FinalProb >= venueAvg1_buy * 0.85;
+      // 【改修】axisReliable: 1号艇 final_prob ≥ 場平均 かつ 最終確率順位が上位2艇以内
+      const boat1ForAxis_bt   = ranked2.find(b => b.boat === 1);
+      const boat1FinalProb_bt = boat1ForAxis_bt?.final_prob ?? 0;
+      const boat1AboveAvg_bt  = boat1FinalProb_bt >= venueAvg1_buy;
+      const boat1RankBt = [...ranked2]
+        .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+        .findIndex(b => b.boat === 1);
+      const boat1InTop2_bt = boat1RankBt <= 1;
+      const axisReliable = boat1AboveAvg_bt && boat1InTop2_bt;
 
       const tenkaiRem_buy = (() => {
         const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
@@ -3677,11 +3732,17 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
           const score = r3 != null ? r3 * clipped : (bt?.final_prob ?? 0) * clipped;
           return { boat: b, r3, score };
         });
-        const hasR3 = withScore.some(x => x.r3 != null);
-        const sorted = [...withScore].sort((a, b) => b.score - a.score);
-        // モード別採用数
-        const pickN = (buyMode === 'rec') ? (hasR3 ? 2 : 3) : (hasR3 ? 3 : 4);
-        return sorted.slice(0, pickN).map(x => x.boat);
+        // 【改修】累積70%以上になるまで追加（両モード共通）
+        const sorted_bt = [...withScore].sort((a, b) => b.score - a.score);
+        const totalScore_bt = sorted_bt.reduce((s, x) => s + x.score, 0);
+        const picked_bt = [];
+        let cum_bt = 0;
+        for (const item of sorted_bt) {
+          picked_bt.push(item.boat);
+          cum_bt += totalScore_bt > 0 ? item.score / totalScore_bt : 1 / sorted_bt.length;
+          if (cum_bt >= 0.70) break;
+        }
+        return picked_bt;
       }
 
       if (sd.valid) {
@@ -3705,27 +3766,53 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
           top3Scen.push(pair);
           if (top3Scen.length >= 3) break;
         }
-        const PICK2_THRESHOLD_HIT_BT = { '逃げ': 0.55, '差し': 0.65, 'まくり': 0.75, 'まくり差し': 0.75, '抜き': 0.65 };
-        const PICK2_THRESHOLD_REC_BT = { '逃げ': 0.35, '差し': 0.40, 'まくり': 0.50, 'まくり差し': 0.50, '抜き': 0.40 };
+        // 【改修】2着閾値: 両モード共通 70%
         function pick2nd_local(winnerBoat, kimari, buyMode) {
           const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
           if (list.length === 0) return [];
           const sorted = [...list].sort((a, b) => b.p2 - a.p2);
-          const threshMap = (buyMode === 'rec') ? PICK2_THRESHOLD_REC_BT : PICK2_THRESHOLD_HIT_BT;
-          const threshold = threshMap[kimari] ?? (buyMode === 'rec' ? 0.40 : 0.55);
           const picked = [];
           let cum = 0;
           for (const item of sorted) {
             if (item.boat === winnerBoat) continue;
             picked.push(item.boat);
             cum += item.p2;
-            if (cum >= threshold) break;
+            if (cum >= 0.70) break;
           }
           return picked;
         }
-        // バックテストは的中重視モードで生成（合成オッズ不足削除なし・点数チェックのみ）
+        // 【改修】バックテスト: モード別1着軸決定（renderBuy と同一仕様）
         const BT_MODE = buyMode;
-        top3Scen.forEach((topScen, scenIdx) => {
+        let btScenariosToProcess;
+        if(BT_MODE === 'hit'){
+          if(axisReliable){
+            const boat1Scens = top3Scen.filter(s => s.boat === 1);
+            if(boat1Scens.length === 0){
+              const boat1Best = allScenPairs.find(p => p.boat === 1);
+              btScenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+            } else {
+              btScenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+            }
+          } else {
+            btScenariosToProcess = top3Scen;
+          }
+        } else {
+          // rec: 1号艇場平均以下なら1号艇以外を優先、累積50%未満なら1号艇を3番手追加
+          if(!boat1AboveAvg_bt){
+            const nonBoat1 = [...ranked2]
+              .filter(b => b.boat !== 1)
+              .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0));
+            const recAxes = [];
+            let cumP = 0;
+            for(const c of nonBoat1){ recAxes.push(c); cumP += c.final_prob ?? 0; if(recAxes.length >= 2) break; }
+            if(cumP < 0.50 && boat1ForAxis_bt) recAxes.push(boat1ForAxis_bt);
+            const recScens = recAxes.map(c => allScenPairs.find(p => p.boat === c.boat)).filter(Boolean);
+            btScenariosToProcess = recScens.length > 0 ? recScens : top3Scen;
+          } else {
+            btScenariosToProcess = top3Scen;
+          }
+        }
+        btScenariosToProcess.forEach((topScen, scenIdx) => {
           const axisBoat = topScen.boat;
           const kimari = topScen.kimari;
           const lc = kimariToLc(kimari);
