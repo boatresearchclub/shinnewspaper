@@ -3845,31 +3845,21 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 
       const buy3seen = new Set();
 
-      // 【改修】pick3rd_local: renderBuy の pick3rd と同一ロジック
-      // scenarioPlace2 の p2 を使用（画面表示と一致）
-      // ※ sd.valid の前に定義するが、sd を参照するため sd.valid チェックを内部で行う
-      // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
+      // pick3rd_local: renderBuy の calc3rdScores + R3_MIN_THRESHOLD と完全同一ロジック
+      // calc3rdScores はトップレベル関数のため computeBuy3 からも直接呼び出し可能
+      const R3_MIN_THRESHOLD_BT = 0.03;
       function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
         const p3Target = (buyMode === 'hit') ? 0.80 : 0.70;
-        if(!sd.valid){
-          // MASTERなしフォールバック: final_prob 降順でモード別累積%
-          const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
-          if(allBoats.length <= 2) return allBoats;
-          const totalFP = allBoats.reduce((s, b) => s + (ranked2.find(r => r.boat === b)?.final_prob ?? 0), 0) || 1;
-          const sorted = [...allBoats].sort((a, b) => (ranked2.find(r=>r.boat===b)?.final_prob??0)-(ranked2.find(r=>r.boat===a)?.final_prob??0));
-          const picked = []; let cum = 0;
-          for(const b of sorted){ picked.push(b); cum += (ranked2.find(r=>r.boat===b)?.final_prob??0)/totalFP; if(cum>=p3Target) break; }
-          return picked;
-        }
-        const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
-        const candidates = place2List.filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
-        if(candidates.length === 0) return [];
-        if(candidates.length <= 2) return candidates.map(x => x.boat);
-        const totalP2 = candidates.reduce((s, x) => s + x.p2, 0) || 1;
+        // calc3rdScores を使って renderBuy と同一のスコアを算出
+        // DATA / currentVenue は computeBuy3 冒頭で vdata にセット済み
+        const thirdAll = calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat);
+        if(thirdAll.length === 0) return [];
+        const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
         const picked = []; let cum = 0;
-        for(const item of candidates){
-          picked.push(item.boat);
-          cum += item.p2 / totalP2;
+        for(const x of thirdAll){
+          if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD_BT) continue; // 絶対値ガード
+          picked.push(x.boat);
+          cum += x.score / scoreTotal;
           if(cum >= p3Target) break;
         }
         return picked;
