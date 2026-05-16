@@ -2314,7 +2314,15 @@ function renderBuy(rno){
           const p2         = p2Item?.p2 ?? 0;
           const prob2      = scenProb * p2;
 
-          const thirdList  = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, kimari, s2);
+          const thirdAll   = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, kimari, s2);
+          const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
+          const thirdList  = [];
+          let cumScore = 0;
+          for(const x of thirdAll){
+            thirdList.push(x);
+            cumScore += x.score / scoreTotal;
+            if(cumScore >= PICK3_PROB_TARGET) break;
+          }
           thirdList.forEach(t => {
             const prob3 = t.r3 != null ? prob2 * t.r3 : null;
             tryAdd3m(axisBoat, s2, t.boat, baseLabel, lc, prob3, scenIdx);
