@@ -3687,15 +3687,15 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     DATA = vdata;
     currentVenue = venue;
 
+    // 買い目上限（バックテスト用）: opt_points があれば使用
+    // ※ synthチェックの try ブロックからも参照するため function スコープで定義
+    const BUY_MAX_POINTS_BT = (rd.opt_points != null) ? rd.opt_points : 10;
+
     let buy3 = [];
     try {
       const arek = rd.arek ?? 54.7;
       const rawBoats = rd.boats;
       const ranked = calcTenkaiProbs(rawBoats, arek);
-
-      // 買い目上限（バックテスト用）: opt_points があれば使用
-      // ※ 要注意会場は最大7点で返るため 0 は存在しない
-      const BUY_MAX_POINTS_BT = (rd.opt_points != null) ? rd.opt_points : 10;
 
       // 展示スコア
       let tenjiScoreMap = null;
