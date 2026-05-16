@@ -2115,9 +2115,9 @@ function renderBuy(rno){
   // buyMode: 'hit'（的中重視）または 'rec'（回収重視）
   //
   // 【2026-05-16 改修】モード別に3着累積目標を分離
-  //   hit: 0.85 → 3着ヒモを広げて的中率向上（旧0.70では外れの40%超が「1着○2,3着×」だった）
+  //   hit: 0.80 → 3着ヒモを広げて的中率向上（0.85はMAX10点上限と衝突し2軸目が押し出された）
   //   rec: 0.70 → 従来通り（配当重視のため絞りを維持）
-  const PICK3_PROB_TARGET_HIT = 0.85; // 的中重視: 3着累積確率目標 85%（ヒモ拡張）
+  const PICK3_PROB_TARGET_HIT = 0.80; // 的中重視: 3着累積確率目標 80%
   const PICK3_PROB_TARGET_REC = 0.70; // 回収重視: 3着累積確率目標 70%（従来通り）
 
   function pick3rd(winnerBoat, kimari, secondBoat, buyMode){
@@ -2197,14 +2197,13 @@ function renderBuy(rno){
       }
 
       // ── 【改修】2着閾値: 両モード共通 70% ──
-      // 【2026-05-16 改修】モード別に2着累積目標を分離
-      //   hit: 0.85 → 2着ヒモも拡張して的中率向上
-      //   rec: 0.70 → 従来通り（配当重視のため絞りを維持）
-      const PICK2_PROB_TARGET_HIT = 0.85;
-      const PICK2_PROB_TARGET_REC = 0.70;
+      // 2着累積目標: 両モード共通 70%
+      // ※ 2着を拡張すると1軸の買い目が10点上限を圧迫し、2軸目・折返し買い目が押し出される
+      //   2着は絞ったまま、3着のみモード別拡張（PICK3_PROB_TARGET_HIT）で対応する
+      const PICK2_PROB_TARGET = 0.70;
 
       function pick2nd(winnerBoat, kimari, bMode){
-        const pick2Target = (bMode === 'hit') ? PICK2_PROB_TARGET_HIT : PICK2_PROB_TARGET_REC;
+        const pick2Target = PICK2_PROB_TARGET;
         const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
         if(list.length === 0) return [];
         const isNige = (kimari === '逃げ' && winnerBoat === 1);
@@ -3801,7 +3800,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       // ※ sd.valid の前に定義するが、sd を参照するため sd.valid チェックを内部で行う
       // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
       function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
-        const p3Target = (buyMode === 'hit') ? 0.85 : 0.70;
+        const p3Target = (buyMode === 'hit') ? 0.80 : 0.70;
         if(!sd.valid){
           // MASTERなしフォールバック: final_prob 降順でモード別累積%
           const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
@@ -3849,8 +3848,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         }
         // 【改修】2着閾値: 両モード共通 70%
         function pick2nd_local(winnerBoat, kimari, buyMode) {
-          // 【2026-05-16 改修】モード別2着累積目標: hit=0.85, rec=0.70
-          const p2Target = (buyMode === 'hit') ? 0.85 : 0.70;
+          // 2着累積目標: 両モード共通 70%（2着拡張は10点上限圧迫を招くため固定）
+          const p2Target = 0.70;
           const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
           if (list.length === 0) return [];
           // renderBuy の pick2nd と同一: 逃げ1号艇は inn2Place_buy で特殊ソート
