@@ -2683,36 +2683,26 @@ function renderBuy(rno){
     return `<span style="margin-left:auto;font-size:11px;font-family:var(--mono);font-weight:700;color:${soColor}">合成${so.toFixed(2)}倍</span>`;
   }
 
-  // ── 合成オッズ不足時に低オッズから削って目標倍率以上にするトリム関数 ──
+  // ── 合成オッズ判定関数 ──
+  // 生成した買い目セットの合成オッズを計算し、目標未達なら空配列（見送り）を返す。
+  // 買い目の中身は一切削らない。確率順に生成した買い目をそのまま判定する。
   // targetSynth: 目標合成オッズ（hit=2.5, rec=4.0）
   // maxPts: 点数上限
-  function trimToTargetSynth(list, oddsMap, targetSynth, maxPts){
-    // オッズを付与してソート（オッズ低い順 = 合成分母への寄与が大きい = まず削る対象）
-    const withOdds = list.map(r => {
-      const ov = oddsMap[normalizeCombo(r.c)] ?? null;
-      return { ...r, _odds: ov };
-    });
-    // 点数上限まず適用
-    let trimmed = withOdds.slice(0, maxPts);
-
-    // 合成オッズを満たすまで低オッズから1点ずつ削る
-    // 【改修】最低1点残しを廃止 → 合成オッズ未達なら空配列を返す（見送り）
-    while(trimmed.length > 0){
-      const so = calcSynthOdds(trimmed, oddsMap);
-      if(so == null || so >= targetSynth) break;
-      // オッズが取得できているものの中で最も低いものを削除
-      const hasOdds = trimmed.filter(r => r._odds != null);
-      if(hasOdds.length === 0) break; // オッズ情報なし→削れない
-      hasOdds.sort((a, b) => a._odds - b._odds);
-      const toRemove = hasOdds[0];
-      trimmed = trimmed.filter(r => r.c !== toRemove.c);
+  function checkSynthOdds(list, oddsMap, targetSynth, maxPts){
+    const candidates = list.slice(0, maxPts);
+    const so = calcSynthOdds(candidates, oddsMap);
+    // オッズデータが1点も取得できていない場合は判定スキップ（参加扱い）
+    // ※ この場合 synthOddsHtml でも「—」表示になるため画面上で識別可能
+    if(so == null){
+      console.warn('[checkSynthOdds] オッズ未取得のため合成オッズ判定スキップ', { targetSynth, candidates: candidates.map(r=>r.c) });
+      return candidates;
     }
-    // 最終確認: 削り終えても合成オッズ未達なら空配列（見送り）
-    if(trimmed.length > 0){
-      const soFinal = calcSynthOdds(trimmed, oddsMap);
-      if(soFinal != null && soFinal < targetSynth) return [];
+    // 合成オッズ未達 → 空配列（見送り扱い）
+    if(so < targetSynth){
+      console.log('[checkSynthOdds] 合成オッズ未達', { so: so.toFixed(2), targetSynth });
+      return [];
     }
-    return trimmed;
+    return candidates;
   }
 
   // ── 各買い目にオッズを付与するヘルパー（EV表示用に残す）──
@@ -2730,20 +2720,22 @@ function renderBuy(rno){
   // 合成オッズ未達の場合は空配列（見送り）
   const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
-  const buy3Hit_trimmed = trimToTargetSynth(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
-  const hitIsPass       = buy3Hit_trimmed.length === 0; // 見送りフラグ
-  const buy3Hit = attachEV(buy3Hit_trimmed, raceOdds3tEv);
-  const buy2Hit = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
+  const buy3Hit_checked  = checkSynthOdds(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
+  // 合成オッズ未達フラグ: 未達でも買い目は表示し、注意書きを添える
+  // buy3Hit は「確率順に生成した買い目」をそのまま表示用に使う（合成オッズ判定とは独立）
+  const hitUnderSynth    = buy3Hit_checked.length === 0;
+  const buy3Hit          = attachEV(buy3Hit_raw.slice(0, HIT_MAX_PTS), raceOdds3tEv);
+  const buy2Hit          = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
   // ── 【改修】回収重視モード ──
   // 生成済み buy3Rec_raw を最大10点、合成4.0倍以上にトリム
   // 合成オッズ未達の場合は空配列（見送り）
   const REC_MAX_PTS     = 10;
   const REC_SYNTH_MIN   = 4.0;
-  const buy3Rec_trimmed = trimToTargetSynth(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
-  const recIsPass       = buy3Rec_trimmed.length === 0; // 見送りフラグ
-  const buy3Rec = attachEV(buy3Rec_trimmed, raceOdds3tEv);
-  const buy2Rec = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
+  const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
+  const recUnderSynth    = buy3Rec_checked.length === 0;
+  const buy3Rec          = attachEV(buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
+  const buy2Rec          = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
   // ── パターンバッジ ──
   const optPattern = rd.opt_pattern || null;
@@ -2799,25 +2791,22 @@ function renderBuy(rno){
     return html || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目なし</div>';
   }
 
-  // ── 【改修】各モードのHTML生成（見送りフラグ対応）──
-  function buildModePanel(buy3list, buy2list, modeId, isPass, synthMin){
-    // 見送りの場合: 合成オッズ未達を明示してカード全体を見送り表示
-    if(isPass){
-      const b3html = `<div style="padding:12px 8px;text-align:center;">
-        <div style="font-size:24px;margin-bottom:6px">🚫</div>
-        <div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:4px">このレースは見送り</div>
-        <div style="font-size:11px;color:var(--text3)">合成オッズが${synthMin}倍未満のため参加条件を満たしません</div>
-      </div>`;
-      return `
-        <div id="${modeId}" style="display:none">
-          <div class="buy-grid">
-            <div class="buy-card">${b3html}</div>
-          </div>
-        </div>`;
-    }
+  // ── 各モードのHTML生成 ──
+  // underSynth=true のとき: 買い目はそのまま表示し、合成オッズ未達の注意書きを添える
+  function buildModePanel(buy3list, buy2list, modeId, underSynth, synthMin){
     const b3html = buildBuyRows(buy3list, resultSan3, true);
     const b2html = buildBuyRows(buy2list, resultNiren, false);
     const so3    = synthOddsHtml(buy3list, raceOdds3tEv);
+    const _soVal = calcSynthOdds(buy3list, raceOdds3tEv);
+    const _soStr = _soVal != null ? _soVal.toFixed(2) + '倍' : '取得中';
+    const synthWarning = underSynth
+      ? `<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;margin-bottom:4px;
+                     background:rgba(255,180,0,0.10);border:1px solid rgba(255,180,0,0.35);
+                     border-radius:6px;font-size:11px;color:var(--orange)">
+           <span style="font-size:14px;flex-shrink:0">⚠️</span>
+           <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）。参考買い目として表示していますが、購入は自己判断でお願いします。</span>
+         </div>`
+      : '';
     return `
       <div id="${modeId}" style="display:none">
         <div class="buy-grid">
@@ -2828,6 +2817,7 @@ function renderBuy(rno){
               ${patBadge}
               ${so3}
             </div>
+            ${synthWarning}
             ${b3html}
           </div>
           <div class="buy-card">
@@ -2838,8 +2828,8 @@ function renderBuy(rno){
       </div>`;
   }
 
-  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitIsPass, HIT_SYNTH_MIN);
-  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recIsPass, REC_SYNTH_MIN);
+  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitUnderSynth, HIT_SYNTH_MIN);
+  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recUnderSynth, REC_SYNTH_MIN);
 
   // ── タブUI ──
   const modeTabs = `
@@ -3909,47 +3899,27 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       console.warn('[calcTopAIStats] computeBuy3 error:', e);
     }
 
-    // ── AI予想タブの trimToTargetSynth と同一処理を適用 ──
-    // renderBuy では低オッズ点を削って合成オッズを目標値以上に調整してから表示するため、
-    // バックテストでも同じトリム後の買い目を使わないと的中チェック対象がずれる
+    // ── renderBuy の checkSynthOdds と同一判定を適用 ──
+    // 買い目は削らず、合成オッズが目標未満なら見送り（空配列）とする
     try {
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
       const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
-      const maxPts_trim     = BUY_MAX_POINTS_BT; // opt_points を反映（旧: ハードコード10固定）
+      const maxPts_trim     = BUY_MAX_POINTS_BT;
 
-      function calcSynth_trim(list) {
-        let d = 0, c = 0;
-        list.forEach(r => {
-          const ov = raceOdds3t_trim[normalizeCombo(r.c)] ?? null;
-          if (ov != null && ov > 0) { d += 1 / ov; c++; }
-        });
-        return (c > 0 && d > 0) ? 1 / d : null;
+      const candidates = buy3.slice(0, maxPts_trim);
+      let synthDenom = 0, synthCount = 0;
+      candidates.forEach(r => {
+        const ov = raceOdds3t_trim[normalizeCombo(r.c)] ?? null;
+        if (ov != null && ov > 0) { synthDenom += 1 / ov; synthCount++; }
+      });
+      if (synthCount > 0 && synthDenom > 0) {
+        const so = 1 / synthDenom;
+        buy3 = so >= synthMin_trim ? candidates : []; // 未達なら見送り
+      } else {
+        buy3 = candidates; // オッズデータ未取得 → 判定スキップ（参加扱い）
       }
-
-      // 【改修】点数上限適用
-      let trimmed = buy3.slice(0, maxPts_trim);
-
-      // 合成オッズが目標未満の間、低オッズ点から1点ずつ削る
-      // renderBuy と同一: 未達なら空配列（見送り）= 最低1点残しを廃止
-      while (trimmed.length > 0) {
-        const so = calcSynth_trim(trimmed);
-        if (so == null || so >= synthMin_trim) break;
-        const withOdds = trimmed
-          .map(r => ({ ...r, _o: raceOdds3t_trim[normalizeCombo(r.c)] ?? null }))
-          .filter(r => r._o != null);
-        if (withOdds.length === 0) break;
-        withOdds.sort((a, b) => a._o - b._o);
-        const removeC = withOdds[0].c;
-        trimmed = trimmed.filter(r => r.c !== removeC);
-      }
-      // 最終確認: 削り終えても合成オッズ未達なら空配列（見送り）
-      if (trimmed.length > 0) {
-        const soFinal = calcSynth_trim(trimmed);
-        if (soFinal != null && soFinal < synthMin_trim) trimmed = [];
-      }
-      buy3 = trimmed;
     } catch(e) {
-      console.warn('[computeBuy3] trim error:', e);
+      console.warn('[computeBuy3] synth check error:', e);
     }
 
     DATA = savedDATA;
