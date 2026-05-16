@@ -2288,55 +2288,61 @@ function renderBuy(rno){
       // ── 【改修】1着軸の決定（モード別）──
       //
       // ① 的中重視(hit):
-      //   axisReliable（1号艇final_prob≥場平均 かつ 最終確率順位上位2艇以内）
-      //   が真なら1号艇を1着固定軸とし、1号艇のシナリオのみを処理する。
-      //   偽なら top3Scen 順で処理（従来動作）。
+      //   axisReliable（1号艇final_prob≥場平均 かつ 最終確率順位上位2艇以内）が真:
+      //     isDualAxis（1・2位差 ≤5%）→ 1号艇＋2位艇の2軸展開（各軸の最有力シナリオ）
+      //     通常（差 >5%）           → 1号艇固定軸（1号艇の全シナリオ＋他艇補完）
+      //   axisReliable が偽:
+      //     final_prob 1位艇を必ず軸先頭に強制し、top3Scen の残りを補完
+      //     （偽でも確率最上位を外さないことで的中率を安定させる）
       //
       // ② 回収重視(rec):
-      //   1号艇の final_prob が場平均以下 → 1号艇以外を優先評価。
-      //   1号艇以外の艇を final_prob 降順で評価し、累積50%以上になるまで
-      //   最大2艇を1着候補として採用。
-      //   その2艇の累積確率が50%未満の場合は1号艇を3番手として追加。
+      //   1号艇の final_prob が場平均以下 → 1号艇を否定し穴軸を探す。
+      //   allScenPairs（シナリオ確率降順）から1号艇を除いた上位3シナリオを採用。
+      //   1号艇が場平均以上 → top3Scen 順（1号艇も自然に候補に入る）。
       let scenariosToProcess;
       if(buyMode === 'hit'){
         if(axisReliable){
-          // 1号艇固定軸: 1号艇のシナリオのみ処理（仕様①）
-          const boat1Scens = top3Scen.filter(s => s.boat === 1);
-          // 1号艇シナリオが top3Scen に入っていない場合は allScenPairs から補完
-          if(boat1Scens.length === 0){
-            const boat1Best = allScenPairs.find(p => p.boat === 1);
-            scenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+          if(isDualAxis){
+            // ── 僅差2頭軸: 1号艇＋final_prob 2位艇の両シナリオを処理 ──
+            // ranked2 は final_prob 降順ソート済み。1号艇以外の先頭を2位艇とする
+            const fp2ndBoat = ranked2.filter(b => b.boat !== 1)[0]
+                              ?? ranked2[1]; // 全艇が1号艇の場合の安全弁（実際には起きない）
+            const dualAxes = [1, fp2ndBoat?.boat].filter(Boolean);
+            const dualScens = dualAxes.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
+            // 残りシナリオ（決まり手カバー）を最大1本補完
+            const dualRest = top3Scen.filter(s => !dualAxes.includes(s.boat)).slice(0, 1);
+            scenariosToProcess = [...dualScens, ...dualRest];
           } else {
-            scenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+            // ── 通常1号艇固定軸 ──
+            const boat1Scens = top3Scen.filter(s => s.boat === 1);
+            if(boat1Scens.length === 0){
+              const boat1Best = allScenPairs.find(p => p.boat === 1);
+              scenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
+            } else {
+              scenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
+            }
           }
         } else {
-          scenariosToProcess = top3Scen;
+          // ── axisReliable 偽: final_prob 1位を必ず先頭に強制 ──
+          const fp1stBoat = ranked2[0]?.boat; // ranked2 は final_prob 降順ソート済み
+          const fp1stScen = allScenPairs.find(p => p.boat === fp1stBoat)
+                            ?? top3Scen.find(s => s.boat === fp1stBoat);
+          if(fp1stScen){
+            const rest = top3Scen.filter(s => s.boat !== fp1stBoat);
+            scenariosToProcess = [fp1stScen, ...rest];
+          } else {
+            scenariosToProcess = top3Scen;
+          }
         }
       } else {
-        // 回収重視: 1号艇 final_prob が場平均以下なら1号艇以外を優先（仕様②）
+        // 回収重視: 1号艇否定 → allScenPairs ベースで穴軸を選出
         if(!boat1AboveAvg){
-          // 1号艇以外を final_prob 降順で評価
-          const nonBoat1ByProb = [...ranked2]
-            .filter(b => b.boat !== 1)
-            .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0));
-          const recAxes = [];
-          let cumProb = 0;
-          for(const candidate of nonBoat1ByProb){
-            recAxes.push(candidate);
-            cumProb += candidate.final_prob ?? 0;
-            if(recAxes.length >= 2) break; // 最大2艇
-          }
-          // 2艇での累積50%未満なら1号艇を3番手として追加（仕様「条件2」）
-          if(cumProb < 0.50 && boat1ForAxis){
-            recAxes.push(boat1ForAxis);
-          }
-          // 採用した1着候補軸に対して最もスコアの高いシナリオを取得
-          const recScenarios = [];
-          for(const axisCandidate of recAxes){
-            const bestForAxis = allScenPairs.find(p => p.boat === axisCandidate.boat);
-            if(bestForAxis) recScenarios.push(bestForAxis);
-          }
-          scenariosToProcess = recScenarios.length > 0 ? recScenarios : top3Scen;
+          // allScenPairs（シナリオ確率降順）から1号艇を除いた上位3シナリオ
+          // final_prob ではなくシナリオ発生確率で選ぶことで穴展開を正確に掴む
+          const recScens = allScenPairs
+            .filter(p => p.boat !== 1)
+            .slice(0, 3);
+          scenariosToProcess = recScens.length > 0 ? recScens : top3Scen;
         } else {
           // 1号艇が場平均以上なら top3Scen 順（1号艇も自然に候補に入る）
           scenariosToProcess = top3Scen;
@@ -2779,7 +2785,11 @@ function renderBuy(rno){
   // 生成済み buy3Rec_raw を最大10点、合成4.0倍以上にトリム
   // 合成オッズ未達の場合は空配列（見送り）
   const REC_MAX_PTS     = 10;
-  const REC_SYNTH_MIN   = 4.0;
+  // rec合成オッズ基準: arek（荒れ指標）連動で動的設定
+  //   arek < 40: 逃げ展開濃厚 → 低配当でも旨みあり（基準下げ）
+  //   arek 40-60: 混戦展開   → 標準基準
+  //   arek > 60: 荒れ展開   → 高配当狙い（基準上げ）
+  const REC_SYNTH_MIN   = arek < 40 ? 3.0 : arek > 60 ? 5.0 : 4.0;
   const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const recUnderSynth    = buy3Rec_checked.length === 0;
   const buy3Rec          = attachEV(buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
