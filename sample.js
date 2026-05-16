@@ -1864,28 +1864,23 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
   </div>`;
 }
 // ── renderBuy ──
-function renderBuy(rno){
-  const rd = DATA.races[String(rno)];
-  if(!rd) return;
-  const arek     = rd.arek ?? 54.7;
-  const rawBoats = rd.boats;
+// ── STEP1〜3 共通前処理（renderBuy / computeBuy3 の両方から呼ぶ）──
+// venue, vdata, rno を受け取り { ranked, ranked2, tenjiScoreMap, sd, ... } を返す。
+// renderBuy は DATA/currentVenue がセット済みの状態で呼ぶため
+// venue=''/vdata=null を渡すと DATA/currentVenue を使うモードで動作する。
+function calcBuyInputs(venue, vdata, rno) {
+  const _venue    = venue    || currentVenue;
+  const _vdata    = vdata    || DATA;
+  const rd        = _vdata.races[String(rno)];
+  if (!rd) return null;
+  const arek      = rd.arek ?? 54.7;
+  const rawBoats  = rd.boats;
 
-  // ── 買い目点数上限（betting_optimizer による推奨点数）──
-  // opt_points が埋め込まれていればそれを使用、なければ 10点（デフォルト）
-  // ※ 要注意会場（大村・宮島・福岡・丸亀）は最大7点で返ってくるため 0 は存在しない
-  const BUY_MAX_POINTS = (rd.opt_points != null) ? rd.opt_points : 10;
+  // STEP1
+  const ranked = calcTenkaiProbs(rawBoats, arek);
 
-  // ─ STEP1: 1着率計算（venue_kimari × prob × 個人kimari適性）
-  const ranked   = calcTenkaiProbs(rawBoats, arek);
-
-  // ─ STEP2: 3スコア独立計算 → 加重合成（base:50% / tenkai:30% / tenji:20%）──
-  //
-  // 【変更点】
-  //   旧: tenkai_prob に展示係数を連鎖乗算 → 二重加点/二重減点が発生していた
-  //   新: 基準prob・相対補正スコア・展示スコアをそれぞれ独立計算し加算合成
-  //       各スコアは互いを参照しない
-  //
-  const SLUG = {
+  // slug / 展示データ
+  const SLUG_LOCAL = {
     "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
     "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
     "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
@@ -1893,126 +1888,95 @@ function renderBuy(rno){
     "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
     "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
   };
-  const slug      = SLUG[DATA.venue] || DATA.venue;
-  const tKey      = tenjiKey(slug, DATA.date, rno);
+  const slug      = SLUG_LOCAL[_venue] || _venue;
+  const tKey      = tenjiKey(slug, _vdata.date, rno);
   const tenjiData = _tenjiCache[tKey] || null;
   const hasTenji  = !!tenjiData;
 
-  // 展示独立スコアを取得（展示データがある場合のみ）
   let tenjiScoreMap = null;
-  if(hasTenji){
-    tenjiScoreMap = calcTenjiScore(ranked, tenjiData, DATA.venue, arek);
-  }
+  if (hasTenji) tenjiScoreMap = calcTenjiScore(ranked, tenjiData, _venue, arek);
 
-  // ── STEP2: 指数重み方式で最終確率を計算 ──
-  //
-  //   final_prob ∝ baseNorm^wBase × tenkaiCoef^wTenkai × tenjiCoef^wTenji
-  //
-  //   FINAL_PROB_WEIGHTS の各値がべき乗の指数として機能する。
-  //   weight=1.0 → 素の乗算と同じ挙動
-  //   weight=2.0 → その指標の影響を2倍強く効かせる
-  //   weight=0.0 → その指標を完全に無効化（係数が何であっても1.0扱い）
-  //
-  //   展示データなし時: tenjiCoef=1.0 のため wTenji の値に関わらず影響ゼロ
-  //
-  const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
-  const useMaster = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
-
-  // FINAL_PROB_WEIGHTS を取得
-  const wBase   = FINAL_PROB_WEIGHTS.base   ?? 1.0;
-  const wTenkai = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
-  const wTenji  = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
-
-  // 各艇の展開係数・展示係数を算出
+  // STEP2: 指数重み方式で final_prob を計算
+  const probTotal       = ranked.reduce((s, b) => s + b.prob, 0) || 1;
+  const useMaster       = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[_venue]);
+  const wBase           = FINAL_PROB_WEIGHTS.base   ?? 1.0;
+  const wTenkai         = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
+  const wTenji          = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
   const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
 
-  // ── 枠番順に並んだrawBoatsから「1つ前コース（枠番-1）の艇」参照マップを生成 ──
-  // 例: 4号艇なら3号艇を前コースとして参照
   const boatByNo = {};
   rawBoats.forEach(b => { boatByNo[b.boat] = b; });
 
-  // 展示データ（枠番→テンジタイム）を取得
-  const tenjiRawMap = {};  // { [boat番号]: tenji秒数 }
-  if(hasTenji && tenjiData){
-    const boatKeysTenji = Object.keys(tenjiData).filter(k => /^\d+$/.test(k));
-    boatKeysTenji.forEach(k => {
+  const tenjiRawMap = {};
+  if (hasTenji && tenjiData) {
+    Object.keys(tenjiData).filter(k => /^\d+$/.test(k)).forEach(k => {
       const entry = tenjiData[k];
-      // テンジタイム: entry.tenji（数値）
-      if(entry && typeof entry.tenji === 'number'){
-        tenjiRawMap[parseInt(k)] = entry.tenji;
-      }
+      if (entry && typeof entry.tenji === 'number') tenjiRawMap[parseInt(k)] = entry.tenji;
     });
   }
 
   ranked.forEach(b => {
-    const baseNorm    = b.prob / probTotal;  // 基準確率（正規化済み）
-
-    // ── 1つ前コースの艇を取得（枠番 b.boat - 1）──
+    const baseNorm = b.prob / probTotal;
     const prevBoat = boatByNo[b.boat - 1] || null;
 
-    // ── 展開補正: 展開スコアベース + ST順位相対差補正 ──
+    // 展開補正 + ST順位相対差補正
     let tenkaiCoef = 1.0;
-    if(useMaster && baseNorm > 0){
+    if (useMaster && baseNorm > 0) {
       const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
       tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
     }
-    // ST順位相対差補正: 1つ前コースの艇より0.5位早いごとに+0.05（半艇身前）
-    // st_rank は小さいほど早い（1位=最速）
-    if(prevBoat){
+    if (prevBoat) {
       const myStRank   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank;
       const prevStRank = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank;
-      if(myStRank != null && prevStRank != null){
-        // 正: 前コースより早い（st_rankが小さい）→ 係数加算
-        const stDiff = prevStRank - myStRank;  // 正値なら自艇が早い
-        // 0.5位差ごとに半艇身（+0.05）→ 0.1/位
-        const stAdj = stDiff * 0.10;
-        tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + stAdj));
+      if (myStRank != null && prevStRank != null) {
+        tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + (prevStRank - myStRank) * 0.10));
       }
     }
 
-    // ── 展示補正: 展示タイムスコアベース + 展示タイム相対差補正 ──
+    // 展示補正 + 展示タイム相対差補正
     let tenjiCoef = 1.0;
-    if(tenjiScoreMap){
-      tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
-    }
-    // 展示タイム相対差補正: 1つ前コースの艇より0.1秒速いごとに+0.05（半艇身前）
-    // tenji は小さいほど速い
-    if(prevBoat && hasTenji){
-      const myTenji   = tenjiRawMap[b.boat]    ?? null;
+    if (tenjiScoreMap) tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
+    if (prevBoat && hasTenji) {
+      const myTenji   = tenjiRawMap[b.boat]        ?? null;
       const prevTenji = tenjiRawMap[prevBoat.boat] ?? null;
-      if(myTenji != null && prevTenji != null){
-        // 正: 前コースより速い（tenjiが小さい）→ 係数加算
-        const tenjiDiff = prevTenji - myTenji;  // 正値なら自艇が速い
-        // 0.1秒差ごとに半艇身（+0.05）→ 0.5/秒
-        const tenjiAdj = tenjiDiff * 0.50;
-        tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + tenjiAdj));
+      if (myTenji != null && prevTenji != null) {
+        tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + (prevTenji - myTenji) * 0.50));
       }
     }
 
-    // 枠番別展示指数: FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
     const wTenjiCourse = wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
-    // 指数重みスコア: coef^weight（weight=0 → 1.0、weight=1 → 素の値）
-    b._multi_score  = Math.pow(baseNorm, wBase) *
-                      Math.pow(tenkaiCoef, wTenkai) *
-                      Math.pow(tenjiCoef,  wTenjiCourse);
+    b._multi_score  = Math.pow(baseNorm, wBase) * Math.pow(tenkaiCoef, wTenkai) * Math.pow(tenjiCoef, wTenjiCourse);
     b.display_base   = baseNorm;
     b.display_tenkai = useMaster ? tenkaiCoef : null;
     b.display_tenji  = hasTenji  ? tenjiCoef  : null;
   });
 
-  // 正規化して final_prob を確定
   const multiTotal = ranked.reduce((s, b) => s + b._multi_score, 0) || 1;
   ranked.forEach(b => {
-    b.final_prob = b._multi_score / multiTotal;
+    b.final_prob        = b._multi_score / multiTotal;
     b.tenkai_prob_base  = b.tenkai_prob;
     b.tenji_score_indep = tenjiScoreMap ? (tenjiScoreMap[b.boat] ?? null) : null;
   });
   ranked.sort((a, b) => b.final_prob - a.final_prob);
 
-  // ─ STEP3: 2着率計算（inn_2place ベース）
+  // STEP3
   const place2Map = calcPlace2Probs(rawBoats, ranked);
-  // place2Map を各ボートに付与して2着ランクを作成
-  const ranked2 = [...ranked].map(b=>({...b, place2_prob: place2Map[b.boat]||0}));
+  const ranked2   = [...ranked].map(b => ({ ...b, place2_prob: place2Map[b.boat] || 0 }));
+
+  const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
+
+  return { rd, arek, rawBoats, ranked, ranked2, tenjiScoreMap, hasTenji, slug, sd, useMaster };
+}
+
+function renderBuy(rno){
+  const inputs = calcBuyInputs('', null, rno);
+  if (!inputs) return;
+  const { rd, arek, rawBoats, ranked, ranked2, tenjiScoreMap, hasTenji, sd, useMaster } = inputs;
+
+  // ── 買い目点数上限（betting_optimizer による推奨点数）──
+  // opt_points が埋め込まれていればそれを使用、なければ 10点（デフォルト）
+  // ※ 要注意会場（大村・宮島・福岡・丸亀）は最大7点で返ってくるため 0 は存在しない
+  const BUY_MAX_POINTS = (rd.opt_points != null) ? rd.opt_points : 10;
 
   const [A, B, C, D] = ranked;
   const mode    = tenkaiLabel(arek);
@@ -2073,10 +2037,6 @@ function renderBuy(rno){
 
   // winner_course_order（個人実績）: renderBuy スコープで参照できるよう定義
   const winnerCO_buy = MASTER_EXT?.winner_course_order || {};
-
-  // calcScenarioData を先読み（軸決定より前に呼ぶため）
-  // tenjiScoreMap を渡して 2着確率に展示係数を反映させる（問題3対応）
-  const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
 
   // ── 軸信頼度判定（if(sd.valid)の外で定義しないと参照エラーになる）──
   const venueAvg1_buy = cRates_buy[1] ?? 0.45;
@@ -2733,14 +2693,10 @@ function renderBuy(rno){
   const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
   const buy3Hit_checked  = checkSynthOdds(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
-  // 合成オッズ未達フラグ
+  // 合成オッズ未達フラグ: 未達でも買い目は表示し、注意書きを添える
+  // buy3Hit は「確率順に生成した買い目」をそのまま表示用に使う（合成オッズ判定とは独立）
   const hitUnderSynth    = buy3Hit_checked.length === 0;
-  // 表示用買い目: 合成オッズ達成時は checked（成績集計と同一セット）を使用。
-  // 未達（参考表示）時のみ raw を使う → 画面表示と成績集計の買い目を一致させる
-  const buy3Hit          = attachEV(
-    hitUnderSynth ? buy3Hit_raw.slice(0, HIT_MAX_PTS) : buy3Hit_checked,
-    raceOdds3tEv
-  );
+  const buy3Hit          = attachEV(buy3Hit_raw.slice(0, HIT_MAX_PTS), raceOdds3tEv);
   const buy2Hit          = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
   // ── 【改修】回収重視モード ──
@@ -2750,12 +2706,7 @@ function renderBuy(rno){
   const REC_SYNTH_MIN   = 4.0;
   const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const recUnderSynth    = buy3Rec_checked.length === 0;
-  // 表示用買い目: 合成オッズ達成時は checked（成績集計と同一セット）を使用。
-  // 未達（参考表示）時のみ raw を使う → 画面表示と成績集計の買い目を一致させる
-  const buy3Rec          = attachEV(
-    recUnderSynth ? buy3Rec_raw.slice(0, REC_MAX_PTS) : buy3Rec_checked,
-    raceOdds3tEv
-  );
+  const buy3Rec          = attachEV(buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
   const buy2Rec          = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
   // ── パターンバッジ ──
@@ -3694,63 +3645,25 @@ function getBuy3ForRace(venue, vdata, rno) {
 
   // buy3を直接計算する純粋関数版（renderBuy の buy3 生成部分を独立化）
 function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
-    const rd = vdata.races[String(rno)];
-    if (!rd) return [];
-    const slug = SLUG_MAP[venue] || venue;
-    const tKey = tenjiKey(slug, vdata.date, rno);
-    const tenjiData = _tenjiCache[tKey] || null;
-
-    // 一時的に DATA / currentVenue をセットして calcTenkaiProbs 等を利用
+    // calcBuyInputs は DATA/currentVenue を一時差し替えて使うため保存・復元する
     const savedDATA  = DATA;
     const savedVenue = currentVenue;
     DATA = vdata;
     currentVenue = venue;
 
+    const inputs = calcBuyInputs(venue, vdata, rno);
+
+    DATA = savedDATA;
+    currentVenue = savedVenue;
+
+    if (!inputs) return [];
+    const { rd, arek, rawBoats, ranked, ranked2, tenjiScoreMap, sd } = inputs;
+
     // 買い目上限（バックテスト用）: opt_points があれば使用
-    // ※ synthチェックの try ブロックからも参照するため function スコープで定義
     const BUY_MAX_POINTS_BT = (rd.opt_points != null) ? rd.opt_points : 10;
 
     let buy3 = [];
     try {
-      const arek = rd.arek ?? 54.7;
-      const rawBoats = rd.boats;
-      const ranked = calcTenkaiProbs(rawBoats, arek);
-
-      // 展示スコア
-      let tenjiScoreMap = null;
-      if (tenjiData) tenjiScoreMap = calcTenjiScore(ranked, tenjiData, venue, arek);
-
-      // final_prob 計算（指数重み方式 / FINAL_PROB_WEIGHTS と同一ロジック）
-      const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
-      const useMaster = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
-      const _wBase   = FINAL_PROB_WEIGHTS.base   ?? 1.0;
-      const _wTenkai = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
-      const _wTenji  = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
-      const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
-      ranked.forEach(b => {
-        const baseNorm = b.prob / probTotal;
-        let tenkaiCoef = 1.0;
-        if (useMaster && baseNorm > 0) {
-          const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
-          tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
-        }
-        let tenjiCoef = 1.0;
-        if (tenjiScoreMap) tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
-        const _wTenjiCourse = _wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
-        b._multi_score = Math.pow(baseNorm, _wBase) *
-                         Math.pow(tenkaiCoef, _wTenkai) *
-                         Math.pow(tenjiCoef,  _wTenjiCourse);
-      });
-      const multiTotal = ranked.reduce((s, b) => s + b._multi_score, 0) || 1;
-      ranked.forEach(b => { b.final_prob = b._multi_score / multiTotal; });
-      ranked.sort((a, b) => b.final_prob - a.final_prob);
-
-      // place2
-      const place2Map = calcPlace2Probs(rawBoats, ranked);
-      const ranked2 = ranked.map(b => ({ ...b, place2_prob: place2Map[b.boat] || 0 }));
-
-      // シナリオ計算
-      const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
 
       // 以下 renderBuy と同じ buy3 生成ロジック
       const cRates_buy = (vdata.inn_data || {}).course_rates || [];
