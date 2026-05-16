@@ -24,6 +24,35 @@ const TENJI_WEIGHT_BY_COURSE = {
   6: 1.0,  // まくり狙いだが距離ロスが大きく控えめ
 };
 
+// ── arek_score連動 動的wBase/wTenkai 算出 ──
+// 荒れやすい会場（arek高）ほど展開の読みが重要 → wTenkai を増やし wBase を下げる。
+// 鉄板会場（arek低）ほど長期統計が支配的    → wBase を増やし wTenkai を抑える。
+// 実データ範囲: 39（大村）〜 60（戸田）を 0〜1 に正規化し最大±0.3 調整。
+// wTenji は arek と無関係（当日展示はどの会場でも同等の情報量）のため固定。
+//
+// 例: 戸田(arek=60) → arekNorm=1.0 → wBase=0.7, wTenkai=1.3
+//     大村(arek=39) → arekNorm=0.0 → wBase=1.3, wTenkai=0.7
+//     平均(arek=50) → arekNorm=0.52 → wBase≈1.0, wTenkai≈1.0
+const AREK_WEIGHT_RANGE   = 0.3;  // 調整幅上限（上げる側・下げる側ともに）
+const AREK_SCORE_MIN      = 39;   // 最小実測値（大村）
+const AREK_SCORE_MAX      = 60;   // 最大実測値（戸田）
+
+function calcDynamicWeights(arek) {
+  const base   = FINAL_PROB_WEIGHTS.base   ?? 1.0;
+  const tenkai = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
+  const tenji  = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
+  const arekNorm = Math.max(0, Math.min(
+    (arek - AREK_SCORE_MIN) / (AREK_SCORE_MAX - AREK_SCORE_MIN), 1
+  ));
+  // 荒れるほど: wBase 下がる / wTenkai 上がる
+  const adj = (arekNorm - 0.5) * 2 * AREK_WEIGHT_RANGE;  // -0.3 〜 +0.3
+  return {
+    wBase:   Math.max(0.1, base   - adj),
+    wTenkai: Math.max(0.1, tenkai + adj),
+    wTenji:  tenji,  // arek非連動
+  };
+}
+
 // ── 買い目確率フィルター閾値 ──
 // この確率（3連単推定）を下回る買い目を除外する。
 // スライダーUIから変更可能。単位: % (例: 2.0 → 2%)
@@ -1056,7 +1085,7 @@ function calcTenkaiProbs(boats, arek){
   if(boat1){
     const hiKimari = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.['被kimari'];
     const boat1Runs = MASTER_EXT?.course_master?.[boat1.name]?.['1']?.runs ?? 0;
-    // runs < 30 はデータ不足なので補正しない ※マスタ基準に合わせて20→30に変更
+    // 被kimari（1コース専用）: 差され/捲られ率の閾値は30走（決まり手ブレンドとは独立した設定）
     if(hiKimari && boat1Runs >= 30){
       // 被kimari率をどれだけ信頼するか（100走で信頼度1.0） ※50→100に変更
       const hiTrust = Math.min(boat1Runs / 100, 1.0);
@@ -1121,9 +1150,9 @@ function calcTenkaiProbs(boats, arek){
     if(!cm) return baseVKimari;
 
     const runs = cm.runs ?? 0;
-    if(runs < 30) return baseVKimari; // データ不足はスキップ ※マスタ基準に合わせて15→30に変更
+    if(runs < 20) return baseVKimari; // データ不足はスキップ（kimariCoefSumのreliable閾値と統一: 20走）
 
-    // runs数に応じた信頼度（30走→約0.21、50走→0.35、100走→0.7） ※基準を50→100に変更
+    // runs数に応じた信頼度（20走→0.14、50走→0.35、100走→0.7） ※閾値を30→20に統一
     const trust = Math.min(runs / 100, 1.0) * PERSONAL_BLEND_STRENGTH;
 
     const personalKimari = cm.kimari ?? {};
@@ -1177,9 +1206,9 @@ function calcTenkaiProbs(boats, arek){
       const rawCoef = calcRelativeCoef(b, kimari, boat1);
       // ── 修正A: runs数に応じて個人適性の信頼度を調整 ──
       // runs不足の選手は係数を中立値(1.0)に引き寄せる。
-      // 50走で信頼度1.0（個人適性をフル反映）
-      // 20走で信頼度0.4（会場平均寄り）
-      // 20走未満は reliable=false のためここには来ないが念のため0に近づける
+      // 100走で信頼度1.0（個人適性をフル反映）
+      // 20走で信頼度0.2（会場平均寄り）
+      // 20走未満は reliable=false のためここには来ない（blendPersonalKimariと同じ閾値）
       const kimariRuns = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.runs ?? 0;
       const personalTrust = Math.min(kimariRuns / 100, 1.0); // ※基準を50→100に変更
       // 信頼度が低いほど中立値(1.0)に引き戻す
@@ -1496,7 +1525,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
     const cm     = MASTER_EXT?.course_master?.[name]?.[course];
     if(!cm) return baseVKimari;
     const runs = cm.runs ?? 0;
-    if(runs < 30) return baseVKimari;
+    if(runs < 20) return baseVKimari; // データ不足はスキップ（blendPersonalKimariと閾値統一: 20走）
     const trust = Math.min(runs / 100, 1.0) * SCENARIO_BLEND_STRENGTH;
     const personalKimari = cm.kimari ?? {};
     const BLEND_TARGETS = ['差し', 'まくり', 'まくり差し', '抜き'];
@@ -1923,10 +1952,8 @@ function renderBuy(rno){
   const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
   const useMaster = hasMasterExt() && !!MASTER_EXT.venue_kimari[DATA.venue];
 
-  // FINAL_PROB_WEIGHTS を取得
-  const wBase   = FINAL_PROB_WEIGHTS.base   ?? 1.0;
-  const wTenkai = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
-  const wTenji  = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
+  // arek連動動的重みを取得（荒れ会場ほどwTenkai増・wBase減）
+  const { wBase, wTenkai, wTenji } = calcDynamicWeights(arek);
 
   // 各艇の展開係数・展示係数を算出
   const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
@@ -3711,9 +3738,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       // final_prob 計算（指数重み方式 / FINAL_PROB_WEIGHTS と同一ロジック）
       const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
       const useMaster = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
-      const _wBase   = FINAL_PROB_WEIGHTS.base   ?? 1.0;
-      const _wTenkai = FINAL_PROB_WEIGHTS.tenkai ?? 1.0;
-      const _wTenji  = FINAL_PROB_WEIGHTS.tenji  ?? 1.0;
+      // arek連動動的重みを取得（renderBuy と同一ロジック）
+      const { wBase: _wBase, wTenkai: _wTenkai, wTenji: _wTenji } = calcDynamicWeights(arek);
       const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
       // 前コース参照マップ（renderBuy と同一）
       const boatByNo_bt = {};
