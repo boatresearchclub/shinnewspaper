@@ -2543,8 +2543,9 @@ function renderBuy(rno){
 
   // 結果comboを正規化（区切り文字を統一）して比較用セットを作成
   function normalizeCombo(s){ return (s||'').replace(/[－−\-]/g,'-'); }
-  const resultSan3  = hasResult ? new Set((resultRd.sanrentan||[]).map(r=>normalizeCombo(r.combo))) : null;
-  const resultNiren = hasResult ? new Set((resultRd.nirentan||[]).map(r=>normalizeCombo(r.combo)))  : null;
+  // sanrentan[0] が確定着順（1着-2着-3着）。全件Setにすると払戻データの他組み合わせと誤マッチする
+  const resultSan3  = hasResult && resultRd.sanrentan[0] ? new Set([normalizeCombo(resultRd.sanrentan[0].combo)]) : null;
+  const resultNiren = hasResult && resultRd.nirentan?.[0] ? new Set([normalizeCombo(resultRd.nirentan[0].combo)])  : null;
 
   function hitBadge(){ return `<span class="hit-badge">🎯 的中</span>`; }
 
@@ -4247,7 +4248,8 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
         return;
       }
 
-      const resultSan3 = new Set((resultRd.sanrentan || []).map(r => normalizeCombo(r.combo)));
+      // sanrentan[0] が確定着順。全件Setにすると誤マッチする
+      const resultSan3 = resultRd.sanrentan[0] ? new Set([normalizeCombo(resultRd.sanrentan[0].combo)]) : new Set();
       let isHit = false;
       let hitOdds = 0;
       let hitCombo = '';
@@ -4256,7 +4258,7 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
         if (resultSan3.has(nc)) {
           isHit = true;
           hitCombo = nc;
-          const hitResult = (resultRd.sanrentan || []).find(r => normalizeCombo(r.combo) === nc);
+          const hitResult = resultRd.sanrentan[0]; // [0]が確定着順
           hitOdds = hitResult ? hitResult.odds : 0;
           break;
         }
