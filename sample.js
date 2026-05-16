@@ -2110,14 +2110,21 @@ function renderBuy(rno){
   // 旧: tenkaiRem_buy の rate3 を使用 → 画面の3着表示と乖離が発生
   // 新: 画面の展開シナリオ表示と同じ scenarioPlace2[winnerBoat][kimari] の p2 を使用
   //     （1着→2着→3着の流れで、2着候補リストから2着指定艇を除いた残りを
-  //       p2 降順で累積70%まで採用する）
+  //       p2 降順で累積まで採用する）
   //
   // buyMode: 'hit'（的中重視）または 'rec'（回収重視）
-  const PICK3_PROB_TARGET = 0.70; // 3着累積確率目標: 70%
+  //
+  // 【2026-05-16 改修】モード別に3着累積目標を分離
+  //   hit: 0.85 → 3着ヒモを広げて的中率向上（旧0.70では外れの40%超が「1着○2,3着×」だった）
+  //   rec: 0.70 → 従来通り（配当重視のため絞りを維持）
+  const PICK3_PROB_TARGET_HIT = 0.85; // 的中重視: 3着累積確率目標 85%（ヒモ拡張）
+  const PICK3_PROB_TARGET_REC = 0.70; // 回収重視: 3着累積確率目標 70%（従来通り）
 
   function pick3rd(winnerBoat, kimari, secondBoat, buyMode){
+    const pick3Target = (buyMode === 'hit') ? PICK3_PROB_TARGET_HIT : PICK3_PROB_TARGET_REC;
+
     if(!sd.valid) {
-      // MASTERなしフォールバック: final_prob 降順で累積70%
+      // MASTERなしフォールバック: final_prob 降順でモード別累積%
       const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
       if(allBoats.length <= 2) return allBoats;
       const sorted = [...allBoats].sort((a, b) => {
@@ -2130,26 +2137,26 @@ function renderBuy(rno){
       for(const b of sorted){
         picked.push(b);
         cum += (ranked2.find(r => r.boat === b)?.final_prob ?? 0) / totalFP;
-        if(cum >= PICK3_PROB_TARGET) break;
+        if(cum >= pick3Target) break;
       }
       return picked;
     }
 
     // scenarioPlace2 から対象シナリオの p2 リストを取得
-    // 2着指定艇・1着軸を除いた残りを p2 降順で累積70%まで採用
+    // 2着指定艇・1着軸を除いた残りを p2 降順でモード別累積%まで採用
     const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
     const candidates = place2List.filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
 
     if(candidates.length === 0) return [];
     if(candidates.length <= 2) return candidates.map(x => x.boat);
 
-    // p2 の合計で正規化して累積70%まで
+    // p2 の合計で正規化してモード別累積%まで
     const totalP2 = candidates.reduce((s, x) => s + x.p2, 0) || 1;
     const picked = []; let cum = 0;
     for(const item of candidates){ // candidates は既に p2 降順ソート済み
       picked.push(item.boat);
       cum += item.p2 / totalP2;
-      if(cum >= PICK3_PROB_TARGET) break;
+      if(cum >= pick3Target) break;
     }
     return picked;
   }
@@ -2190,11 +2197,14 @@ function renderBuy(rno){
       }
 
       // ── 【改修】2着閾値: 両モード共通 70% ──
-      // 仕様: 各「1着展開シナリオ」ごとに、2着候補の合計確率が70%以上に
-      //       なるまで買い目を追加する（hit・rec 共通）。
-      const PICK2_PROB_TARGET = 0.70;
+      // 【2026-05-16 改修】モード別に2着累積目標を分離
+      //   hit: 0.85 → 2着ヒモも拡張して的中率向上
+      //   rec: 0.70 → 従来通り（配当重視のため絞りを維持）
+      const PICK2_PROB_TARGET_HIT = 0.85;
+      const PICK2_PROB_TARGET_REC = 0.70;
 
       function pick2nd(winnerBoat, kimari, bMode){
+        const pick2Target = (bMode === 'hit') ? PICK2_PROB_TARGET_HIT : PICK2_PROB_TARGET_REC;
         const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
         if(list.length === 0) return [];
         const isNige = (kimari === '逃げ' && winnerBoat === 1);
@@ -2210,14 +2220,14 @@ function renderBuy(rno){
         } else {
           sorted = [...list].sort((a,b) => b.p2 - a.p2);
         }
-        // 累積 p2 が 70% 以上になるまで追加（モード共通）
+        // 累積 p2 がモード別目標以上になるまで追加
         const picked = [];
         let cum = 0;
         for(const item of sorted){
           if(item.boat === winnerBoat) continue;
           picked.push(item.boat);
           cum += item.p2;
-          if(cum >= PICK2_PROB_TARGET) break;
+          if(cum >= pick2Target) break;
         }
         return picked;
       }
@@ -2315,10 +2325,12 @@ function renderBuy(rno){
           const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
           const thirdList  = [];
           let cumScore = 0;
+          // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
+          const pick3TargetInner = (buyMode === 'hit') ? PICK3_PROB_TARGET_HIT : PICK3_PROB_TARGET_REC;
           for(const x of thirdAll){
             thirdList.push(x);
             cumScore += x.score / scoreTotal;
-            if(cumScore >= PICK3_PROB_TARGET) break;
+            if(cumScore >= pick3TargetInner) break;
           }
           thirdList.forEach(t => {
             const prob3 = t.r3 != null ? prob2 * t.r3 : null;
@@ -3787,15 +3799,17 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       // 【改修】pick3rd_local: renderBuy の pick3rd と同一ロジック
       // scenarioPlace2 の p2 を使用（画面表示と一致）
       // ※ sd.valid の前に定義するが、sd を参照するため sd.valid チェックを内部で行う
+      // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
       function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
+        const p3Target = (buyMode === 'hit') ? 0.85 : 0.70;
         if(!sd.valid){
-          // MASTERなしフォールバック: final_prob 降順で累積70%
+          // MASTERなしフォールバック: final_prob 降順でモード別累積%
           const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
           if(allBoats.length <= 2) return allBoats;
           const totalFP = allBoats.reduce((s, b) => s + (ranked2.find(r => r.boat === b)?.final_prob ?? 0), 0) || 1;
           const sorted = [...allBoats].sort((a, b) => (ranked2.find(r=>r.boat===b)?.final_prob??0)-(ranked2.find(r=>r.boat===a)?.final_prob??0));
           const picked = []; let cum = 0;
-          for(const b of sorted){ picked.push(b); cum += (ranked2.find(r=>r.boat===b)?.final_prob??0)/totalFP; if(cum>=0.70) break; }
+          for(const b of sorted){ picked.push(b); cum += (ranked2.find(r=>r.boat===b)?.final_prob??0)/totalFP; if(cum>=p3Target) break; }
           return picked;
         }
         const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
@@ -3807,7 +3821,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         for(const item of candidates){
           picked.push(item.boat);
           cum += item.p2 / totalP2;
-          if(cum >= 0.70) break;
+          if(cum >= p3Target) break;
         }
         return picked;
       }
@@ -3835,6 +3849,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         }
         // 【改修】2着閾値: 両モード共通 70%
         function pick2nd_local(winnerBoat, kimari, buyMode) {
+          // 【2026-05-16 改修】モード別2着累積目標: hit=0.85, rec=0.70
+          const p2Target = (buyMode === 'hit') ? 0.85 : 0.70;
           const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
           if (list.length === 0) return [];
           // renderBuy の pick2nd と同一: 逃げ1号艇は inn2Place_buy で特殊ソート
@@ -3857,7 +3873,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
             if (item.boat === winnerBoat) continue;
             picked.push(item.boat);
             cum += item.p2;
-            if (cum >= 0.70) break;
+            if (cum >= p2Target) break;
           }
           return picked;
         }
@@ -4347,15 +4363,7 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
 }
 
 // ── バックテスト CSV エクスポート ──
-// buyMode: 'hit'=的中重視, 'rec'=回収重視, null=両方（ファイル2本）
-function exportBacktestCSV(buyMode) {
-  // 引数なし or null → 両モードを別々にダウンロード
-  if (buyMode == null) {
-    exportBacktestCSV('hit');
-    exportBacktestCSV('rec');
-    return;
-  }
-
+function exportBacktestCSV() {
   const allDates  = getAvailableDates().slice().reverse();
   const todayDate = getAvailableDates().slice(-1)[0];
 
@@ -4367,11 +4375,10 @@ function exportBacktestCSV(buyMode) {
   const output = [];
 
   allDates.forEach(dateStr => {
-    const { results } = collectResultsForDate(dateStr, buyMode);
+    const { results } = collectResultsForDate(dateStr);
 
     results.forEach(r => {
       output.push({
-        モード: buyMode === 'hit' ? '的中重視' : '回収重視',
         日付: dateStr,
         日前: dateLabels[dateStr] || '',
         会場: r.venue,
@@ -4400,23 +4407,13 @@ function exportBacktestCSV(buyMode) {
   });
 
   if (output.length === 0) {
-    alert(`エクスポートできるデータがありません（${buyMode === 'hit' ? '的中重視' : '回収重視'}）。`);
+    alert('エクスポートできるデータがありません。');
     return;
   }
 
   const headers = Object.keys(output[0]);
-  const modeLabel = buyMode === 'hit' ? '的中重視' : '回収重視';
-  const dateTag   = new Date().toISOString().slice(0,10).replace(/-/g,'');
-  const modeTag   = buyMode === 'hit' ? 'hit' : 'rec';
-
-  // CSV先頭にタイトル行を追加（開いた瞬間に何のファイルか分かるように）
-  const titleRow1 = `"Boat Research Club - バックテスト結果 [${modeLabel}]"`;
-  const titleRow2 = `"出力日: ${new Date().toLocaleDateString('ja-JP')}"`;
 
   const csvRows = [
-    titleRow1,
-    titleRow2,
-    '',
     headers.join(','),
     ...output.map(row =>
       headers.map(header => {
@@ -4437,7 +4434,7 @@ function exportBacktestCSV(buyMode) {
 
   const a = document.createElement('a');
   a.href = url;
-  a.download = `backtest_${modeTag}_${dateTag}.csv`;
+  a.download = `backtest_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.csv`;
 
   document.body.appendChild(a);
   a.click();
