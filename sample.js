@@ -1649,6 +1649,49 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
 // 「決まり手」を主軸にし、同じ決まり手の重複は最上位1件のみ残す。
 // 2着率: 逃げ(1コース1着)→inn_2place, それ以外→tenkai_remaining+winner_course_order
 // 3着率: tenkai_remaining.rate3 × winner_course_order.rate3 個人補正ブレンド
+// ── トップレベル関数（buildScenarioSection・renderBuy 両方から参照）──
+function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
+  const tenkaiRem = (() => {
+    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
+    return MASTER_EXT?.tenkai_remaining || null;
+  })();
+  const winnerCO = MASTER_EXT?.winner_course_order || {};
+  const wc = String(winnerBoat);
+  return ranked2
+    .filter(b => b.boat !== winnerBoat && b.boat !== secondBoat)
+    .map(b => {
+      const sc = String(b.boat);
+      const entry   = tenkaiRem?.[kimari]?.[wc]?.[sc];
+      const baseR3  = entry?.rate3 ?? null;
+      const personEntry = winnerCO[b.name]?.[sc]?.[wc];
+      const personR3    = personEntry?.rate3 ?? null;
+      const personTrust = personEntry?.trust  ?? 0;
+      let r3;
+      if(baseR3 != null && personR3 != null && personTrust > 0.3){
+        r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
+      } else if(personR3 != null && personTrust > 0.3){
+        r3 = personR3;
+      } else {
+        r3 = baseR3;
+      }
+      const tenjiCoef = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0) : 1.0;
+      const CLIP3_BY_COURSE = {
+        1: [0.85, 1.20],
+        2: [0.80, 1.25],
+        3: [0.70, 1.40],
+        4: [0.65, 1.45],
+        5: [0.70, 1.40],
+        6: [0.75, 1.35],
+      };
+      const [c3lo, c3hi] = CLIP3_BY_COURSE[b.boat] ?? [0.75, 1.35];
+      const clipped = Math.min(c3hi, Math.max(c3lo, tenjiCoef));
+      const score = r3 != null ? r3 * clipped : (b.final_prob ?? b.tenkai_prob ?? 0);
+      return { boat: b.boat, name: b.name, r3, score };
+    })
+    .sort((a, b) => b.score - a.score);
+}
+
 //
 function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTenji){
   const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
@@ -1664,44 +1707,9 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
   })();
   const winnerCO_scen = MASTER_EXT?.winner_course_order || {};
 
-  // 3着スコアを計算する関数（winner_course_order個人補正+tenkai_remaining+展示係数）
-  function calc3rdScores(winnerBoat, kimari, secondBoat){
-    const wc = String(winnerBoat);
-    return ranked2
-      .filter(b => b.boat !== winnerBoat && b.boat !== secondBoat)
-      .map(b => {
-        const sc = String(b.boat);
-        // tenkai_remaining ベース
-        const entry   = tenkaiRem_scen?.[kimari]?.[wc]?.[sc];
-        const baseR3  = entry?.rate3 ?? null;
-        // winner_course_order 個人補正
-        const personEntry = winnerCO_scen[b.name]?.[sc]?.[wc];
-        const personR3    = personEntry?.rate3 ?? null;
-        const personTrust = personEntry?.trust  ?? 0;
-        let r3;
-        if(baseR3 != null && personR3 != null && personTrust > 0.3){
-          r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
-        } else if(personR3 != null && personTrust > 0.3){
-          r3 = personR3;
-        } else {
-          r3 = baseR3;
-        }
-        // 展示係数補正（平均=1.0基準）— 枠番別クリップ
-        const tenjiCoef = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0) : 1.0;
-        const CLIP3_BY_COURSE = {
-          1: [0.85, 1.20],
-          2: [0.80, 1.25],
-          3: [0.70, 1.40],
-          4: [0.65, 1.45],
-          5: [0.70, 1.40],
-          6: [0.75, 1.35],
-        };
-        const [c3lo, c3hi] = CLIP3_BY_COURSE[b.boat] ?? [0.75, 1.35];
-        const clipped = Math.min(c3hi, Math.max(c3lo, tenjiCoef));
-        const score = r3 != null ? r3 * clipped : (b.final_prob ?? b.tenkai_prob ?? 0);
-        return { boat: b.boat, name: b.name, r3: r3, score };
-      })
-      .sort((a,b) => b.score - a.score);
+  // 3着スコアを計算する関数 → トップレベルの calc3rdScores に委譲
+  function calc3rdScoresLocal(winnerBoat, kimari, secondBoat){
+    return calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat);
   }
 
   const boatCircle = (n) =>
@@ -1795,7 +1803,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
       const r3Map = {}; // boat番号 → { boat, r3sum, scoreSum, weight }
       for(const scen of grp.scenarios){
         const w = scen.prob / (totalProb || 1);
-        const thirds = calc3rdScores(grp.boat, scen.kimari, secondBoat);
+        const thirds = calc3rdScoresLocal(grp.boat, scen.kimari, secondBoat);
         for(const t3 of thirds){
           if(!r3Map[t3.boat]){
             r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
@@ -1819,7 +1827,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 
     // 各2着候補の行を生成
     const p2Lines = top4Place.map(item => {
-      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScores(grp.boat, grp.scenarios[0].kimari, item.boat)).slice(0, 3);
+      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScoresLocal(grp.boat, grp.scenarios[0].kimari, item.boat)).slice(0, 3);
       const third3html = third3.map(t3 =>
         `<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap">
           ${boatCircle(t3.boat)}
@@ -2306,45 +2314,18 @@ function renderBuy(rno){
           const p2         = p2Item?.p2 ?? 0;
           const prob2      = scenProb * p2;
 
-          const thirdList  = pick3rd(axisBoat, kimari, s2, buyMode);
+          const thirdList  = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, kimari, s2);
           thirdList.forEach(t => {
-            const wc3    = String(axisBoat);
-            const sc3    = String(t);
-            const bt3    = ranked2.find(r => r.boat === t);
-            const entry3 = tenkaiRem_buy?.[kimari]?.[wc3]?.[sc3];
-            const baseR3 = entry3?.rate3 ?? null;
-            const pe3    = bt3 ? winnerCO_buy[bt3.name]?.[sc3]?.[wc3] : null;
-            const pr3    = pe3?.rate3 ?? null;
-            const pt3    = pe3?.trust  ?? 0;
-            let r3Final  = baseR3;
-            if(baseR3 != null && pr3 != null && pt3 > 0.3){
-              r3Final = pr3 * pt3 + baseR3 * (1 - pt3);
-            } else if(pr3 != null && pt3 > 0.3){
-              r3Final = pr3;
-            }
-            const prob3 = r3Final != null ? prob2 * r3Final : null;
-            tryAdd3m(axisBoat, s2, t, baseLabel, lc, prob3, scenIdx);
+            const prob3 = t.r3 != null ? prob2 * t.r3 : null;
+            tryAdd3m(axisBoat, s2, t.boat, baseLabel, lc, prob3, scenIdx);
 
             // 折り返し
             if(seconds.length === 1){
-              const p2RevItem  = (scenarioPlace2[axisBoat]?.[kimari] || []).find(x => x.boat === t);
+              const p2RevItem  = (scenarioPlace2[axisBoat]?.[kimari] || []).find(x => x.boat === t.boat);
               const p2Rev      = p2RevItem?.p2 ?? 0;
               const prob2Rev   = scenProb * p2Rev;
-              const wc3r = String(axisBoat), sc3r = String(s2);
-              const bt3r = ranked2.find(r => r.boat === s2);
-              const entry3r = tenkaiRem_buy?.[kimari]?.[wc3r]?.[sc3r];
-              const baseR3r = entry3r?.rate3 ?? null;
-              const pe3r    = bt3r ? winnerCO_buy[bt3r.name]?.[sc3r]?.[wc3r] : null;
-              const pr3r    = pe3r?.rate3 ?? null;
-              const pt3r    = pe3r?.trust  ?? 0;
-              let r3Rev     = baseR3r;
-              if(baseR3r != null && pr3r != null && pt3r > 0.3){
-                r3Rev = pr3r * pt3r + baseR3r * (1 - pt3r);
-              } else if(pr3r != null && pt3r > 0.3){
-                r3Rev = pr3r;
-              }
-              const probRev = r3Rev != null ? prob2Rev * r3Rev : null;
-              tryAdd3m(axisBoat, t, s2, baseLabel+'（折返）', lc, probRev, scenIdx);
+              const probRev    = t.r3 != null ? prob2Rev * t.r3 : null;
+              tryAdd3m(axisBoat, t.boat, s2, baseLabel+'（折返）', lc, probRev, scenIdx);
             }
           });
           tryAdd2m(axisBoat, s2, baseLabel, lc, prob2, scenIdx);
