@@ -4410,20 +4410,18 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
 }
 
 // ── バックテスト CSV エクスポート ──
-function exportBacktestCSV() {
+// ── CSV 生成共通ヘルパー ──
+function _buildBacktestRows(buyMode) {
   const allDates  = getAvailableDates().slice().reverse();
   const todayDate = getAvailableDates().slice(-1)[0];
-
   const dateLabels = { [todayDate]: '本日' };
   getAvailableDates().slice(0, -1).reverse().forEach((d, i) => {
     dateLabels[d] = `${i+1}日前`;
   });
 
   const output = [];
-
   allDates.forEach(dateStr => {
-    const { results } = collectResultsForDate(dateStr);
-
+    const { results } = collectResultsForDate(dateStr, buyMode);
     results.forEach(r => {
       output.push({
         日付: dateStr,
@@ -4452,42 +4450,75 @@ function exportBacktestCSV() {
       });
     });
   });
+  return output;
+}
 
-  if (output.length === 0) {
-    alert('エクスポートできるデータがありません。');
-    return;
-  }
-
-  const headers = Object.keys(output[0]);
-
+function _rowsToCSVBlob(rows) {
+  if (rows.length === 0) return null;
+  const headers = Object.keys(rows[0]);
   const csvRows = [
     headers.join(','),
-    ...output.map(row =>
-      headers.map(header => {
-        let val = row[header] ?? '';
+    ...rows.map(row =>
+      headers.map(h => {
+        let val = row[h] ?? '';
         val = String(val).replace(/"/g, '""');
         return `"${val}"`;
       }).join(',')
     )
   ];
+  return new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+}
 
-  const csvContent = '\uFEFF' + csvRows.join('\n');
-
-  const blob = new Blob([csvContent], {
-    type: 'text/csv;charset=utf-8;'
-  });
-
+function _triggerDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
-
   const a = document.createElement('a');
   a.href = url;
-  a.download = `backtest_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.csv`;
-
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-
   URL.revokeObjectURL(url);
+}
+
+// ── 的中重視 CSV エクスポート ──
+function exportBacktestCSV_hit() {
+  const rows = _buildBacktestRows('hit');
+  const blob = _rowsToCSVBlob(rows);
+  if (!blob) { alert('エクスポートできるデータがありません。'); return; }
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  _triggerDownload(blob, `backtest_hit_${date}.csv`);
+}
+
+// ── 回収重視 CSV エクスポート ──
+function exportBacktestCSV_rec() {
+  const rows = _buildBacktestRows('rec');
+  const blob = _rowsToCSVBlob(rows);
+  if (!blob) { alert('エクスポートできるデータがありません。'); return; }
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  _triggerDownload(blob, `backtest_rec_${date}.csv`);
+}
+
+// ── 両方同時ダウンロード（少し間を置いて連続ダウンロード）──
+function exportBacktestCSV_both() {
+  const rowsHit = _buildBacktestRows('hit');
+  const rowsRec = _buildBacktestRows('rec');
+  if (rowsHit.length === 0 && rowsRec.length === 0) {
+    alert('エクスポートできるデータがありません。');
+    return;
+  }
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const blobHit = _rowsToCSVBlob(rowsHit);
+  if (blobHit) _triggerDownload(blobHit, `backtest_hit_${date}.csv`);
+  // ブラウザが連続ダウンロードをブロックしないよう 300ms ずらす
+  setTimeout(() => {
+    const blobRec = _rowsToCSVBlob(rowsRec);
+    if (blobRec) _triggerDownload(blobRec, `backtest_rec_${date}.csv`);
+  }, 300);
+}
+
+// 旧関数: 後方互換のため残す（hit モードと同等）
+function exportBacktestCSV() {
+  exportBacktestCSV_hit();
 }
 
 // ── TOP PAGE ──
@@ -5072,4 +5103,36 @@ function drawSimCanvas(canvas, boats, scenario, boatMeta){
     ctx.fillText(boat.boat, PL-18, y+4);
   });
 }
+
+// ── CSV ダウンロードボタンの onclick を新関数に差し替え ──
+// index.html 側のボタン onclick="exportBacktestCSV()" を
+// hit/rec 分離版・両方同時版に上書きする。
+(function _initCsvButtons() {
+  function wire() {
+    // data-csv-mode 属性で対象ボタンを特定する（推奨）
+    document.querySelectorAll('[data-csv-mode]').forEach(btn => {
+      const m = btn.getAttribute('data-csv-mode');
+      if (m === 'hit')  btn.onclick = exportBacktestCSV_hit;
+      if (m === 'rec')  btn.onclick = exportBacktestCSV_rec;
+      if (m === 'both') btn.onclick = exportBacktestCSV_both;
+    });
+
+    // data-csv-mode がない場合はボタンのテキストで判定（後方互換）
+    document.querySelectorAll('button').forEach(btn => {
+      const t = btn.textContent || '';
+      if (t.includes('的中重視') && t.includes('CSV') && !btn.getAttribute('data-csv-mode'))
+        btn.onclick = exportBacktestCSV_hit;
+      if (t.includes('回収重視') && t.includes('CSV') && !btn.getAttribute('data-csv-mode'))
+        btn.onclick = exportBacktestCSV_rec;
+      if ((t.includes('両方') || t.includes('両方ダウンロード')) && !btn.getAttribute('data-csv-mode'))
+        btn.onclick = exportBacktestCSV_both;
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', wire);
+  } else {
+    wire();
+  }
+})();
 
