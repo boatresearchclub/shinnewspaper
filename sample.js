@@ -2421,6 +2421,7 @@ function renderBuy(rno){
   const { b3: buy3Rec_raw, b2: buy2Rec_raw } = buildBuy3ForMode('rec');
 
   // 旧コードとの互換性のため buy3 / buy2 は的中重視ベースで定義
+  // ※ 合成オッズ判定（buy3Hit_checked）は後段で行うため、ここでは raw を参照
   const buy3 = buy3Hit_raw;
   const buy2 = buy2Hit_raw;
 
@@ -2775,10 +2776,11 @@ function renderBuy(rno){
   const HIT_MAX_PTS     = 10;
   const HIT_SYNTH_MIN   = 2.5;
   const buy3Hit_checked  = checkSynthOdds(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
-  // 合成オッズ未達フラグ: 未達でも買い目は表示し、注意書きを添える
-  // buy3Hit は「確率順に生成した買い目」をそのまま表示用に使う（合成オッズ判定とは独立）
+  // 合成オッズ未達フラグ
   const hitUnderSynth    = buy3Hit_checked.length === 0;
-  const buy3Hit          = attachEV(buy3Hit_raw.slice(0, HIT_MAX_PTS), raceOdds3tEv);
+  // 表示用: 未達でも参考として raw を表示するが、EV付与は checked ベース
+  // ※ 集計（collectResultsForDate）は computeBuy3 内部で同じ閾値チェック済みなので二重カウントなし
+  const buy3Hit          = attachEV(buy3Hit_checked.length > 0 ? buy3Hit_checked : buy3Hit_raw.slice(0, HIT_MAX_PTS), raceOdds3tEv);
   const buy2Hit          = attachEV(buy2Hit_raw.slice(0, 8), raceOdds2tEv);
 
   // ── 【改修】回収重視モード ──
@@ -2792,7 +2794,7 @@ function renderBuy(rno){
   const REC_SYNTH_MIN   = arek < 40 ? 3.0 : arek > 60 ? 5.0 : 4.0;
   const buy3Rec_checked  = checkSynthOdds(buy3Rec_raw, raceOdds3tEv, REC_SYNTH_MIN, REC_MAX_PTS);
   const recUnderSynth    = buy3Rec_checked.length === 0;
-  const buy3Rec          = attachEV(buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
+  const buy3Rec          = attachEV(buy3Rec_checked.length > 0 ? buy3Rec_checked : buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
   const buy2Rec          = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
   // ── パターンバッジ ──
@@ -4036,7 +4038,7 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         const so = 1 / synthDenom;
         buy3 = so >= synthMin_trim ? candidates : []; // 未達なら見送り
       } else {
-        buy3 = candidates; // オッズデータ未取得 → 判定スキップ（参加扱い）
+        buy3 = []; // オッズデータ未取得 → 合成オッズ判定不能のため見送り扱い
       }
     } catch(e) {
       console.warn('[computeBuy3] synth check error:', e);
