@@ -2022,72 +2022,50 @@ function renderBuy(rno){
   // hit軸信頼フラグ（旧: axisReliable）
   const axisReliable   = boat1AboveAvg && boat1InTop2;
 
-  // ── 【改修】3着候補絞り込み関数（累積確率70%ベース）──
+  // ── 【改修】3着候補絞り込み関数（画面表示と同一データベース）──
   //
-  // 仕様: 各「1着→2着展開シナリオ」ごとに、3着候補の合計確率が70%以上に
-  //       なるまで候補を追加する（両モード共通）。
-  //
-  // 統合スコア = r3_blend × tenjiCoef（展示補正）
-  //   r3_blend = winner_course_order.rate3 × trust + tenkai_remaining.rate3 × (1-trust)
-  // スコアを確率として扱い、スコア合計が PICK3_PROB_TARGET(=0.70) に達するまで追加。
-  // スコアデータ不足時は final_prob を代替として使用。
+  // 旧: tenkaiRem_buy の rate3 を使用 → 画面の3着表示と乖離が発生
+  // 新: 画面の展開シナリオ表示と同じ scenarioPlace2[winnerBoat][kimari] の p2 を使用
+  //     （1着→2着→3着の流れで、2着候補リストから2着指定艇を除いた残りを
+  //       p2 降順で累積70%まで採用する）
   //
   // buyMode: 'hit'（的中重視）または 'rec'（回収重視）
   const PICK3_PROB_TARGET = 0.70; // 3着累積確率目標: 70%
 
   function pick3rd(winnerBoat, kimari, secondBoat, buyMode){
-    const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
-    if(allBoats.length === 0) return [];
-    if(allBoats.length <= 2) return allBoats;
-
-    const wc = String(winnerBoat);
-
-    const withScore = allBoats.map(b => {
-      const bt  = ranked2.find(r => r.boat === b);
-      const sc  = String(b);
-
-      // tenkai_remaining ベースのrate3
-      const entry  = tenkaiRem_buy?.[kimari]?.[wc]?.[sc];
-      const baseR3 = entry?.rate3 ?? null;
-
-      // winner_course_order 個人補正
-      const personEntry = bt ? winnerCO_buy[bt.name]?.[sc]?.[wc] : null;
-      const personR3    = personEntry?.rate3 ?? null;
-      const personTrust = personEntry?.trust  ?? 0;
-
-      let r3;
-      if(baseR3 != null && personR3 != null && personTrust > 0.3){
-        r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
-      } else if(personR3 != null && personTrust > 0.3){
-        r3 = personR3;
-      } else {
-        r3 = baseR3;
+    if(!sd.valid) {
+      // MASTERなしフォールバック: final_prob 降順で累積70%
+      const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
+      if(allBoats.length <= 2) return allBoats;
+      const sorted = [...allBoats].sort((a, b) => {
+        const fa = ranked2.find(r => r.boat === a)?.final_prob ?? 0;
+        const fb = ranked2.find(r => r.boat === b)?.final_prob ?? 0;
+        return fb - fa;
+      });
+      const totalFP = sorted.reduce((s, b) => s + (ranked2.find(r => r.boat === b)?.final_prob ?? 0), 0) || 1;
+      const picked = []; let cum = 0;
+      for(const b of sorted){
+        picked.push(b);
+        cum += (ranked2.find(r => r.boat === b)?.final_prob ?? 0) / totalFP;
+        if(cum >= PICK3_PROB_TARGET) break;
       }
+      return picked;
+    }
 
-      // 展示係数補正（過補正防止クリップ）
-      const tenjiCoef3 = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b}`] ?? 1.0) : 1.0;
-      const CLIP3 = [0.75, 1.35];
-      const clipped = Math.min(CLIP3[1], Math.max(CLIP3[0], tenjiCoef3));
+    // scenarioPlace2 から対象シナリオの p2 リストを取得
+    // 2着指定艇・1着軸を除いた残りを p2 降順で累積70%まで採用
+    const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
+    const candidates = place2List.filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
 
-      // 統合スコア（r3がない場合はfinal_probで代替）
-      const score = r3 != null
-        ? r3 * clipped
-        : (bt?.final_prob ?? bt?.tenkai_prob ?? 0) * clipped;
+    if(candidates.length === 0) return [];
+    if(candidates.length <= 2) return candidates.map(x => x.boat);
 
-      return { boat: b, r3, score };
-    });
-
-    // スコア降順ソート
-    const sorted = [...withScore].sort((a, b) => b.score - a.score);
-
-    // ── 累積確率70%以上になるまで追加（両モード共通） ──
-    // スコア合計を正規化して確率として扱う
-    const totalScore = sorted.reduce((s, x) => s + x.score, 0);
-    const picked = [];
-    let cum = 0;
-    for(const item of sorted){
+    // p2 の合計で正規化して累積70%まで
+    const totalP2 = candidates.reduce((s, x) => s + x.p2, 0) || 1;
+    const picked = []; let cum = 0;
+    for(const item of candidates){ // candidates は既に p2 降順ソート済み
       picked.push(item.boat);
-      cum += totalScore > 0 ? item.score / totalScore : 1 / sorted.length;
+      cum += item.p2 / totalP2;
       if(cum >= PICK3_PROB_TARGET) break;
     }
     return picked;
@@ -3710,39 +3688,32 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 
       const buy3seen = new Set();
 
+      // 【改修】pick3rd_local: renderBuy の pick3rd と同一ロジック
+      // scenarioPlace2 の p2 を使用（画面表示と一致）
+      // ※ sd.valid の前に定義するが、sd を参照するため sd.valid チェックを内部で行う
       function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
-        const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
-        if (allBoats.length === 0) return [];
-        if (allBoats.length <= 2) return allBoats;
-        const wc = String(winnerBoat);
-        const withScore = allBoats.map(b => {
-          const bt = ranked2.find(r => r.boat === b);
-          const sc = String(b);
-          const entry = tenkaiRem_buy?.[kimari]?.[wc]?.[sc];
-          const baseR3 = entry?.rate3 ?? null;
-          const personEntry = bt ? winnerCO_buy[bt.name]?.[sc]?.[wc] : null;
-          const personR3 = personEntry?.rate3 ?? null;
-          const personTrust = personEntry?.trust ?? 0;
-          let r3;
-          if (baseR3 != null && personR3 != null && personTrust > 0.3) r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
-          else if (personR3 != null && personTrust > 0.3) r3 = personR3;
-          else r3 = baseR3;
-          const tenjiCoef3 = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b}`] ?? 1.0) : 1.0;
-          const clipped = Math.min(1.35, Math.max(0.75, tenjiCoef3));
-          const score = r3 != null ? r3 * clipped : (bt?.final_prob ?? 0) * clipped;
-          return { boat: b, r3, score };
-        });
-        // 【改修】累積70%以上になるまで追加（両モード共通）
-        const sorted_bt = [...withScore].sort((a, b) => b.score - a.score);
-        const totalScore_bt = sorted_bt.reduce((s, x) => s + x.score, 0);
-        const picked_bt = [];
-        let cum_bt = 0;
-        for (const item of sorted_bt) {
-          picked_bt.push(item.boat);
-          cum_bt += totalScore_bt > 0 ? item.score / totalScore_bt : 1 / sorted_bt.length;
-          if (cum_bt >= 0.70) break;
+        if(!sd.valid){
+          // MASTERなしフォールバック: final_prob 降順で累積70%
+          const allBoats = ranked2.map(b => b.boat).filter(b => b !== winnerBoat && b !== secondBoat);
+          if(allBoats.length <= 2) return allBoats;
+          const totalFP = allBoats.reduce((s, b) => s + (ranked2.find(r => r.boat === b)?.final_prob ?? 0), 0) || 1;
+          const sorted = [...allBoats].sort((a, b) => (ranked2.find(r=>r.boat===b)?.final_prob??0)-(ranked2.find(r=>r.boat===a)?.final_prob??0));
+          const picked = []; let cum = 0;
+          for(const b of sorted){ picked.push(b); cum += (ranked2.find(r=>r.boat===b)?.final_prob??0)/totalFP; if(cum>=0.70) break; }
+          return picked;
         }
-        return picked_bt;
+        const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
+        const candidates = place2List.filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
+        if(candidates.length === 0) return [];
+        if(candidates.length <= 2) return candidates.map(x => x.boat);
+        const totalP2 = candidates.reduce((s, x) => s + x.p2, 0) || 1;
+        const picked = []; let cum = 0;
+        for(const item of candidates){
+          picked.push(item.boat);
+          cum += item.p2 / totalP2;
+          if(cum >= 0.70) break;
+        }
+        return picked;
       }
 
       if (sd.valid) {
