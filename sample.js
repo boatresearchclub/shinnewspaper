@@ -1310,13 +1310,16 @@ function calcPlace2Probs(boats, ranked){
   // winner_course_order: 個人の「勝者コース別・自コース別2着率」
   const winnerCO = MASTER_EXT?.winner_course_order || {};
 
-  // 1コース艇の tenkai_prob 比率（1コースが逃げで勝つ条件付き確率への按分）
+  // 1コース艇の final_prob 比率（展示補正後の最終確率ベースで按分）
   const boat1 = ranked.find(b => b.boat === 1);
+  const fp1   = boat1?.final_prob ?? boat1?.tenkai_prob ?? 0;
+  const totalFP = ranked.reduce((s, b) => s + (b.final_prob ?? b.tenkai_prob ?? 0), 0) || 1;
+  // 後続処理（非逃げ按分）でも参照するため totalTP は残す
   const tp1   = boat1 ? boat1.tenkai_prob : 0;
   const totalTP = ranked.reduce((s, b) => s + b.tenkai_prob, 0) || 1;
 
-  // 逃げ展開（1コース1着）の確率
-  const nigeWinProb = nigeProb * (tp1 / totalTP);
+  // 逃げ展開（1コース1着）の確率: final_prob ベースで按分
+  const nigeWinProb = nigeProb * (fp1 / totalFP);
 
   // ── 逃げ展開での2着: inn_2place ベース + winner_course_order 個人補正 ──
   if(hasInn2 && nigeWinProb > 0){
@@ -1348,13 +1351,11 @@ function calcPlace2Probs(boats, ranked){
   // ── 非逃げ展開（差し・まくり等）の2着: tenkai_remaining + winner_course_order ──
   const nonNigeProb = 1.0 - nigeWinProb;
   // tenkai_remaining: {決まり手: {1着コース: {進入コース: {rate2, trust}}}}
-  // 会場別のみ使用（全国実績フォールバックなし）
+  // 会場別データ優先、なければ全国実績にフォールバック（calcScenarioData と統一）
   const tenkaiRemaining = (() => {
-    const venue = DATA.venue;
-    const venueLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
-    if(venueLocal && typeof venueLocal === 'object' && Object.keys(venueLocal).length > 0)
-      return venueLocal;
-    return {};  // 会場別データなければ空（全国フォールバックなし）
+    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    if(vLocal && Object.keys(vLocal).length > 0) return vLocal;
+    return MASTER_EXT?.tenkai_remaining || {};
   })();
   if(nonNigeProb > 0){
     for(const winner of ranked){
@@ -1715,7 +1716,16 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
       };
       const [c3lo, c3hi] = CLIP3_BY_COURSE[b.boat] ?? [0.75, 1.35];
       const clipped = Math.min(c3hi, Math.max(c3lo, tenjiCoef));
-      const score = r3 != null ? r3 * clipped : (b.final_prob ?? b.tenkai_prob ?? 0);
+      let score = r3 != null ? r3 * clipped : (b.final_prob ?? b.tenkai_prob ?? 0);
+
+      // ── 2着艇の強さ補正: 2着が強いほど残り枠が埋まり3着争いが狭まる ──
+      if(secondBoat != null){
+        const secondFP = ranked2.find(r => r.boat === secondBoat)?.final_prob ?? (1/6);
+        const secondFPNorm = secondFP / (ranked2.reduce((s, r) => s + (r.final_prob ?? r.tenkai_prob ?? 0), 0) || 1);
+        const secondOccupyAdj = Math.max(0.7, 1.0 - secondFPNorm * 0.5);
+        score *= secondOccupyAdj;
+      }
+
       return { boat: b.boat, name: b.name, r3, score };
     })
     .sort((a, b) => b.score - a.score);
@@ -2223,14 +2233,14 @@ function renderBuy(rno){
                  'まくり差し':'bl-makusas', '抜き':'bl-nuki' }[kimari] || 'bl-nuki';
       }
 
-      // ── 【改修】2着閾値: 両モード共通 70% ──
-      // 2着累積目標: 両モード共通 70%
-      // ※ 2着を拡張すると1軸の買い目が10点上限を圧迫し、2軸目・折返し買い目が押し出される
-      //   2着は絞ったまま、3着のみモード別拡張（PICK3_PROB_TARGET_HIT）で対応する
-      const PICK2_PROB_TARGET = 0.70;
+      // ── 【改修】2着閾値: hitモード 75% / recモード 70% ──
+      // hit: 的中重視のため2着も拡張して取りこぼし削減
+      // rec: 配当重視のため従来通り絞りを維持（10点上限圧迫を回避）
+      const PICK2_PROB_TARGET_HIT2 = 0.75;
+      const PICK2_PROB_TARGET_REC2 = 0.70;
 
       function pick2nd(winnerBoat, kimari, bMode){
-        const pick2Target = PICK2_PROB_TARGET;
+        const pick2Target = (bMode === 'hit') ? PICK2_PROB_TARGET_HIT2 : PICK2_PROB_TARGET_REC2;
         const list = scenarioPlace2[winnerBoat]?.[kimari] || [];
         if(list.length === 0) return [];
         const isNige = (kimari === '逃げ' && winnerBoat === 1);
@@ -2348,12 +2358,14 @@ function renderBuy(rno){
           const prob2      = scenProb * p2;
 
           const thirdAll   = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, kimari, s2);
+          const R3_MIN_THRESHOLD = 0.03; // 3着率3%未満の艇は買い目から除外
           const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
           const thirdList  = [];
           let cumScore = 0;
           // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
           const pick3TargetInner = (buyMode === 'hit') ? PICK3_PROB_TARGET_HIT : PICK3_PROB_TARGET_REC;
           for(const x of thirdAll){
+            if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD) continue; // 絶対値ガード
             thirdList.push(x);
             cumScore += x.score / scoreTotal;
             if(cumScore >= pick3TargetInner) break;
