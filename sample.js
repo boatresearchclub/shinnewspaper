@@ -1917,7 +1917,15 @@ function renderBuy(rno){
   // ── 買い目点数上限（betting_optimizer による推奨点数）──
   // opt_points が埋め込まれていればそれを使用、なければ 10点（デフォルト）
   // ※ 要注意会場（大村・宮島・福岡・丸亀）は最大7点で返ってくるため 0 は存在しない
-  const BUY_MAX_POINTS = (rd.opt_points != null) ? rd.opt_points : 10;
+  // 見送り推奨（pass_reason あり）でも買い目は参考表示するため上限は10点固定
+  // 通常パターンは buyMode 別に opt_points_hit/rec を参照
+  const _optHit  = rd.opt_points_hit != null ? rd.opt_points_hit : (rd.opt_points != null ? rd.opt_points : 10);
+  const _optRec  = rd.opt_points_rec != null ? rd.opt_points_rec : (rd.opt_points != null ? rd.opt_points : 10);
+  const _passHit = rd.opt_pass_reason_hit || '';
+  const _passRec = rd.opt_pass_reason_rec || '';
+  const BUY_MAX_POINTS_HIT = _passHit ? 10 : (_optHit > 0 ? _optHit : 10);
+  const BUY_MAX_POINTS_REC = _passRec ? 10 : (_optRec > 0 ? _optRec : 10);
+  const BUY_MAX_POINTS = BUY_MAX_POINTS_HIT; // 後方互換（buildBuy3ForMode のクロージャ参照用）
 
   // ─ STEP1: 1着率計算（venue_kimari × prob × 個人kimari適性）
   const ranked   = calcTenkaiProbs(rawBoats, arek);
