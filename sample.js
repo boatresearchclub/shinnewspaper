@@ -2203,12 +2203,12 @@ function renderBuy(rno){
   // 1着軸選定ロジックもモードで変える:
   //   hit: final_prob 1位固定（ブレ排除）
   //   rec: top3Scen の1〜2位も候補（穴も許容）
-  function buildBuy3ForMode(buyMode){
+  function buildBuy3ForMode(buyMode, maxPts){
     const b3    = [];
     const b3seen = new Set();
     const b2    = [];
     const b2seen = new Set();
-    const MAX_PTS = BUY_MAX_POINTS; // 10点上限
+    const MAX_PTS = (maxPts != null) ? maxPts : BUY_MAX_POINTS; // 10点上限
 
     function tryAdd3m(first, second, third, label, lc, prob, sg){
       const key = `${first}-${second}-${third}`;
@@ -2417,8 +2417,9 @@ function renderBuy(rno){
   }
 
   // ── 2モードの買い目をそれぞれ生成 ──
-  const { b3: buy3Hit_raw, b2: buy2Hit_raw } = buildBuy3ForMode('hit');
-  const { b3: buy3Rec_raw, b2: buy2Rec_raw } = buildBuy3ForMode('rec');
+  // HIT/REC 別の点数上限で買い目を生成（見送り推奨時は10点で参考表示）
+  const { b3: buy3Hit_raw, b2: buy2Hit_raw } = buildBuy3ForMode('hit', BUY_MAX_POINTS_HIT);
+  const { b3: buy3Rec_raw, b2: buy2Rec_raw } = buildBuy3ForMode('rec', BUY_MAX_POINTS_REC);
 
   // 旧コードとの互換性のため buy3 / buy2 は的中重視ベースで定義
   // ※ 合成オッズ判定（buy3Hit_checked）は後段で行うため、ここでは raw を参照
@@ -2793,9 +2794,12 @@ function renderBuy(rno){
   const buy3Rec          = attachEV(buy3Rec_checked.length > 0 ? buy3Rec_checked : buy3Rec_raw.slice(0, REC_MAX_PTS), raceOdds3tEv);
   const buy2Rec          = attachEV(buy2Rec_raw.slice(0, 8), raceOdds2tEv);
 
-  // ── パターンバッジ ──
-  const optPattern = rd.opt_pattern || null;
-  const optPoints  = rd.opt_points  != null ? rd.opt_points : 10;
+  // ── パターンバッジ・見送り推奨 ──
+  const optPattern    = rd.opt_pattern || null;
+  const optPoints     = rd.opt_points  != null ? rd.opt_points : 10;
+  // 見送り推奨理由（モード別）
+  const passReasonHit = rd.opt_pass_reason_hit || '';
+  const passReasonRec = rd.opt_pass_reason_rec || '';
   const patternColors = {
     '高配当1号艇': '#0066ff', '高配当他艇': '#00b86b',
     '中立1号艇':   '#6c7a94', '中立他艇':   '#6c7a94',
@@ -2849,11 +2853,12 @@ function renderBuy(rno){
 
   // ── 各モードのHTML生成 ──
   // underSynth=true のとき: 買い目はそのまま表示し、合成オッズ未達の注意書きを添える
-  function buildModePanel(buy3list, buy2list, modeId, underSynth, synthMin){
-    // 合成オッズ未達（見送り扱い）のときは的中バッジを表示しない
-    // collectResultsForDate でも見送りレースは除外されるため、画面表示と成績集計を一致させる
-    const b3html = buildBuyRows(buy3list, underSynth ? null : resultSan3, true);
-    const b2html = buildBuyRows(buy2list, underSynth ? null : resultNiren, false);
+  // passReason が空でないとき: 見送り推奨バナーをタブ直下・buy-grid上に表示
+  function buildModePanel(buy3list, buy2list, modeId, underSynth, synthMin, passReason){
+    // 合成オッズ未達（見送り扱い）または見送り推奨のときは的中バッジを表示しない
+    const showHitBadge = !underSynth && !passReason;
+    const b3html = buildBuyRows(buy3list, showHitBadge ? resultSan3 : null, true);
+    const b2html = buildBuyRows(buy2list, showHitBadge ? resultNiren : null, false);
     const so3    = synthOddsHtml(buy3list, raceOdds3tEv);
     const _soVal = calcSynthOdds(buy3list, raceOdds3tEv);
     const _soStr = _soVal != null ? _soVal.toFixed(2) + '倍' : '取得中';
@@ -2865,8 +2870,21 @@ function renderBuy(rno){
            <span>合成オッズ <strong>${_soStr}</strong>（基準${synthMin}倍未満）。参考買い目として表示していますが、購入は自己判断でお願いします。</span>
          </div>`
       : '';
+    // ── 見送り推奨バナー（➊高人気圧縮 ➋中人気ロス ➌limited会場 ➍SS他艇高あれ指数）──
+    const passWarning = passReason
+      ? `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 10px;margin:4px 0 6px;
+                     background:rgba(220,53,69,0.08);border:1px solid rgba(220,53,69,0.30);
+                     border-radius:6px;font-size:11px;color:#c0392b">
+           <span style="font-size:15px;flex-shrink:0;line-height:1.4">🚫</span>
+           <div style="line-height:1.6">
+             <div style="font-weight:700;margin-bottom:2px">見送り推奨</div>
+             <div style="color:var(--text2)">${passReason}</div>
+           </div>
+         </div>`
+      : '';
     return `
       <div id="${modeId}" style="display:none">
+        ${passWarning}
         <div class="buy-grid">
           <div class="buy-card">
             <div class="buy-card-title" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
@@ -2886,8 +2904,8 @@ function renderBuy(rno){
       </div>`;
   }
 
-  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitUnderSynth, HIT_SYNTH_MIN);
-  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recUnderSynth, REC_SYNTH_MIN);
+  const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitUnderSynth, HIT_SYNTH_MIN, passReasonHit);
+  const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recUnderSynth, REC_SYNTH_MIN, passReasonRec);
 
   // ── タブUI ──
   const modeTabs = `
@@ -3741,13 +3759,12 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     DATA = vdata;
     currentVenue = venue;
 
-    // 買い目上限（バックテスト用）: opt_points があれば使用
-    // ※ synthチェックの try ブロックからも参照するため function スコープで定義
-    // 買い目上限: buyMode別に opt_points_hit/rec を参照（後方互換: なければ opt_points）
+    // 買い目上限（バックテスト用）: buyMode 別に opt_points_hit/rec を参照
+    // 見送り推奨（pass_reason あり）は集計から除外されるため 0 が来ることはないが念のため10点フォールバック
     // ※ synthチェックの try ブロックからも参照するため function スコープで定義
     const BUY_MAX_POINTS_BT = buyMode === 'rec'
-      ? (rd.opt_points_rec != null ? rd.opt_points_rec : (rd.opt_points != null ? rd.opt_points : 10))
-      : (rd.opt_points_hit != null ? rd.opt_points_hit : (rd.opt_points != null ? rd.opt_points : 10));
+      ? (rd.opt_points_rec != null && rd.opt_points_rec > 0 ? rd.opt_points_rec : (rd.opt_points != null ? rd.opt_points : 10))
+      : (rd.opt_points_hit != null && rd.opt_points_hit > 0 ? rd.opt_points_hit : (rd.opt_points != null ? rd.opt_points : 10));
 
     let buy3 = [];
     try {
@@ -4355,13 +4372,11 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
         return;
       }
 
-      // ── 見送り推奨パターン除外（➊高人気圧縮 ➋中人気ロス ➌limited会場 ➍SS他艇高あれ指数）──
-      // opt_pass_reason_hit/rec が空でないレースはパターン判定で見送り推奨済み
-      // 成績集計・的中率・回収率の分母から除外し、集計を実態に合わせる
-      const passReason = buyMode === 'rec'
+      // ── 見送り推奨パターン除外（成績集計・的中率・回収率の分母から除外）──
+      const _passReason = buyMode === 'rec'
         ? (rd.opt_pass_reason_rec || '')
         : (rd.opt_pass_reason_hit || '');
-      if (passReason) {
+      if (_passReason) {
         excludedList.push({ venue, rno, reason: `見送り推奨（${rd.opt_pattern || ''}）` });
         return;
       }
