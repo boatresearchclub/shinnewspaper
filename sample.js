@@ -3743,7 +3743,11 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 
     // 買い目上限（バックテスト用）: opt_points があれば使用
     // ※ synthチェックの try ブロックからも参照するため function スコープで定義
-    const BUY_MAX_POINTS_BT = (rd.opt_points != null) ? rd.opt_points : 10;
+    // 買い目上限: buyMode別に opt_points_hit/rec を参照（後方互換: なければ opt_points）
+    // ※ synthチェックの try ブロックからも参照するため function スコープで定義
+    const BUY_MAX_POINTS_BT = buyMode === 'rec'
+      ? (rd.opt_points_rec != null ? rd.opt_points_rec : (rd.opt_points != null ? rd.opt_points : 10))
+      : (rd.opt_points_hit != null ? rd.opt_points_hit : (rd.opt_points != null ? rd.opt_points : 10));
 
     let buy3 = [];
     try {
@@ -4348,6 +4352,17 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
       }
       if (hasCourseOrderChange(rno, vdata)) {
         excludedList.push({ venue, rno, reason: '進入変更' });
+        return;
+      }
+
+      // ── 見送り推奨パターン除外（➊高人気圧縮 ➋中人気ロス ➌limited会場 ➍SS他艇高あれ指数）──
+      // opt_pass_reason_hit/rec が空でないレースはパターン判定で見送り推奨済み
+      // 成績集計・的中率・回収率の分母から除外し、集計を実態に合わせる
+      const passReason = buyMode === 'rec'
+        ? (rd.opt_pass_reason_rec || '')
+        : (rd.opt_pass_reason_hit || '');
+      if (passReason) {
+        excludedList.push({ venue, rno, reason: `見送り推奨（${rd.opt_pattern || ''}）` });
         return;
       }
 
