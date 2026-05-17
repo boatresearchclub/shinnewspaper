@@ -2863,10 +2863,9 @@ function renderBuy(rno){
   // underSynth=true のとき: 買い目はそのまま表示し、合成オッズ未達の注意書きを添える
   // passReason が空でないとき: 見送り推奨バナーをタブ直下・buy-grid上に表示
   function buildModePanel(buy3list, buy2list, modeId, underSynth, synthMin, passReason){
-    // 合成オッズ未達（見送り扱い）または見送り推奨のときは的中バッジを表示しない
-    const showHitBadge = !underSynth && !passReason;
-    const b3html = buildBuyRows(buy3list, showHitBadge ? resultSan3 : null, true);
-    const b2html = buildBuyRows(buy2list, showHitBadge ? resultNiren : null, false);
+    // 見送り・合成オッズ未達に関係なく、買い目が結果と一致すれば的中バッジを常に表示する
+    const b3html = buildBuyRows(buy3list, resultSan3, true);
+    const b2html = buildBuyRows(buy2list, resultNiren, false);
     const so3    = synthOddsHtml(buy3list, raceOdds3tEv);
     const _soVal = calcSynthOdds(buy3list, raceOdds3tEv);
     const _soStr = _soVal != null ? _soVal.toFixed(2) + '倍' : '取得中';
