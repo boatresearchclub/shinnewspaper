@@ -30,19 +30,27 @@ const SLIT_TENJI_THRESHOLDS = [
 // スリット補正全体の適用強度（0=無効 / 1=フル）
 const SLIT_WEIGHT = 0.5;  // ← 変更可: 0.0〜1.0
 
-// ── 枠番別 展示補正指数テーブル ──
-// FINAL_PROB_WEIGHTS.tenji をベースに枠番ごとに調整する乗数。
-// 1〜2枠: コース優位が支配的なため展示の影響を抑制。
-// 3〜5枠: 差し・まくりの爆発力に直結するため強めに効かせる。
-// 6枠:    まくり一発狙いで展示差が出やすいが6枠自体の勝率が低いため中程度。
-// 最終的な指数 = FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
-const TENJI_WEIGHT_BY_COURSE = {
-  1: 0.6,  // イン有利はコース補正で十分、展示は補助的
-  2: 0.8,  // 差しに展示が絡むが1枠に次いで抑制
-  3: 1.3,  // 差し・まくり差しの主力、展示差が着順に直結
-  4: 1.4,  // まくり・まくり差し最多コース、展示最重要
-  5: 1.3,  // まくり一発、外枠でも展示良ければ上位に
-  6: 1.0,  // まくり狙いだが距離ロスが大きく控えめ
+// ── 枠番別 展示感度テーブル ──
+// [2026-05-18 修正] TENJI_WEIGHT_BY_COURSE → TENJI_SENSITIVITY_BY_COURSE に変更
+// 旧: calcTenjiScore が返す係数に後付けで乗算するだけ（コース差が弱かった）
+// 新: 合成スコアの平均乖離率に掛ける感度係数として calcTenjiScore 内部で使用
+//     → 同じ乖離率でも枠番によって係数の伸びが変わる
+//     → 1号艇と6号艇が同タイムなら6号艇を高評価（外枠ほど展示の価値が高い）
+//
+// 設計方針:
+//   1枠: イン優位はコース補正が支配的。展示が突き抜けても評価を抑制。
+//   2枠: 差しに展示が絡むが1枠に次いで抑制。
+//   3枠: 差し・まくり差しの主力。展示差が着順に直結。
+//   4枠: まくり最多コース。展示最重要。
+//   5枠: まくり一発。外枠で同タイムなら内枠より高評価。
+//   6枠: 距離ロス大きいが展示突き抜けなら評価。1枠より明確に高く。
+const TENJI_SENSITIVITY_BY_COURSE = {
+  1: 3.0,   // 抑制: イン優位はコース補正で十分
+  2: 5.0,   // やや抑制
+  3: 9.0,   // 標準〜強め
+  4: 11.0,  // 最重要コース
+  5: 10.0,  // 外枠まくり評価
+  6: 7.0,   // 1枠より明確に高く、ただし距離ロス分を控えめに
 };
 
 // ── arek_score連動 動的wBase/wTenkai 算出 ──
@@ -608,76 +616,90 @@ function resolveWeights(venue, arek){
   return base;
 }
 
-// タイム値 → 偏差値ベースの補正係数（小さい=速い=偏差値高）
-function timeToCoef(h){
-  if(h >= 60) return 1.15;
-  if(h >= 55) return 1.08;
-  if(h >= 45) return 1.00;
-  if(h >= 40) return 0.93;
-  return 0.85;
-}
-
-// 1項目分の補正係数配列を返す（値がnullの艇が1艇でもあればnullを返す）
-// 全項目「小さいほど速い（タイム値）」
-function fieldCoefs(boats, tenjiData, field){
+// ── [2026-05-18 修正] fieldRawVals: 生タイム値を返すだけに変更 ──
+// 旧 timeToCoef + fieldCoefs: 各項目を個別に偏差値化してから加重平均
+//   → 複数項目が突き抜けていても段階テーブルで平坦化され乖離が死んでいた
+// 新: 生タイムをそのまま返し calcTenjiScore 側で合成スコアを作ってから一括乖離評価
+//   欠損艇は有効値の平均で補完（展示データが一部欠けても他艇のスコアを活かす）
+function fieldRawVals(boats, tenjiData, field){
   const vals = boats.map(b => tenjiData[b.boat]?.[field] ?? null);
-  // [2026-05-13 修正] 全艇欠損のみnullを返す（旧: 1艇でもnull→全体null）
-  // 欠損艇は計測値の平均で補完 → 展示データが一部欠けても他艇のスコアを活かす
   const validVals = vals.filter(v => v !== null);
   if(validVals.length === 0) return null;
   const fillAvg = validVals.reduce((a, v) => a + v, 0) / validVals.length;
-  const filled  = vals.map(v => v !== null ? v : fillAvg);
-  const avg = filled.reduce((a, v) => a + v, 0) / filled.length;
-  const std = Math.sqrt(filled.reduce((a, v) => a + (v - avg) ** 2, 0) / filled.length);
-  if(std === 0) return filled.map(() => 1.0);  // 全艇同タイム → 補正なし
-  return filled.map(v => timeToCoef(50 + ((avg - v) / std) * 10));
+  return vals.map(v => v !== null ? v : fillAvg);
 }
 
-// ── calcTenjiScore（独立展示スコア生成）──
+// ── [2026-05-18 修正] calcTenjiScore → 合成スコア平均乖離 × コース別感度方式 ──
 //
-// 【変更点】
-//   旧 calcTenjiDelta: base_score（prob/tenkai_prob）に展示係数を乗算
-//     → 基準probやtenkai_probに依存した連鎖計算になっていた
-//   新 calcTenjiScore: 展示タイムだけから独立した正規化スコアを生成
-//     → 基準prob・tenkai_probを一切参照しない
+// 【設計】
+//   ① 展示スコア = lap1×w + (mawari or chokusen)×w + tenji×w （生タイム加重合算）
+//      → 小さいほど速い（タイム値の合計）
+//   ② 6艇の平均スコアを基準に乖離率を算出
+//      deviation = (avg - 艇スコア) / avg  → 速い艇はプラス
+//   ③ 乖離率 × TENJI_SENSITIVITY_BY_COURSE[枠番] で rawCoef を生成
+//      → 同じ乖離率でも枠番によって係数の伸びが変わる
+//      → 1号艇と6号艇が同タイムなら6号艇（sensitivity大）を高評価
 //
-// 返り値: { [boat番号]: 展示独立スコア（正規化済み 0-1） } または null
+// 返り値: { [boat番号]: 正規化スコア, __coef_N: 平均1.0基準の係数 } または null
 //
 function calcTenjiScore(boats, tenjiData, venue, arek){
   if(!tenjiData) return null;
 
-  const w = resolveWeights(venue || "_default", arek || 50);
-  const FIELDS = ["lap1", "mawari", "chokusen", "tenji"];
+  const cfg = VENUE_TENJI_CONFIG[venue] || VENUE_TENJI_CONFIG["_default"];
 
-  const coefsMap = {};
-  for(const f of FIELDS){
-    if(w[f] <= 0) continue;
-    const c = fieldCoefs(boats, tenjiData, f);
-    if(c) coefsMap[f] = c;
-  }
+  // ① 項目別の生タイム値を取得
+  const lap1Vals     = fieldRawVals(boats, tenjiData, "lap1");
+  const mawariVals   = fieldRawVals(boats, tenjiData, "mawari");
+  const chokusenVals = fieldRawVals(boats, tenjiData, "chokusen");
+  const tenjiVals    = fieldRawVals(boats, tenjiData, "tenji");
 
-  if(Object.keys(coefsMap).length === 0) return null;
+  // tenji は必須
+  if(!tenjiVals) return null;
 
-  // 加重平均で合成係数を算出（各艇の展示パフォーマンス指標）
-  const compositeCoefs = boats.map((_, i) => {
-    let score = 0, wTotal = 0;
-    for(const f of FIELDS){
-      if(!coefsMap[f]) continue;
-      score  += w[f] * coefsMap[f][i];
-      wTotal += w[f];
-    }
-    return wTotal > 0 ? score / wTotal : 1.0;
+  // 会場重みを解決（計測なし項目はゼロ）
+  const w = (() => {
+    const base = { ...cfg.weight };
+    if(!cfg.available.lap1)     base.lap1     = 0;
+    if(!cfg.available.mawari)   base.mawari   = 0;
+    if(!cfg.available.chokusen) base.chokusen = 0;
+    if(!cfg.available.tenji)    base.tenji    = 0;
+    return base;
+  })();
+
+  const useLap1     = w.lap1     > 0 && lap1Vals     !== null;
+  const useMawari   = w.mawari   > 0 && mawariVals   !== null;
+  const useChokusen = w.chokusen > 0 && chokusenVals  !== null;
+
+  // lap1・mawari・chokusen のどれも使えなければ null
+  if(!useLap1 && !useMawari && !useChokusen) return null;
+
+  // ② 各艇の合成スコアを生成（タイム加重合算 → 小さいほど速い）
+  const compositeScores = boats.map((b, i) => {
+    let score = tenjiVals[i] * w.tenji;
+    if(useLap1)     score += lap1Vals[i]     * w.lap1;
+    if(useMawari)   score += mawariVals[i]   * w.mawari;
+    if(useChokusen) score += chokusenVals[i] * w.chokusen;
+    return score;
   });
 
-  // ★ 係数をそのまま正規化して独立スコアにする（probを一切掛けない）
-  const coefTotal = compositeCoefs.reduce((a, v) => a + v, 0) || 1;
-  const coefAvg   = coefTotal / boats.length;  // 平均係数（6艇均等なら全艇1.0）
+  // ③ 6艇平均を基準に乖離率を算出し、コース別感度で係数化
+  const avg = compositeScores.reduce((a, v) => a + v, 0) / compositeScores.length;
+  if(avg <= 0) return null;
+
+  const rawCoefs = boats.map((b, i) => {
+    const deviation   = (avg - compositeScores[i]) / avg;  // 速い艇→プラス
+    const sensitivity = TENJI_SENSITIVITY_BY_COURSE[b.boat] ?? 8.0;
+    return Math.min(2.0, Math.max(0.5, 1.0 + deviation * sensitivity));
+  });
+
+  // ④ 全艇平均を1.0基準に正規化して格納
+  const coefAvg   = rawCoefs.reduce((a, v) => a + v, 0) / rawCoefs.length;
+  const coefTotal = rawCoefs.reduce((a, v) => a + v, 0) || 1;
   const tenjiScoreMap = {};
   boats.forEach((b, i) => {
-    tenjiScoreMap[b.boat] = compositeCoefs[i] / coefTotal;
-    // 表示用: 平均を1.0基準とした係数（0.5〜2.0にクリップ）
+    tenjiScoreMap[b.boat] = rawCoefs[i] / coefTotal;
     tenjiScoreMap[`__coef_${b.boat}`] = coefAvg > 0
-      ? Math.min(2.0, Math.max(0.5, compositeCoefs[i] / coefAvg))
+      ? Math.min(2.0, Math.max(0.5, rawCoefs[i] / coefAvg))
       : 1.0;
   });
   return tenjiScoreMap;
@@ -2119,8 +2141,10 @@ function renderBuy(rno){
       slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
     }
 
-    // 枠番別展示指数
-    const wTenjiCourse = wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
+    // [2026-05-18 修正] TENJI_WEIGHT_BY_COURSE 廃止
+    // コース別感度は calcTenjiScore 内の TENJI_SENSITIVITY_BY_COURSE で処理済み
+    // → 二重適用を防ぐため wTenji をそのまま使用
+    const wTenjiCourse = wTenji;
 
     // 1パス目: 各係数と baseNorm を保存（2パス目で後艇参照するため）
     b._baseNorm   = baseNorm;
@@ -3985,7 +4009,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
             tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + (prevTenji - myTenji) * 0.50));
           }
         }
-        const _wTenjiCourse = _wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
+        // [2026-05-18 修正] TENJI_WEIGHT_BY_COURSE 廃止 → コース別感度は calcTenjiScore 内で処理済み
+        const _wTenjiCourse = _wTenji;
         b._multi_score = Math.pow(baseNorm, _wBase) *
                          Math.pow(tenkaiCoef, _wTenkai) *
                          Math.pow(tenjiCoef,  _wTenjiCourse);
@@ -4841,7 +4866,8 @@ function buildTopPickupRaces() {
             const my=tenjiRawMap_p[b.boat]??null, pr=tenjiRawMap_p[prev.boat]??null;
             if(my!=null&&pr!=null) tenjiCoef=Math.min(2.0,Math.max(0.5,tenjiCoef+(pr-my)*0.50));
           }
-          const wTenjiC=wTenji*(TENJI_WEIGHT_BY_COURSE[b.boat]??1.0);
+          // [2026-05-18 修正] TENJI_WEIGHT_BY_COURSE 廃止 → コース別感度は calcTenjiScore 内で処理済み
+          const wTenjiC=wTenji;
           b._multi_score=Math.pow(baseNorm,wBase)*Math.pow(tenkaiCoef,wTenkai)*Math.pow(tenjiCoef,wTenjiC);
         });
         const multiTotal=ranked.reduce((s,b)=>s+b._multi_score,0)||1;
