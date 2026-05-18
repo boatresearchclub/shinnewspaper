@@ -5123,7 +5123,7 @@ function computeScenCombos(venue, vdata, rno) {
   return combos;
 }
 
-// ── シナリオ買い 1日分集計（除外制限なし）──
+// ── シナリオ買い 1日分集計（合成オッズ2.5倍以上）──
 // ・合成オッズフィルター・見送り推奨フィルター なし
 // ・データ不足・進入変更・結果未確定は除外（最低限の品質確保）
 function collectResultsForDateScen(dateStr) {
@@ -5164,6 +5164,11 @@ function collectResultsForDateScen(dateStr) {
       });
       const synthOdds = (synthCount > 0 && synthDenom > 0) ? 1 / synthDenom : null;
 
+      // ── 合成オッズフィルター: 2.5倍未満は見送り ──
+      // ODDS_DATA未取得(null)の場合は参加扱い（オッズ欠損で除外しすぎない）
+      const SCEN_SYNTH_MIN = 2.5;
+      if (synthOdds !== null && synthOdds < SCEN_SYNTH_MIN) return;
+
       let isHit = false, hitOdds = 0, hitCombo = '';
       for (const c of combos) {
         const nc = normalizeCombo(c);
@@ -5194,7 +5199,7 @@ function _buildScenPanel_dateCard(results) {
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">除外制限なし</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
     </div>`;
 
@@ -5276,7 +5281,7 @@ function _buildScenPanel_dateCard(results) {
   return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">除外制限なし</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">合成オッズ2.5倍以上</div>
       <div style="display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
           <span style="font-size:10px;color:var(--text3)">的中率</span>
@@ -5313,7 +5318,7 @@ function _buildScen30Panel(results) {
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">除外制限なし</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
     </div>`;
 
@@ -5372,7 +5377,7 @@ function _buildScen30Panel(results) {
   return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:10px">除外制限なし</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:10px">合成オッズ2.5倍以上</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
           <span style="font-size:10px;color:var(--text3)">的中率</span>
