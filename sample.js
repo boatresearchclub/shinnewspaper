@@ -3316,11 +3316,21 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
 
   // ── 3着確率上位リスト（winner・2着を除いた ranked2 の final_prob 順）──
   function getPlace3Ranking(winnerBoat, secondBoat){
+    // 展開シナリオタブと同一の merged3rdMap を参照（修正: 旧実装は final_prob 順で
+    // 展開タブの3着と食い違いが生じていた。merged3rdMap を使うことで完全一致させる）
+    const thirdAll = sd.merged3rdMap?.[winnerBoat]?.[secondBoat] || [];
+    if(thirdAll.length > 0){
+      return thirdAll
+        .filter(x => x.boat !== winnerBoat && x.boat !== secondBoat)
+        .slice(0, 3)
+        .map(x => x.boat);
+    }
+    // フォールバック: merged3rdMap がない場合のみ final_prob 順
     return ranked2
       .filter(r => r.boat !== winnerBoat && r.boat !== secondBoat)
       .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
       .map(r => r.boat)
-      .slice(0, 3);  // 上位3位
+      .slice(0, 3);
   }
 
   // ── 3点（折り返し込み6点）生成ヘルパー ──
