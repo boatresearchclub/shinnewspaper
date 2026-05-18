@@ -4848,25 +4848,22 @@ function buildTopPickupRaces() {
       <div onclick="jumpToPickup('${p.venue}',${p.rno})"
            style="
              flex:0 0 auto;
-             width:${CARD_W}px;min-height:${CARD_W}px;
+             width:${CARD_W}px;
              box-sizing:border-box;
              background:var(--bg2);border:1px solid var(--border);
              border-radius:var(--radius-sm);
-             padding:9px 8px 8px;
+             padding:8px;
              cursor:pointer;transition:background 0.15s;
-             display:flex;flex-direction:column;gap:5px;
+             display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
            "
            onmouseover="this.style.background='var(--bg3)'"
            onmouseout="this.style.background='var(--bg2)'">
-        <!-- 時刻 -->
-        <div style="font-size:10px;color:var(--text3);text-align:center;letter-spacing:.04em">${p.time} 発走</div>
-        <!-- 会場・レース -->
-        <div style="text-align:center">
+        <div style="font-size:10px;color:var(--text3);letter-spacing:.04em">${p.time} 発走</div>
+        <div>
           <span style="font-size:15px;font-weight:700;color:var(--text)">${p.venue}</span>
-          <span style="font-size:13px;font-weight:700;color:var(--accent2);margin-left:4px">${p.rno}R</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent2);margin-left:3px">${p.rno}R</span>
         </div>
-        <!-- タグバッジ群 -->
-        <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">
           ${badgesHtml}
         </div>
       </div>`;
