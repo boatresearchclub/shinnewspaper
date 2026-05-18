@@ -4590,8 +4590,9 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 function buildDateCard(dateStr, label) {
   const { results: resultsHit } = collectResultsForDate(dateStr, 'hit');
   const { results: resultsRec, excludedList } = collectResultsForDate(dateStr, 'rec');
+  const resultsScen = collectResultsForDateScen(dateStr);
 
-  if (resultsHit.length === 0 && resultsRec.length === 0 && excludedList.length === 0) return '';
+  if (resultsHit.length === 0 && resultsRec.length === 0 && excludedList.length === 0 && resultsScen.length === 0) return '';
 
   function modePanel(results, modeName, synthMin) {
     const total = results.length;
@@ -4710,6 +4711,7 @@ function buildDateCard(dateStr, label) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
         ${modePanel(resultsHit, '🎯 的中重視', 2.5)}
         ${modePanel(resultsRec, '💰 回収重視', 4.0)}
+        ${_buildScenPanel_dateCard(resultsScen)}
       </div>
     </div>`;
 }
@@ -4752,11 +4754,14 @@ function calcTopAIStats() {
       // ── 的中重視・回収重視 それぞれ集計 ──
       const allResultsHit = [];
       const allResultsRec = [];
+      const allResultsScen = [];
       past30.forEach(d => {
         const { results: rh } = collectResultsForDate(d, 'hit');
         const { results: rr } = collectResultsForDate(d, 'rec');
+        const rs = collectResultsForDateScen(d);
         allResultsHit.push(...rh);
         allResultsRec.push(...rr);
+        allResultsScen.push(...rs);
       });
 
       if (allResultsHit.length === 0 && allResultsRec.length === 0) {
@@ -4859,6 +4864,7 @@ function calcTopAIStats() {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
               ${mode30Panel(allResultsHit, '🎯 的中重視', 2.5)}
               ${mode30Panel(allResultsRec, '💰 回収重視', 4.0)}
+              ${_buildScen30Panel(allResultsScen)}
             </div>
           </div>`;
       }
@@ -4986,6 +4992,385 @@ function collectResultsForDate(dateStr, buyMode = 'hit') {
   });
 
   return { results, excludedList };
+}
+
+// ============================================================
+// シナリオ買い 集計用ヘルパー
+// ============================================================
+
+// ── シナリオコンボ生成（集計専用）──
+// buildScenarioBuyPanel と同一ロジックを pure function 化。
+// DATA を一時差し替えして calcScenarioData / calcTenkaiProbs を利用する。
+// 戻り値: combo 文字列の配列（最大18点）
+function computeScenCombos(venue, vdata, rno) {
+  const rd = vdata.races[String(rno)];
+  if (!rd || !rd.boats) return [];
+
+  const slug     = SLUG_MAP[venue] || venue;
+  const tKey     = tenjiKey(slug, vdata.date, rno);
+  const tenjiData = _tenjiCache[tKey] || null;
+
+  // DATA を一時差し替え（calcScenarioData が DATA.venue に依存）
+  const savedDATA  = DATA;
+  const savedVenue = currentVenue;
+  DATA        = vdata;
+  currentVenue = venue;
+
+  let combos = [];
+  try {
+    const arek     = rd.arek ?? 54.7;
+    const rawBoats = rd.boats;
+    const ranked   = calcTenkaiProbs(rawBoats, arek);
+
+    let tenjiScoreMap = null;
+    if (tenjiData) tenjiScoreMap = calcTenjiScore(ranked, tenjiData, venue, arek);
+
+    // final_prob 計算（computeBuy3 と同一ロジック）
+    const probTotal        = ranked.reduce((s, b) => s + b.prob, 0) || 1;
+    const useMaster        = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
+    const { wBase, wTenkai, wTenji } = calcDynamicWeights(arek);
+    const tenkaiOnlyTotal  = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
+    const boatByNo         = {};
+    rawBoats.forEach(b => { boatByNo[b.boat] = b; });
+    const tenjiRawMap      = {};
+    if (tenjiData) {
+      Object.keys(tenjiData).filter(k => /^\d+$/.test(k)).forEach(k => {
+        const e = tenjiData[k];
+        if (e && typeof e.tenji === 'number') tenjiRawMap[parseInt(k)] = e.tenji;
+      });
+    }
+
+    ranked.forEach(b => {
+      const baseNorm = b.prob / probTotal;
+      const prevBoat = boatByNo[b.boat - 1] || null;
+      let tenkaiCoef = 1.0;
+      if (useMaster && baseNorm > 0) {
+        const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
+        tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
+      }
+      if (prevBoat) {
+        const myStRk   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank;
+        const pvStRk   = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank;
+        if (myStRk != null && pvStRk != null)
+          tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + (pvStRk - myStRk) * 0.10));
+      }
+      let tenjiCoef = 1.0;
+      if (tenjiScoreMap) tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
+      if (prevBoat && tenjiData) {
+        const myTj  = tenjiRawMap[b.boat]        ?? null;
+        const pvTj  = tenjiRawMap[prevBoat.boat] ?? null;
+        if (myTj != null && pvTj != null) {
+          const DIFF_MULT = { 1:0.0, 2:0.0, 3:0.3, 4:0.4, 5:0.35, 6:0.25 };
+          tenjiCoef = Math.min(3.0, Math.max(0.3, tenjiCoef + (pvTj - myTj) * (DIFF_MULT[b.boat] ?? 0.2)));
+        }
+      }
+      b._baseNorm   = baseNorm;
+      b._tenkaiCoef = tenkaiCoef;
+      b._tenjiCoef  = tenjiCoef;
+      b.final_prob  = baseNorm * wBase * tenkaiCoef * wTenkai * tenjiCoef * wTenji;
+    });
+
+    const totalFP = ranked.reduce((s, b) => s + b.final_prob, 0) || 1;
+    ranked.forEach(b => { b.final_prob /= totalFP; });
+    const ranked2 = [...ranked].sort((a, b) => b.final_prob - a.final_prob);
+
+    // scenarioData 計算
+    const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
+    if (!sd || !sd.valid) { DATA = savedDATA; currentVenue = savedVenue; return; }
+
+    const { scenarioPlace2, scenarioProb } = sd;
+    const fp1st = ranked2[0]?.boat;
+    const fp2nd = ranked2[1]?.boat;
+
+    function getP2Rank(winnerBoat) {
+      if (!scenarioPlace2?.[winnerBoat]) return [];
+      const totals = {}; let wSum = 0;
+      for (const [k, list] of Object.entries(scenarioPlace2[winnerBoat])) {
+        const p = scenarioProb?.[winnerBoat]?.[k] ?? 0; wSum += p;
+        (list || []).forEach(x => { totals[x.boat] = (totals[x.boat] ?? 0) + x.p2 * p; });
+      }
+      if (wSum <= 0)
+        return ranked2.filter(r => r.boat !== winnerBoat).sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0)).map(r => r.boat);
+      return Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([b]) => parseInt(b));
+    }
+    function getP3Rank(w, s) {
+      return ranked2.filter(r => r.boat !== w && r.boat !== s)
+        .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0)).map(r => r.boat).slice(0, 3);
+    }
+    function mkBlock(w, s, thirds) {
+      const out = [];
+      thirds.forEach(t => { if (t !== w && t !== s) { out.push(`${w}-${s}-${t}`); out.push(`${w}-${t}-${s}`); } });
+      return out;
+    }
+
+    const p2r1   = getP2Rank(fp1st);
+    const p2r2   = getP2Rank(fp2nd);
+    const sA = p2r1[0], sB = p2r1[1], sC = p2r2[0];
+    const b1 = sA != null ? mkBlock(fp1st, sA, getP3Rank(fp1st, sA)) : [];
+    const b2 = sB != null ? mkBlock(fp1st, sB, getP3Rank(fp1st, sB)) : [];
+    const b3 = sC != null ? mkBlock(fp2nd, sC, getP3Rank(fp2nd, sC)) : [];
+
+    const seen = new Set();
+    [b1, b2, b3].forEach(blk => blk.forEach(c => { if (!seen.has(c)) { seen.add(c); combos.push(c); } }));
+
+  } catch(e) {
+    console.warn('[computeScenCombos] error:', e);
+    combos = [];
+  }
+
+  DATA        = savedDATA;
+  currentVenue = savedVenue;
+  return combos;
+}
+
+// ── シナリオ買い 1日分集計（除外制限なし）──
+// ・合成オッズフィルター・見送り推奨フィルター なし
+// ・データ不足・進入変更・結果未確定は除外（最低限の品質確保）
+function collectResultsForDateScen(dateStr) {
+  const dataForDate = getDataForDate(dateStr);
+  const results = [];
+
+  VENUE_LIST.forEach(venue => {
+    const vdata = dataForDate[venue];
+    if (!vdata || !vdata.races) return;
+    if (venue === '江戸川') return;
+
+    const slug = SLUG_MAP[venue] || venue;
+
+    Object.entries(vdata.races).sort((a, b) => +a[0] - +b[0]).forEach(([rnoStr, rd]) => {
+      const rno = parseInt(rnoStr);
+      if (!rd || !rd.boats) return;
+
+      const rKey     = resultKey(slug, vdata.date, rno);
+      const resultRd = RESULT_DATA[rKey];
+      if (!resultRd || !resultRd.sanrentan || resultRd.sanrentan.length === 0) return;
+      if (hasInsufficient(rd))             return;
+      if (hasCourseOrderChange(rno, vdata)) return;
+
+      const combos = computeScenCombos(venue, vdata, rno);
+      if (!combos || combos.length === 0) return;
+
+      const resultSan3 = resultRd.sanrentan[0]
+        ? new Set([normalizeCombo(resultRd.sanrentan[0].combo)])
+        : new Set();
+
+      let isHit = false, hitOdds = 0, hitCombo = '';
+      for (const c of combos) {
+        const nc = normalizeCombo(c);
+        if (resultSan3.has(nc)) {
+          isHit    = true;
+          hitCombo = nc;
+          hitOdds  = resultRd.sanrentan[0]?.odds ?? 0;
+          break;
+        }
+      }
+
+      results.push({
+        venue, rno,
+        buyCnt: combos.length,
+        isHit, hitOdds, hitCombo,
+        actualResult: resultRd.sanrentan?.[0]?.combo || '',
+      });
+    });
+  });
+
+  return results;
+}
+
+// ── シナリオ買い 日別カード内パネル ──
+function _buildScenPanel_dateCard(results) {
+  const total = results.length;
+  if (total === 0) return `
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">除外制限なし</div>
+      <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
+    </div>`;
+
+  const hitCount     = results.filter(r => r.isHit).length;
+  const hitRate      = hitCount / total;
+  const totalBet     = results.reduce((s, r) => s + r.buyCnt * 100, 0);
+  const totalReturn  = results.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+  const recoveryRate = totalBet > 0 ? totalReturn / totalBet : 0;
+  const hitColor = hitRate      >= 0.7 ? 'var(--green)' : hitRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
+  const recColor = recoveryRate >= 1.0 ? 'var(--green)' : recoveryRate >= 0.75 ? 'var(--orange)' : 'var(--text)';
+
+  const venueMap = {};
+  results.forEach(r => { if (!venueMap[r.venue]) venueMap[r.venue] = []; venueMap[r.venue].push(r); });
+  const venueBlocks = VENUE_LIST.filter(v => venueMap[v]).map(v => {
+    const vrs  = venueMap[v];
+    const vHit = vrs.filter(r => r.isHit).length;
+    const vTot = vrs.length;
+    const vHR  = vHit / vTot;
+    const vBet = vrs.reduce((s, r) => s + r.buyCnt * 100, 0);
+    const vRet = vrs.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+    const vRec = vBet > 0 ? vRet / vBet : 0;
+    const vHC  = vHR >= 0.7 ? 'hit' : vHR >= 0.5 ? 'warn' : '';
+    const vRC  = vRec >= 1.0 ? 'over' : vRec >= 0.75 ? 'warn' : '';
+
+    const comboBadges = combo => (combo || '').split(/[-－−]/).map(n =>
+      /^[1-6]$/.test(n.trim())
+        ? `<span class="boat-circle b${n.trim()}" style="width:20px;height:20px;font-size:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n.trim()}</span>`
+        : ''
+    ).join('<span style="color:var(--text3);font-size:11px;margin:0 1px">−</span>');
+
+    const raceDetails = vrs.map(r => {
+      const hitOddsStr = r.isHit && r.hitOdds ? `￥${r.hitOdds.toLocaleString()}` : '';
+      const resultStr  = r.actualResult ? `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px">${comboBadges(r.actualResult)}</span>` : '';
+      const hitPart    = r.isHit
+        ? `<span class="ai-venue-race-hit" style="flex-shrink:0">🎯 的中</span>${resultStr}<span class="ai-venue-race-odds" style="flex-shrink:0">${hitOddsStr}</span>`
+        : `<span class="ai-venue-race-miss" style="flex-shrink:0">—</span>${resultStr}`;
+      return `<div class="ai-race-row" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--border)">
+        <span class="ai-venue-race-no" style="flex-shrink:0">${r.rno}R</span>
+        <span class="ai-venue-race-cnt" style="flex-shrink:0">${r.buyCnt}点</span>
+        ${hitPart}
+      </div>`;
+    }).join('');
+
+    return `<details class="ai-venue-details">
+      <summary class="ai-venue-summary">
+        <span class="ai-venue-summary-arrow">▶</span>
+        <span class="ai-venue-name">${v}</span>
+        <span class="ai-venue-stat">
+          <span class="ai-venue-stat-label">的中率</span>
+          <span class="ai-venue-stat-val ${vHC}">${(vHR*100).toFixed(0)}%</span>
+          <span class="ai-venue-stat-sub">${vHit}/${vTot}R</span>
+        </span>
+        <span class="ai-venue-stat">
+          <span class="ai-venue-stat-label">回収率</span>
+          <span class="ai-venue-stat-val ${vRC}">${(vRec*100).toFixed(0)}%</span>
+        </span>
+      </summary>
+      <div class="ai-venue-race-list">${raceDetails}</div>
+    </details>`;
+  }).join('');
+
+  const detailHtml = venueBlocks ? `
+    <details style="margin-top:0.5rem">
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;letter-spacing:.06em;list-style:none;display:flex;align-items:center;gap:5px">
+        <span style="font-size:10px">▶</span> 会場別内訳
+      </summary>
+      <div class="ai-venue-list" style="margin-top:0.5rem">${venueBlocks}</div>
+    </details>` : '';
+
+  return `
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">除外制限なし</div>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+          <span style="font-size:10px;color:var(--text3)">的中率</span>
+          <span style="font-size:15px;font-weight:700;font-family:var(--mono);color:${hitColor}">${(hitRate*100).toFixed(0)}%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+          <span style="font-size:10px;color:var(--text3)">回収率</span>
+          <span style="font-size:15px;font-weight:700;font-family:var(--mono);color:${recColor}">${(recoveryRate*100).toFixed(0)}%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+          <span style="font-size:10px;color:var(--text3)">総投資</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${totalBet.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+          <span style="font-size:10px;color:var(--text3)">総回収</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${recColor}">${totalReturn.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+          <span style="font-size:10px;color:var(--text3)">集計R</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${total}R</span>
+        </div>
+      </div>
+      ${detailHtml}
+    </div>`;
+}
+
+// ── シナリオ買い 30日集計サマリーパネル ──
+function _buildScen30Panel(results) {
+  const total = results.length;
+  if (total === 0) return `
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">除外制限なし</div>
+      <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
+    </div>`;
+
+  const hitCount     = results.filter(r => r.isHit).length;
+  const hitRate      = hitCount / total;
+  const totalBet     = results.reduce((s, r) => s + r.buyCnt * 100, 0);
+  const totalReturn  = results.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+  const recoveryRate = totalBet > 0 ? totalReturn / totalBet : 0;
+  const hitColor = hitRate      >= 0.7 ? 'var(--green)' : hitRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
+  const recColor = recoveryRate >= 1.0 ? 'var(--green)' : recoveryRate >= 0.75 ? 'var(--orange)' : 'var(--text)';
+
+  const venueMap30 = {};
+  results.forEach(r => { if (!venueMap30[r.venue]) venueMap30[r.venue] = []; venueMap30[r.venue].push(r); });
+  const venueRows30 = VENUE_LIST.filter(v => venueMap30[v]).map(v => {
+    const vrs  = venueMap30[v];
+    const vHit = vrs.filter(r => r.isHit).length;
+    const vTot = vrs.length;
+    const vBet = vrs.reduce((s, r) => s + r.buyCnt * 100, 0);
+    const vRet = vrs.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+    const vRec = vBet > 0 ? vRet / vBet : 0;
+    const vHC  = (vHit/vTot) >= 0.7 ? 'var(--green)' : (vHit/vTot) >= 0.5 ? 'var(--orange)' : 'var(--text)';
+    const vRC  = vRec >= 1.0 ? 'var(--green)' : vRec >= 0.75 ? 'var(--orange)' : 'var(--text)';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:3px 6px;font-size:11px;color:var(--text2);white-space:nowrap">${v}</td>
+      <td style="padding:3px 6px;text-align:right;font-size:11px;font-weight:700;color:${vHC}">${(vHit/vTot*100).toFixed(0)}%</td>
+      <td style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3)">${vHit}/${vTot}R</td>
+      <td style="padding:3px 6px;text-align:right;font-size:11px;font-weight:700;color:${vRC}">${(vRec*100).toFixed(0)}%</td>
+    </tr>`;
+  }).join('');
+
+  const venueDetail30 = venueRows30 ? `
+    <details style="margin-top:6px">
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0">
+        <span style="font-size:10px">▶</span> 会場別内訳
+      </summary>
+      <div style="overflow-x:auto;margin-top:4px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:3px 6px;text-align:left;font-size:10px;color:var(--text3);font-weight:500">会場</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">的中率</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">R数</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">回収率</th>
+          </tr></thead>
+          <tbody>${venueRows30}</tbody>
+        </table>
+      </div>
+    </details>` : '';
+
+  return `
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:10px">除外制限なし</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+          <span style="font-size:10px;color:var(--text3)">的中率</span>
+          <div style="text-align:right">
+            <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${hitColor}">${(hitRate*100).toFixed(0)}%</span>
+            <div style="font-size:10px;color:var(--text3)">${hitCount}/${total}R</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+          <span style="font-size:10px;color:var(--text3)">回収率</span>
+          <div style="text-align:right">
+            <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${recColor}">${(recoveryRate*100).toFixed(0)}%</span>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+          <span style="font-size:10px;color:var(--text3)">総投資</span>
+          <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${totalBet.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+          <span style="font-size:10px;color:var(--text3)">総回収</span>
+          <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${recColor}">${totalReturn.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:10px;color:var(--text3)">集計R</span>
+          <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${total}R</span>
+        </div>
+      </div>
+      ${venueDetail30}
+    </div>`;
 }
 
 // ── バックテスト CSV エクスポート ──
