@@ -1823,7 +1823,36 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
     }
   }
 
-  return { valid: true, scenarioProb, scenarioPlace2, kimariTypes, inn2Place, top3, scenarioVKimari, isValidFirst };
+  // ── 軸艇×2着艇の3着上位リストを事前計算（画面・買い目の共通データ源）──
+  // buildScenarioSection / renderBuy の両方がここを参照することでズレをなくす。
+  // merged3rdMap[axisBoat][secondBoat] = calc3rdScores の全kimari加重平均結果（score降順）
+  const merged3rdMap = {};
+  for(const winner of ranked2){
+    const ax = winner.boat;
+    const axisScens = kimariTypes
+      .map(k => ({ kimari: k, prob: scenarioProb[ax]?.[k] ?? 0 }))
+      .filter(x => x.prob > 0.001);
+    const totalAxProb = axisScens.reduce((s, x) => s + x.prob, 0) || 1;
+    merged3rdMap[ax] = {};
+    for(const second of ranked2){
+      if(second.boat === ax) continue;
+      const r3Map = {};
+      for(const scen of axisScens){
+        const w = scen.prob / totalAxProb;
+        const thirds = calc3rdScores(ranked2, tenjiScoreMap, ax, scen.kimari, second.boat);
+        for(const t3 of thirds){
+          if(!r3Map[t3.boat]) r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
+          if(t3.r3 != null){ r3Map[t3.boat].r3sum += t3.r3 * w; r3Map[t3.boat].r3Count += w; }
+          r3Map[t3.boat].scoreSum += t3.score * w; r3Map[t3.boat].scoreCount += w;
+        }
+      }
+      merged3rdMap[ax][second.boat] = Object.values(r3Map)
+        .map(x => ({ boat: x.boat, r3: x.r3Count > 0 ? x.r3sum / x.r3Count : null, score: x.scoreCount > 0 ? x.scoreSum / x.scoreCount : 0 }))
+        .sort((a, b) => b.score - a.score);
+    }
+  }
+
+  return { valid: true, scenarioProb, scenarioPlace2, kimariTypes, inn2Place, top3, scenarioVKimari, isValidFirst, merged3rdMap };
 }
 
 // ── 展開シナリオセクション生成（強化版: 2着+3着確率表示・1着率信頼度バー付き）──
@@ -1889,20 +1918,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
   const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
   if(!sd.valid) return '';
 
-  const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
-
-  // tenkaiRem & winnerCO（3着率取得用）
-  const tenkaiRem_scen = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
-    if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
-    return MASTER_EXT?.tenkai_remaining || null;
-  })();
-  const winnerCO_scen = MASTER_EXT?.winner_course_order || {};
-
-  // 3着スコアを計算する関数 → トップレベルの calc3rdScores に委譲
-  function calc3rdScoresLocal(winnerBoat, kimari, secondBoat){
-    return calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat);
-  }
+  const { scenarioProb, scenarioPlace2, kimariTypes, merged3rdMap } = sd;
 
   const boatCircle = (n) =>
     `<span class="boat-circle b${n}" style="width:20px;height:20px;font-size:10px;line-height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">${n}</span>`;
@@ -1986,37 +2002,9 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 
     const top4Place = mergedPlace2.slice(0, 4);
 
-    // ── 3着確率も加重平均で合算 ──
-    // 各2着候補に対して、複数シナリオ分の3着スコアをシナリオ確率で加重平均する
-    function calcMerged3rd(secondBoat){
-      const r3Map = {}; // boat番号 → { boat, r3sum, scoreSum, weight }
-      for(const scen of grp.scenarios){
-        const w = scen.prob / (totalProb || 1);
-        const thirds = calc3rdScoresLocal(grp.boat, scen.kimari, secondBoat);
-        for(const t3 of thirds){
-          if(!r3Map[t3.boat]){
-            r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
-          }
-          if(t3.r3 != null){
-            r3Map[t3.boat].r3sum   += t3.r3 * w;
-            r3Map[t3.boat].r3Count += w;
-          }
-          r3Map[t3.boat].scoreSum   += t3.score * w;
-          r3Map[t3.boat].scoreCount += w;
-        }
-      }
-      return Object.values(r3Map)
-        .map(x => ({
-          boat:  x.boat,
-          r3:    x.r3Count > 0 ? x.r3sum / x.r3Count : null,
-          score: x.scoreCount > 0 ? x.scoreSum / x.scoreCount : 0,
-        }))
-        .sort((a, b) => b.score - a.score);
-    }
-
     // 各2着候補の行を生成
     const p2Lines = top4Place.map(item => {
-      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScoresLocal(grp.boat, grp.scenarios[0].kimari, item.boat));
+      const third3     = merged3rdMap[grp.boat]?.[item.boat] || [];
       const third3html = third3.map(t3 =>
         `<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap">
           ${boatCircle(t3.boat)}
@@ -2532,7 +2520,7 @@ function renderBuy(rno){
     }
 
     if(sd.valid){
-      const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
+      const { scenarioProb, scenarioPlace2, kimariTypes, merged3rdMap } = sd;
       function kimariToLc(kimari){
         return { '逃げ':'bl-nige', '差し':'bl-sashi', 'まくり':'bl-makuri',
                  'まくり差し':'bl-makusas', '抜き':'bl-nuki' }[kimari] || 'bl-nuki';
@@ -2644,49 +2632,6 @@ function renderBuy(rno){
         }
       }
 
-      // ── 画面シナリオ表示と同一の「全kimari加重平均3着スコア」を買い目にも適用 ──
-      // 旧: 単一kimariの calc3rdScores を直接使用 → 画面表示とずれが発生
-      // 新: 画面の buildScenarioSection / calcMerged3rd と完全同一の構造
-      //     → 軸艇ごとに「全kimariをscenarioProb重みで加重平均」したキャッシュを先に作る
-      //     → scenariosToProcess のループ内でもこのキャッシュを参照する
-
-      // 軸艇ごとのallScens（画面の boatGroups.scenarios と同じ）を事前生成
-      const axisAllScensCache = {};
-      for(const winner of ranked2){
-        const allScens = kimariTypes
-          .map(k => ({ kimari: k, prob: scenarioProb[winner.boat]?.[k] ?? 0 }))
-          .filter(x => x.prob > 0.001);
-        axisAllScensCache[winner.boat] = allScens;
-      }
-
-      function calcMerged3rdBuy(axisBoat, secondBoat){
-        const axisScens = axisAllScensCache[axisBoat] || [];
-        const totalAxisProb = axisScens.reduce((s, x) => s + x.prob, 0) || 1;
-        const r3Map = {};
-        for(const scen of axisScens){
-          const w = scen.prob / totalAxisProb;
-          const thirds = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, scen.kimari, secondBoat);
-          for(const t3 of thirds){
-            if(!r3Map[t3.boat]){
-              r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
-            }
-            if(t3.r3 != null){
-              r3Map[t3.boat].r3sum   += t3.r3 * w;
-              r3Map[t3.boat].r3Count += w;
-            }
-            r3Map[t3.boat].scoreSum   += t3.score * w;
-            r3Map[t3.boat].scoreCount += w;
-          }
-        }
-        return Object.values(r3Map)
-          .map(x => ({
-            boat:  x.boat,
-            r3:    x.r3Count > 0 ? x.r3sum / x.r3Count : null,
-            score: x.scoreCount > 0 ? x.scoreSum / x.scoreCount : 0,
-          }))
-          .sort((a, b) => b.score - a.score);
-      }
-
       scenariosToProcess.forEach((topScen, scenIdx) => {
         const axisBoat = topScen.boat;
         const kimari   = topScen.kimari;
@@ -2701,16 +2646,15 @@ function renderBuy(rno){
           const p2         = p2Item?.p2 ?? 0;
           const prob2      = scenProb * p2;
 
-          // 【修正】画面表示と同じ全kimari加重平均3着スコアを使用
-          const thirdAll   = calcMerged3rdBuy(axisBoat, s2);
+          // 展開シナリオ表示と同一の merged3rdMap を直接参照
+          const thirdAll   = merged3rdMap[axisBoat]?.[s2] || [];
           const R3_MIN_THRESHOLD = 0.03; // 3着率3%未満の艇は買い目から除外
           const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
           const thirdList  = [];
           let cumScore = 0;
-          // 【2026-05-16 改修】モード別3着累積目標: hit=0.80, rec=0.70
           const pick3TargetInner = (buyMode === 'hit') ? PICK3_PROB_TARGET_HIT : PICK3_PROB_TARGET_REC;
           for(const x of thirdAll){
-            if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD) continue; // 絶対値ガード
+            if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD) continue;
             thirdList.push(x);
             cumScore += x.score / scoreTotal;
             if(cumScore >= pick3TargetInner) break;
