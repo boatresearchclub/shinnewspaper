@@ -3450,6 +3450,7 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
       </div>
     </div>`;
 
+}                  //
 
 // ── renderComment ──
 function renderComment(rno){
