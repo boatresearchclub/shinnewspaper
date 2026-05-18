@@ -5133,6 +5133,12 @@ function computeScenCombos(venue, vdata, rno) {
       return Object.entries(totals).sort((a, b) => b[1] - a[1]).map(([b]) => parseInt(b));
     }
     function getP3Rank(w, s) {
+      // buildScenarioBuyPanel の getPlace3Ranking と同一ロジック（修正: merged3rdMap参照）
+      const thirdAll = sd.merged3rdMap?.[w]?.[s] || [];
+      if (thirdAll.length > 0) {
+        return thirdAll.filter(x => x.boat !== w && x.boat !== s).slice(0, 3).map(x => x.boat);
+      }
+      // フォールバック: merged3rdMap がない場合のみ final_prob 順
       return ranked2.filter(r => r.boat !== w && r.boat !== s)
         .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0)).map(r => r.boat).slice(0, 3);
     }
