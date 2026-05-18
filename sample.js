@@ -9,6 +9,27 @@ const FINAL_PROB_WEIGHTS = {
   // [2026-05-14 修正] 0.3→0.5: 枠別指数テーブル導入に合わせて底上げ
 };
 
+// ── スリット補正パラメータ ──
+// 前艇（枠番-1）との ST差・展示タイム差から捲り/前艇有利を判定する。
+// 「後艇が前艇より有利」な場合に後艇を加点、前艇を減点する。
+//
+// ST差閾値（前艇ST - 後艇ST）: 正値=後艇が速い=捲り有効
+const SLIT_ST_THRESHOLDS = [
+  { min: 0.5,  coef: 1.30 },  // 差0.5以上: 捲り強
+  { min: 0.3,  coef: 1.15 },  // 差0.3〜0.5: 捲り中
+  { min: -0.3, coef: 1.00 },  // 差±0.3未満: 互角
+  { min: -Infinity, coef: 0.90 },  // 差-0.3以下: 前艇有利
+];
+// 展示タイム差閾値（前艇展示 - 後艇展示）: 正値=後艇が速い
+const SLIT_TENJI_THRESHOLDS = [
+  { min: 0.10,  coef: 1.20 },
+  { min: 0.05,  coef: 1.10 },
+  { min: -0.05, coef: 1.00 },
+  { min: -Infinity, coef: 0.90 },
+];
+// スリット補正全体の適用強度（0=無効 / 1=フル）
+const SLIT_WEIGHT = 0.5;  // ← 変更可: 0.0〜1.0
+
 // ── 枠番別 展示補正指数テーブル ──
 // FINAL_PROB_WEIGHTS.tenji をベースに枠番ごとに調整する乗数。
 // 1〜2枠: コース優位が支配的なため展示の影響を抑制。
@@ -2039,15 +2060,53 @@ function renderBuy(rno){
       }
     }
 
+    // ── スリット補正: 前艇(枠番-1)との ST差・展示タイム差から捲り優位を評価 ──
+    //
+    // 1枠は前艇なし → slitCoef=1.0（補正なし）
+    // ST差・展示タイム差それぞれから係数を取得し乗算する。
+    // SLIT_WEIGHT で全体の強度を調整（0=無効 / 1=フル適用）。
+    //
+    let slitCoef = 1.0;
+    if(prevBoat && hasTenji && SLIT_WEIGHT > 0){
+      // ST差係数（平均ST: MASTER_EXT から取得）
+      const myStRank   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank;
+      const prevStRank = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank;
+      let stSlitCoef = 1.0;
+      if(myStRank != null && prevStRank != null){
+        const stDiff = prevStRank - myStRank;  // 正値: 後艇が速い
+        const found  = SLIT_ST_THRESHOLDS.find(t => stDiff >= t.min);
+        stSlitCoef   = found ? found.coef : 1.0;
+      }
+
+      // 展示タイム差係数
+      const myTenji2   = tenjiRawMap[b.boat]        ?? null;
+      const prevTenji2 = tenjiRawMap[prevBoat.boat] ?? null;
+      let tenjiSlitCoef = 1.0;
+      if(myTenji2 != null && prevTenji2 != null){
+        const tenjiDiff2 = prevTenji2 - myTenji2;  // 正値: 後艇が速い
+        const found2     = SLIT_TENJI_THRESHOLDS.find(t => tenjiDiff2 >= t.min);
+        tenjiSlitCoef    = found2 ? found2.coef : 1.0;
+      }
+
+      // ST差・展示差の乗算でスリット係数を確定
+      const rawSlitCoef = stSlitCoef * tenjiSlitCoef;
+      // SLIT_WEIGHT で中立値(1.0)に引き寄せる（0なら常に1.0、1なら rawSlitCoef そのまま）
+      slitCoef = 1.0 + (rawSlitCoef - 1.0) * SLIT_WEIGHT;
+      slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
+    }
+
     // 枠番別展示指数: FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
     const wTenjiCourse = wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
     // 指数重みスコア: coef^weight（weight=0 → 1.0、weight=1 → 素の値）
+    // スリット補正は乗算で直接適用（指数重みなし）
     b._multi_score  = Math.pow(baseNorm, wBase) *
                       Math.pow(tenkaiCoef, wTenkai) *
-                      Math.pow(tenjiCoef,  wTenjiCourse);
+                      Math.pow(tenjiCoef,  wTenjiCourse) *
+                      slitCoef;
     b.display_base   = baseNorm;
     b.display_tenkai = useMaster ? tenkaiCoef : null;
     b.display_tenji  = hasTenji  ? tenjiCoef  : null;
+    b.display_slit   = hasTenji  ? slitCoef   : null;  // 表示用（展示データありの場合のみ）
   });
 
   // 正規化して final_prob を確定
