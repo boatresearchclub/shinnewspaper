@@ -3218,6 +3218,9 @@ function renderBuy(rno){
   const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitUnderSynth, HIT_SYNTH_MIN, passReasonHit);
   const recPanelHtml = buildModePanel(buy3Rec, buy2Rec, 'buy-mode-rec', recUnderSynth, REC_SYNTH_MIN, passReasonRec);
 
+  // ── シナリオ買いパネル生成 ──
+  const scenPanelHtml = buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo);
+
   // ── タブUI ──
   const modeTabs = `
     <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0;background:var(--bg2);">
@@ -3231,9 +3234,14 @@ function renderBuy(rno){
                border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;">
         💰 回収重視<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">合成4.0x以上</span>
       </button>
+      <button id="buy-tab-scen" onclick="switchBuyMode('scen')"
+        style="flex:1;padding:8px 4px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;">
+        🎲 シナリオ<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">18点固定</span>
+      </button>
     </div>`;
 
-  document.getElementById('detail2-panel').innerHTML = modeTabs + hitPanelHtml + recPanelHtml;
+  document.getElementById('detail2-panel').innerHTML = modeTabs + hitPanelHtml + recPanelHtml + scenPanelHtml;
 
   // 初期表示
   document.getElementById('buy-mode-hit').style.display = 'block';
@@ -3242,21 +3250,205 @@ function renderBuy(rno){
 
 // ── 買い目モード切り替え ──
 function switchBuyMode(mode){
-  const hitPanel = document.getElementById('buy-mode-hit');
-  const recPanel = document.getElementById('buy-mode-rec');
-  const hitTab   = document.getElementById('buy-tab-hit');
-  const recTab   = document.getElementById('buy-tab-rec');
+  const hitPanel  = document.getElementById('buy-mode-hit');
+  const recPanel  = document.getElementById('buy-mode-rec');
+  const scenPanel = document.getElementById('buy-mode-scen');
+  const hitTab    = document.getElementById('buy-tab-hit');
+  const recTab    = document.getElementById('buy-tab-rec');
+  const scenTab   = document.getElementById('buy-tab-scen');
   if(!hitPanel || !recPanel) return;
-  const isHit = (mode === 'hit');
-  hitPanel.style.display = isHit ? 'block' : 'none';
-  recPanel.style.display = isHit ? 'none'  : 'block';
-  hitTab.style.borderBottomColor = isHit ? 'var(--accent)' : 'transparent';
-  hitTab.style.color             = isHit ? 'var(--accent)' : 'var(--text3)';
-  hitTab.style.fontWeight        = isHit ? '700' : '500';
-  recTab.style.borderBottomColor = isHit ? 'transparent' : 'var(--accent)';
-  recTab.style.color             = isHit ? 'var(--text3)' : 'var(--accent)';
-  recTab.style.fontWeight        = isHit ? '500' : '700';
+
+  const panels = [hitPanel, recPanel, scenPanel].filter(Boolean);
+  const tabs   = [hitTab,   recTab,   scenTab  ].filter(Boolean);
+
+  // 全パネルを非表示・タブをリセット
+  panels.forEach(p => { p.style.display = 'none'; });
+  tabs.forEach(t => {
+    t.style.borderBottomColor = 'transparent';
+    t.style.color             = 'var(--text3)';
+    t.style.fontWeight        = '500';
+  });
+
+  // 選択モードだけアクティブ化
+  const activePanel = document.getElementById('buy-mode-' + mode);
+  const activeTab   = document.getElementById('buy-tab-' + mode);
+  if(activePanel) activePanel.style.display = 'block';
+  if(activeTab){
+    activeTab.style.borderBottomColor = 'var(--accent)';
+    activeTab.style.color             = 'var(--accent)';
+    activeTab.style.fontWeight        = '700';
+  }
 }
+
+// ── シナリオ買いパネル生成 ──
+// ranked2      : final_prob 降順ソート済み艇リスト
+// sd           : calcScenarioData の戻り値 ({ scenarioPlace2, ... })
+// resultSan3   : 3連単結果 Set（的中バッジ用）
+// raceOdds3tEv : 3連単オッズ map
+// comboToBadges: コンボ文字列 → 艇バッジHTML変換関数（renderBuy スコープから渡す）
+// normalizeCombo: コンボ正規化関数
+function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo){
+  if(!ranked2 || ranked2.length < 2){
+    return `<div id="buy-mode-scen" style="display:none">
+      <div style="padding:16px;color:var(--text3);font-size:12px">データ不足のためシナリオ買いを生成できません</div>
+    </div>`;
+  }
+
+  const { scenarioPlace2 } = sd || {};
+
+  // ── 最終確率1位・2位の艇番を取得 ──
+  const fp1st = ranked2[0]?.boat;  // final_prob 1位
+  const fp2nd = ranked2[1]?.boat;  // final_prob 2位
+
+  // ── 2着確率上位リストを取得するヘルパー ──
+  // scenarioPlace2[winner][kimari] の p2 を kimari ごとに合算して総合2着確率を求める
+  function getPlace2Ranking(winnerBoat){
+    if(!scenarioPlace2?.[winnerBoat]) return [];
+    // kimari をまたいで各艇の p2 を加重平均（シナリオ確率で重みづけ）
+    const totals = {};
+    let weightSum = 0;
+    for(const [kimari, list] of Object.entries(scenarioPlace2[winnerBoat])){
+      const scenProb = sd.scenarioProb?.[winnerBoat]?.[kimari] ?? 0;
+      weightSum += scenProb;
+      (list || []).forEach(x => {
+        totals[x.boat] = (totals[x.boat] ?? 0) + x.p2 * scenProb;
+      });
+    }
+    if(weightSum <= 0){
+      // フォールバック: kimari なし時は final_prob で代替
+      return ranked2
+        .filter(r => r.boat !== winnerBoat)
+        .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+        .map(r => r.boat);
+    }
+    return Object.entries(totals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([boat]) => parseInt(boat));
+  }
+
+  // ── 3着確率上位リスト（winner・2着を除いた ranked2 の final_prob 順）──
+  function getPlace3Ranking(winnerBoat, secondBoat){
+    return ranked2
+      .filter(r => r.boat !== winnerBoat && r.boat !== secondBoat)
+      .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+      .map(r => r.boat)
+      .slice(0, 3);  // 上位3位
+  }
+
+  // ── 3点（折り返し込み6点）生成ヘルパー ──
+  // winner → second → 3着上位3つ、さらに 2着3着を折り返し
+  function makeBlock(winner, second, thirdCandidates){
+    const combos = new Set();
+    thirdCandidates.forEach(third => {
+      if(third === winner || third === second) return;
+      combos.add(`${winner}-${second}-${third}`);
+      combos.add(`${winner}-${third}-${second}`);  // 折り返し
+    });
+    return [...combos];
+  }
+
+  // ── ① fp1st → 2着1位 → 3着上位3 × 折り返し = 6点 ──
+  const p2Ranking1st = getPlace2Ranking(fp1st);
+  const second_A = p2Ranking1st[0];  // 2着確率1位
+  const second_B = p2Ranking1st[1];  // 2着確率2位
+
+  const block1 = second_A != null ? makeBlock(fp1st, second_A, getPlace3Ranking(fp1st, second_A)) : [];
+  // ── ② fp1st → 2着2位 → 3着上位3 × 折り返し = 6点 ──
+  const block2 = second_B != null ? makeBlock(fp1st, second_B, getPlace3Ranking(fp1st, second_B)) : [];
+  // ── ③ fp2nd → 2着1位（fp2nd基準） → 3着上位3 × 折り返し = 6点 ──
+  const p2Ranking2nd = getPlace2Ranking(fp2nd);
+  const second_C = p2Ranking2nd[0];  // fp2ndの2着確率1位
+  const block3 = second_C != null ? makeBlock(fp2nd, second_C, getPlace3Ranking(fp2nd, second_C)) : [];
+
+  // 重複除去しつつ順番を保持
+  const allCombosSet = new Set();
+  const allCombos = [];
+  [block1, block2, block3].forEach(block => {
+    block.forEach(c => {
+      if(!allCombosSet.has(c)){ allCombosSet.add(c); allCombos.push(c); }
+    });
+  });
+
+  // ── HTML生成 ──
+  const boatBadge = n => `<span class="boat-circle b${n}" style="width:22px;height:22px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;vertical-align:middle">${n}</span>`;
+  function comboToHtml(combo){
+    return combo.replace(/(\d)/g, m => boatBadge(parseInt(m))).replace(/-/g,'<span style="color:var(--text3);margin:0 1px;font-size:11px">-</span>');
+  }
+
+  function blockHeader(label, winner, second){
+    const wBadge = boatBadge(winner);
+    const sBadge = second != null ? boatBadge(second) : '?';
+    return `<div style="font-size:10px;color:var(--text3);padding:4px 0 2px;margin-top:6px;border-top:1px dashed var(--border)">${label}: ${wBadge}<span style="color:var(--text3);margin:0 2px">→</span>${sBadge}<span style="color:var(--text3);margin:0 2px;font-size:9px">→ 3着折り返し</span></div>`;
+  }
+
+  let rowsHtml = '';
+
+  // グループ①
+  rowsHtml += blockHeader('①', fp1st, second_A);
+  block1.forEach(c => {
+    const nc = normalizeCombo(c);
+    const isHit = resultSan3 && resultSan3.has(nc);
+    const oddsVal = raceOdds3tEv?.[nc] ?? null;
+    const oddsStr = oddsVal != null ? oddsVal.toFixed(1) : '—';
+    rowsHtml += `<div class="buy-row${isHit?' hit':''}" style="padding:5px 0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap">
+        <span class="buy-combo" style="display:inline-flex;align-items:center;gap:0;letter-spacing:0;flex:1;min-width:0">${comboToHtml(c)}</span>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:600;color:${oddsVal!=null?'var(--text)':'var(--text3)'};flex-shrink:0;min-width:3.8em;text-align:right">${oddsStr}倍</span>
+        ${isHit?`<span style="font-size:10px;font-weight:700;color:var(--green);flex-shrink:0">✓的中</span>`:''}
+      </div>
+    </div>`;
+  });
+
+  // グループ②
+  rowsHtml += blockHeader('②', fp1st, second_B);
+  block2.forEach(c => {
+    const nc = normalizeCombo(c);
+    const isHit = resultSan3 && resultSan3.has(nc);
+    const oddsVal = raceOdds3tEv?.[nc] ?? null;
+    const oddsStr = oddsVal != null ? oddsVal.toFixed(1) : '—';
+    rowsHtml += `<div class="buy-row${isHit?' hit':''}" style="padding:5px 0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap">
+        <span class="buy-combo" style="display:inline-flex;align-items:center;gap:0;letter-spacing:0;flex:1;min-width:0">${comboToHtml(c)}</span>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:600;color:${oddsVal!=null?'var(--text)':'var(--text3)'};flex-shrink:0;min-width:3.8em;text-align:right">${oddsStr}倍</span>
+        ${isHit?`<span style="font-size:10px;font-weight:700;color:var(--green);flex-shrink:0">✓的中</span>`:''}
+      </div>
+    </div>`;
+  });
+
+  // グループ③
+  rowsHtml += blockHeader('③', fp2nd, second_C);
+  block3.forEach(c => {
+    const nc = normalizeCombo(c);
+    const isHit = resultSan3 && resultSan3.has(nc);
+    const oddsVal = raceOdds3tEv?.[nc] ?? null;
+    const oddsStr = oddsVal != null ? oddsVal.toFixed(1) : '—';
+    rowsHtml += `<div class="buy-row${isHit?' hit':''}" style="padding:5px 0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap">
+        <span class="buy-combo" style="display:inline-flex;align-items:center;gap:0;letter-spacing:0;flex:1;min-width:0">${comboToHtml(c)}</span>
+        <span style="font-size:12px;font-family:var(--mono);font-weight:600;color:${oddsVal!=null?'var(--text)':'var(--text3)'};flex-shrink:0;min-width:3.8em;text-align:right">${oddsStr}倍</span>
+        ${isHit?`<span style="font-size:10px;font-weight:700;color:var(--green);flex-shrink:0">✓的中</span>`:''}
+      </div>
+    </div>`;
+  });
+
+  const totalPts = allCombos.length;
+
+  return `
+    <div id="buy-mode-scen" style="display:none">
+      <div class="buy-grid">
+        <div class="buy-card">
+          <div class="buy-card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>🎲 シナリオ買い（3連単）</span>
+            <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px;line-height:1.6">
+            最終確率1位: ${boatBadge(fp1st)} 　2位: ${boatBadge(fp2nd)}<br>
+            展開シナリオの2着確率データをもとに、折り返し込みで18点を組み立てます。
+          </div>
+          ${rowsHtml || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目を生成できませんでした</div>'}
+        </div>
+      </div>
+    </div>`;
 
 
 // ── renderComment ──
