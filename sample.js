@@ -4830,7 +4830,7 @@ function buildTopPickupRaces() {
   const CARD_W = 130;
 
   cardsEl.innerHTML = pickups.map(p => {
-    // タグバッジ（ラベルのみ、1行に並べる）
+    // タグバッジ（ラベルのみ）
     const badgesHtml = p.tags.map(t =>
       `<div style="
         font-size:10px;font-weight:700;letter-spacing:.03em;
@@ -4840,11 +4840,6 @@ function buildTopPickupRaces() {
         white-space:normal;word-break:keep-all;line-height:1.4;
         text-align:center;
       ">${t.label}</div>`
-    ).join('');
-
-    // 補足テキスト（subがあるタグだけ）
-    const subsHtml = p.tags.filter(t=>t.sub).map(t =>
-      `<div style="font-size:9px;color:var(--text3);line-height:1.4;text-align:center;margin-top:1px">${t.sub}</div>`
     ).join('');
 
     return `
@@ -4871,7 +4866,6 @@ function buildTopPickupRaces() {
         <!-- タグバッジ群 -->
         <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">
           ${badgesHtml}
-          ${subsHtml}
         </div>
       </div>`;
   }).join('');
