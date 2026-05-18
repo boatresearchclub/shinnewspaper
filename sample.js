@@ -3213,19 +3213,25 @@ function renderBuy(rno){
   const modeTabs = `
     <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:0;background:var(--bg2);">
       <button id="buy-tab-hit" onclick="switchBuyMode('hit')"
-        style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;
-               border-bottom:2px solid var(--accent);color:var(--accent);font-family:'Noto Sans JP',sans-serif;">
-        🎯 的中重視<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">合成2.0x以上</span>
+        style="flex:1;padding:8px 2px 6px;font-size:11px;font-weight:700;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid var(--accent);color:var(--accent);font-family:'Noto Sans JP',sans-serif;
+               display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;">
+        <span>🎯 的中重視</span>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);">合成2.0x以上</span>
       </button>
       <button id="buy-tab-rec" onclick="switchBuyMode('rec')"
-        style="flex:1;padding:8px 4px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;
-               border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;">
-        💰 回収重視<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">合成4.0x以上</span>
+        style="flex:1;padding:8px 2px 6px;font-size:11px;font-weight:500;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;
+               display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;">
+        <span>💰 回収重視</span>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);">合成4.0x以上</span>
       </button>
       <button id="buy-tab-scen" onclick="switchBuyMode('scen')"
-        style="flex:1;padding:8px 4px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;
-               border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;">
-        🎲 シナリオ<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">18点固定</span>
+        style="flex:1;padding:8px 2px 6px;font-size:11px;font-weight:500;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid transparent;color:var(--text3);font-family:'Noto Sans JP',sans-serif;
+               display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;">
+        <span>🎲 シナリオ</span>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);">18点固定</span>
       </button>
     </div>`;
 
