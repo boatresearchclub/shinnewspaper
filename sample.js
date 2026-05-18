@@ -1,4 +1,102 @@
 // ============================================================
+// ── betting_optimizer.py 連動パラメータ ──────────────────────
+// betting_optimizer.py (v6.0) が変わったらここだけ書き換える。
+// ピックアップレースの「AI条件該当」バッジ判定がここを参照する。
+// ============================================================
+const BETTING_PARAMS = {
+  // ★ HIT: 参加優良会場（hit_priority 会場のみ）
+  hit_allowed_venues: new Set(['唐津','住之江','尼崎','桐生','びわこ','浜名湖']),
+
+  // ★ 全モード: 完全除外会場（skip 会場）
+  skip_venues: new Set(['宮島','大村','多摩川','鳴門']),
+
+  // ★ HIT: あれ指数上限（これ超えたら HIT スキップ）
+  are_hit_max: 50.0,
+
+  // ★ SS条件 base幅（v6.0: 0.43〜0.57）
+  sweet_base_min: 0.43,
+  sweet_base_max: 0.57,
+  sweet_tenkai_max: 1.05,
+
+  // ★ 高配当1号艇判定閾値（boat1_tenkai がこれ未満 = 高配当1号艇）
+  hd1_tenkai_max: 0.90,
+
+  // ★ REC: 高配当1号艇参加条件
+  hd1_rec_base_min: 0.60,
+  hd1_rec_are_min:  43.0,
+  hd1_rec_are_max:  47.0,
+
+  // ★ SSプレミアム他艇あれ範囲（あれ45〜48）
+  premium_are_min: 45.0,
+  premium_are_max: 48.0,
+
+  // ★ HIT: 買い目点数下限
+  hit_min_points: 5,
+};
+
+/**
+ * betting_optimizer.py の classify_race に相当する JS 版簡易判定。
+ * ピックアップカードの「AI条件該当」バッジ専用。
+ * 戻り値: { hit: bool, rec: bool }
+ *
+ * 引数:
+ *   venue       : 会場名
+ *   boat1Base   : 1号艇 base 確率（0〜1）
+ *   boat1Tenkai : 1号艇 tenkai 係数
+ *   pred1Boat   : AI予想1位の艇番（1〜6）
+ *   pred1Base   : AI予想1位の base 確率
+ *   pred1Tenkai : AI予想1位の tenkai 係数
+ *   areIndex    : あれ指数
+ */
+function classifyRaceJS(venue, boat1Base, boat1Tenkai, pred1Boat, pred1Base, pred1Tenkai, areIndex) {
+  const bp = BETTING_PARAMS;
+
+  // 除外会場は両モードとも不参加
+  if (bp.skip_venues.has(venue)) return { hit: false, rec: false };
+
+  const isBoat1   = (pred1Boat === 1);
+  const mainBase  = isBoat1 ? boat1Base   : pred1Base;
+  const mainTenkai = isBoat1 ? boat1Tenkai : pred1Tenkai;
+
+  // SS条件
+  const isSweet = (mainBase >= bp.sweet_base_min && mainBase < bp.sweet_base_max)
+               && (mainTenkai < bp.sweet_tenkai_max);
+
+  // SSプレミアム他艇（!isBoat1 & SS & あれ45〜48）
+  const isPremium = !isBoat1 && isSweet
+                 && areIndex >= bp.premium_are_min && areIndex <= bp.premium_are_max;
+
+  // 高配当1号艇（boat1_tenkai < 0.90）
+  const isHD1 = isBoat1 && boat1Tenkai < bp.hd1_tenkai_max;
+
+  // ── HIT 判定 ──────────────────────────────────────────────
+  let hit = false;
+  if (bp.hit_allowed_venues.has(venue)) {
+    // あれ上限チェック（プレミアムは例外通過）
+    const areOk = isPremium || areIndex <= bp.are_hit_max;
+    if (areOk) {
+      if (isPremium)       hit = true;   // SSプレミアム他艇: 最優先
+      else if (isHD1)      hit = false;  // 高配当1号艇: HIT全スキップ
+      else if (isSweet)    hit = true;   // SS1号艇 or SS他艇
+      else if (!isBoat1)   hit = false;  // 中立他艇: HIT全スキップ
+      else                 hit = true;   // その他1号艇系（低配当・高人気・中立）
+    }
+  }
+
+  // ── REC 判定 ──────────────────────────────────────────────
+  // REC は skip_venues 以外は基本参加（高配当1号艇は条件付き）
+  let rec = true;
+  if (isHD1) {
+    // base≥0.60 & あれ43〜47 のみ参加
+    rec = (boat1Base >= bp.hd1_rec_base_min)
+       && (areIndex  >= bp.hd1_rec_are_min)
+       && (areIndex  <= bp.hd1_rec_are_max);
+  }
+
+  return { hit, rec };
+}
+
+// ============================================================
 const FINAL_PROB_WEIGHTS = {
   base:   1.0,  // 基準1着率  （長期統計）  ← 変更可: 0.5〜2.0 推奨
   tenkai: 1.0,  // 展開補正   （決まり手適性）← 変更可: 0.5〜2.0 推奨
@@ -4857,6 +4955,8 @@ function buildTopPickupRaces() {
       // base1: 6艇のprobを正規化した相対1着率（AI予想タブ「基準」列と同一）
       let base1      = null;
       let finalProb1 = null;
+      // classifyRaceJS 用: ranked 1位艇の情報
+      let _rankTop = null;
       try {
         const arek   = rd.arek ?? 54.7;
         const ranked = calcTenkaiProbs_pickup(boats, arek, venue, vdata);
@@ -4907,6 +5007,19 @@ function buildTopPickupRaces() {
         const multiTotal=ranked.reduce((s,b)=>s+b._multi_score,0)||1;
         ranked.forEach(b=>{ b.final_prob=b._multi_score/multiTotal; });
         finalProb1=ranked.find(b=>b.boat===1)?.final_prob??null;
+
+        // classifyRaceJS 用: final_prob 最大の艇情報を保存
+        const sortedByFinal = [...ranked].sort((a,b)=>(b.final_prob??0)-(a.final_prob??0));
+        const topB = sortedByFinal[0];
+        if (topB) {
+          const probTotalForBase = ranked.reduce((s,b)=>s+b.prob,0)||1;
+          _rankTop = {
+            boat:    topB.boat,
+            base:    topB.prob / probTotalForBase,
+            tenkai:  topB.tenkai_score ?? topB.tenkai_prob ?? 1.0,
+            arek:    arek,
+          };
+        }
       } catch(e) { finalProb1 = null; }
 
       // ── まくりアラート ──
@@ -4960,14 +5073,28 @@ function buildTopPickupRaces() {
 
       if (tags.length === 0) return;
 
-      // ── AI条件該当チェック（的中重視・回収重視どちらかで参加可能か）──
+      // ── AI条件該当チェック（betting_optimizer.py 連動）──
+      // BETTING_PARAMS / classifyRaceJS を参照するため、
+      // ここを変えるだけで betting_optimizer.py の改版に追従できる。
       let aiHit = false;
       let aiRec = false;
       try {
-        const b3hit = computeBuy3(venue, vdata, rno, 'hit');
-        const b3rec = computeBuy3(venue, vdata, rno, 'rec');
-        aiHit = b3hit.length > 0;
-        aiRec = b3rec.length > 0;
+        if (_rankTop) {
+          const b1tenkai = boat1
+            ? (_rankTop.boat === 1 ? _rankTop.tenkai : (boat1.tenkai ?? 1.0))
+            : 1.0;
+          const res = classifyRaceJS(
+            venue,
+            _rankTop.boat === 1 ? _rankTop.base   : (base1 ?? 0),   // boat1Base
+            b1tenkai,                                                  // boat1Tenkai
+            _rankTop.boat,                                             // pred1Boat
+            _rankTop.base,                                             // pred1Base
+            _rankTop.tenkai,                                           // pred1Tenkai
+            _rankTop.arek,                                             // areIndex
+          );
+          aiHit = res.hit;
+          aiRec = res.rec;
+        }
       } catch(e) {}
       const aiParticipate = aiHit || aiRec;
 
