@@ -2644,6 +2644,39 @@ function renderBuy(rno){
         }
       }
 
+      // ── 画面シナリオ表示と同一の「全kimari加重平均3着スコア」を買い目にも適用 ──
+      // 旧: 単一kimariの calc3rdScores を直接使用 → 画面表示とずれが発生
+      // 新: 画面の calcMerged3rd と同じく、axisBoat の全kimariをscenarioProb重みで加重平均
+      function calcMerged3rdBuy(axisBoat, secondBoat){
+        const axisScens = kimariTypes
+          .map(k => ({ kimari: k, prob: scenarioProb[axisBoat]?.[k] ?? 0 }))
+          .filter(x => x.prob > 0.001);
+        const totalAxisProb = axisScens.reduce((s, x) => s + x.prob, 0) || 1;
+        const r3Map = {};
+        for(const scen of axisScens){
+          const w = scen.prob / totalAxisProb;
+          const thirds = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, scen.kimari, secondBoat);
+          for(const t3 of thirds){
+            if(!r3Map[t3.boat]){
+              r3Map[t3.boat] = { boat: t3.boat, r3sum: 0, scoreSum: 0, r3Count: 0, scoreCount: 0 };
+            }
+            if(t3.r3 != null){
+              r3Map[t3.boat].r3sum   += t3.r3 * w;
+              r3Map[t3.boat].r3Count += w;
+            }
+            r3Map[t3.boat].scoreSum   += t3.score * w;
+            r3Map[t3.boat].scoreCount += w;
+          }
+        }
+        return Object.values(r3Map)
+          .map(x => ({
+            boat:  x.boat,
+            r3:    x.r3Count > 0 ? x.r3sum / x.r3Count : null,
+            score: x.scoreCount > 0 ? x.scoreSum / x.scoreCount : 0,
+          }))
+          .sort((a, b) => b.score - a.score);
+      }
+
       scenariosToProcess.forEach((topScen, scenIdx) => {
         const axisBoat = topScen.boat;
         const kimari   = topScen.kimari;
@@ -2658,12 +2691,13 @@ function renderBuy(rno){
           const p2         = p2Item?.p2 ?? 0;
           const prob2      = scenProb * p2;
 
-          const thirdAll   = calc3rdScores(ranked2, tenjiScoreMap, axisBoat, kimari, s2);
+          // 【修正】画面表示と同じ全kimari加重平均3着スコアを使用
+          const thirdAll   = calcMerged3rdBuy(axisBoat, s2);
           const R3_MIN_THRESHOLD = 0.03; // 3着率3%未満の艇は買い目から除外
           const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
           const thirdList  = [];
           let cumScore = 0;
-          // 【2026-05-16 改修】モード別3着累積目標: hit=0.85, rec=0.70
+          // 【2026-05-16 改修】モード別3着累積目標: hit=0.80, rec=0.70
           const pick3TargetInner = (buyMode === 'hit') ? PICK3_PROB_TARGET_HIT : PICK3_PROB_TARGET_REC;
           for(const x of thirdAll){
             if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD) continue; // 絶対値ガード
