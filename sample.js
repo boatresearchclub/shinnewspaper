@@ -4956,9 +4956,10 @@ function buildTopVenueChips() {
     const info = _isToday2
       ? ((RACE_INDEX_DATA && RACE_INDEX_DATA.venues) ? (RACE_INDEX_DATA.venues[v] || null) : null)
       : (dataForDate[v] ? (dataForDate[v].race_info || null) : null);
-    const grade   = info ? (info.grade || '') : '';
-    const isJoshi = !!(info && info.is_joshi);
-    const day     = info ? (info.day || '') : '';
+    const grade      = info ? (info.grade || '') : '';
+    const isJoshi    = !!(info && info.is_joshi);
+    const day        = info ? (info.day || '') : '';
+    const totalDays  = info ? (info.total_days ?? null) : null;
 
     // ── バッジ構築 ──
     // グレードバッジ（G1/G2/G3/SG）
@@ -4975,9 +4976,12 @@ function buildTopVenueChips() {
       ? `<span class="chip-grade cg-ippan">一般</span>`
       : '';
 
-    const badgesHtml = `<span class="chip-badges">${gradeBadge}${joshiBadge}${ippanBadge}</span>`;
-    const nameHtml   = `<span class="chip-name">${v}</span>`;
-    const dayHtml    = day ? `<span class="chip-day">${day}</span>` : '';
+    const badgesHtml  = `<span class="chip-badges">${gradeBadge}${joshiBadge}${ippanBadge}</span>`;
+    const nameHtml    = `<span class="chip-name">${v}</span>`;
+    const totalStr    = totalDays ? `${totalDays}日間` : '';
+    const dayHtml     = (day || totalStr)
+      ? `<span class="chip-day">${day}${day && totalStr ? '／' : ''}${totalStr}</span>`
+      : '';
 
     return `<span class="top-venue-chip" onclick="jumpToVenueForDate('${v}')" style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
   }).join('');
