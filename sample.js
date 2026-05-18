@@ -3496,6 +3496,23 @@ function isRacePast(timeStr){
   return nowMin > raceMin;
 }
 
+// ── レース種別ラベル取得 ──
+// RACE_INDEX_DATA.venues[venue].race_kinds から直接引く。
+// race_kinds は fetch_race_index.py が raceindex ページから取得した
+// {レース番号: "優勝戦" | "準優勝戦" | ...} の辞書。
+function getRaceKindLabel(rno, rd){
+  // rd に直接 race_kind が入っている場合は最優先
+  if(rd && rd.race_kind) return rd.race_kind;
+
+  const info = (RACE_INDEX_DATA && RACE_INDEX_DATA.venues)
+    ? (RACE_INDEX_DATA.venues[currentVenue] || null)
+    : null;
+  if(!info || !info.race_kinds) return '';
+
+  // race_kinds のキーは数値または文字列どちらの場合もあるため両方試す
+  return info.race_kinds[parseInt(rno)] || info.race_kinds[String(rno)] || '';
+}
+
 function buildRaceBar(){
   const bar = document.getElementById('race-bar');
   if(!bar) return;
@@ -3504,9 +3521,10 @@ function buildRaceBar(){
     const btn = document.createElement('button');
     const past = isRacePast(rd.time);
     const hasInsuf = rd.boats && rd.boats.some(b=>b.dq==='insufficient');
+    const kindLabel = getRaceKindLabel(rno, rd);
     btn.className = 'race-btn' + (parseInt(rno)===selectedRace?' active':'') + (past?' past':'');
     btn.id = `rc-${rno}`;
-    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>${hasInsuf?'<span style="font-size:9px;color:var(--orange)">⚠</span>':''}`;
+    btn.innerHTML = `<span class="race-btn-no">${rno}R</span><span class="race-btn-time">${rd.time||''}</span>${kindLabel?`<span style="display:block;font-size:8px;line-height:1.2;color:var(--accent,#00aaff);letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${kindLabel}</span>`:''}${hasInsuf?'<span style="font-size:9px;color:var(--orange)">⚠</span>':''}`;
     btn.onclick = ()=>{ selectRace(parseInt(rno)); };
     bar.appendChild(btn);
   });
@@ -4845,7 +4863,7 @@ function buildTopPickupRaces() {
       <div onclick="jumpToPickup('${p.venue}',${p.rno})"
            style="
              flex:0 0 auto;
-             min-width:110px;max-width:160px;
+             min-width:90px;max-width:110px;
              box-sizing:border-box;
              background:var(--bg2);border:1px solid var(--border);
              border-radius:var(--radius-sm);
@@ -4977,7 +4995,7 @@ function buildTopVenueChips() {
     const nameHtml    = `<span class="chip-name">${v}</span>`;
     const totalStr    = totalDays ? `${totalDays}日間開催` : '';
     const dayHtml     = (day || totalStr)
-      ? `<span class="chip-day">${[day, totalStr].filter(Boolean).join('・')}</span>`
+      ? `<span class="chip-day">${[day, totalStr].filter(Boolean).join('<br>')}</span>`
       : '';
 
     return `<span class="top-venue-chip" onclick="jumpToVenueForDate('${v}')" style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
