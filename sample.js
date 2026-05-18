@@ -2529,6 +2529,21 @@ function renderBuy(rno){
       tenjiCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
     }
 
+    // スリット補正列: 係数表示（▲1.08 / ▼0.82 形式）展示データありの場合のみ表示
+    let slitCorrCell;
+    if(hasTenji && bt.display_slit != null){
+      const coef = bt.display_slit;
+      if(Math.abs(coef - 1.0) < 0.02){
+        slitCorrCell = `<span style="font-size:10px;color:var(--text3)">±1.00</span>`;
+      } else {
+        const color = coef >= 1.0 ? 'var(--green)' : 'var(--red)';
+        const mark  = coef >= 1.0 ? '▲' : '▼';
+        slitCorrCell = `<span style="font-size:10px;font-weight:600;color:${color}">${mark}${coef.toFixed(2)}</span>`;
+      }
+    } else {
+      slitCorrCell = `<span style="font-size:10px;color:var(--text3)">—</span>`;
+    }
+
     // 最終確率: 3スコアの加重合成結果（合計は常に100%）
     const finalProb = bt.final_prob ?? bt.tenkai_prob;
     const finalPct  = (finalProb * 100).toFixed(1);
@@ -2542,6 +2557,7 @@ function renderBuy(rno){
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;color:var(--text3)">${basePct}%</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${relCorrCell}</td>
       <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${tenjiCorrCell}</td>
+      <td style="padding:4px 3px;text-align:center;font-size:0.82rem">${slitCorrCell}</td>
       <td style="padding:4px 4px;text-align:center;font-family:var(--mono);font-size:0.82rem;font-weight:700;color:var(--accent2)">${finalPct}%</td>
     </tr>`;
   }).join('');
@@ -2637,6 +2653,7 @@ function renderBuy(rno){
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="6艇のprobを正規化した相対1着率（合計100%）">基準</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展開適性の係数（1.0基準: ▲=有利 ▼=不利）">展開補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="展示タイムの係数（1.0基準: ▲=有利 ▼=不利）">展示補正</th>
+          <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 4px;text-align:center" title="前艇とのST差・展示タイム差から捲り優位を判定（展示データありの場合のみ）">スリット補正</th>
           <th style="font-size:10px;color:var(--text3);font-weight:500;padding:3px 6px;text-align:center" title="基準・展開・展示を均等（1:1:1）で合成・正規化した最終1着率（合計は常に100%）">最終確率</th>
         </tr></thead>
         <tbody>${probRows}</tbody>
