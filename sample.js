@@ -3336,16 +3336,18 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   }
 
   // ── 3点（折り返し込み6点）生成ヘルパー ──
-  // winner → second → 3着上位3つ、さらに 2着3着を折り返し（2・3着は艇番若い順に表示）
+  // 3着候補ごとに「正（second先）→折り返し（third先）」をペアで連続出力
   function makeBlock(winner, second, thirdCandidates){
-    const combos = new Set();
+    const seen = new Set();
+    const combos = [];
     thirdCandidates.forEach(third => {
       if(third === winner || third === second) return;
-      const [lo, hi] = second < third ? [second, third] : [third, second];
-      combos.add(`${winner}-${lo}-${hi}`);
-      combos.add(`${winner}-${hi}-${lo}`);  // 折り返し
+      const a = `${winner}-${second}-${third}`;
+      const b = `${winner}-${third}-${second}`;
+      if(!seen.has(a)){ seen.add(a); combos.push(a); }
+      if(!seen.has(b)){ seen.add(b); combos.push(b); }
     });
-    return [...combos];
+    return combos;
   }
 
   // ── ① fp1st → 2着1位 → 3着上位3 × 折り返し = 6点 ──
@@ -3435,23 +3437,6 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
 
   const totalPts = allCombos.length;
 
-  // 18点全体の合成オッズを計算
-  function calcScenSynthOdds(combos, oddsMap){
-    let denom = 0, cnt = 0;
-    combos.forEach(c => {
-      const nc = normalizeCombo(c);
-      const ov = oddsMap?.[nc] ?? null;
-      if(ov != null && ov > 0){ denom += 1/ov; cnt++; }
-    });
-    if(cnt === 0 || denom === 0) return null;
-    return 1 / denom;
-  }
-  const scenSynth = calcScenSynthOdds(allCombos, raceOdds3tEv);
-  const scenSynthColor = scenSynth == null ? 'var(--text3)' : scenSynth >= 3.0 ? 'var(--green)' : scenSynth >= 1.5 ? 'var(--text2)' : 'var(--red)';
-  const scenSynthHtml = scenSynth != null
-    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${scenSynthColor};margin-left:4px">合成${scenSynth.toFixed(2)}倍</span>`
-    : '';
-
   return `
     <div id="buy-mode-scen" style="display:none">
       <div class="buy-grid">
@@ -3459,7 +3444,6 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
           <div class="buy-card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span>🎲 シナリオ買い（3連単）</span>
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
-            ${scenSynthHtml}
           </div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:6px;line-height:1.6">
             最終確率1位: ${boatBadge(fp1st)} 　2位: ${boatBadge(fp2nd)}<br>
