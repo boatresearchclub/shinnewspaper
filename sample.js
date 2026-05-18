@@ -4978,9 +4978,9 @@ function buildTopVenueChips() {
 
     const badgesHtml  = `<span class="chip-badges">${gradeBadge}${joshiBadge}${ippanBadge}</span>`;
     const nameHtml    = `<span class="chip-name">${v}</span>`;
-    const totalStr    = totalDays ? `${totalDays}日間` : '';
+    const totalStr    = totalDays ? `${totalDays}日間開催` : '';
     const dayHtml     = (day || totalStr)
-      ? `<span class="chip-day">${day}${day && totalStr ? '／' : ''}${totalStr}</span>`
+      ? `<span class="chip-day">${[day, totalStr].filter(Boolean).join('<br>')}</span>`
       : '';
 
     return `<span class="top-venue-chip" onclick="jumpToVenueForDate('${v}')" style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
