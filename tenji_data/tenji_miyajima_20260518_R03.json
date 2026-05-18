@@ -17,7 +17,7 @@
     "parts_exchange": null,
     "weight": 51.5,
     "weight_adjust": 0.5,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 36,
     "motor_rate2": 33.6,
     "motor_rate3": 46.5,
@@ -26,12 +26,12 @@
     "start_timing": null,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -51,7 +51,7 @@
     "parts_exchange": null,
     "weight": 52,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 72,
     "motor_rate2": 47.0,
     "motor_rate3": 64.4,
@@ -60,12 +60,12 @@
     "start_timing": -0.01,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -85,7 +85,7 @@
     "parts_exchange": null,
     "weight": 52,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 79,
     "motor_rate2": 36.4,
     "motor_rate3": 55.0,
@@ -94,12 +94,12 @@
     "start_timing": 0.12,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -119,7 +119,7 @@
     "parts_exchange": null,
     "weight": 55,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 33,
     "motor_rate2": 35.9,
     "motor_rate3": 53.2,
@@ -128,12 +128,12 @@
     "start_timing": 0.17,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -153,7 +153,7 @@
     "parts_exchange": null,
     "weight": 47.9,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 53,
     "motor_rate2": 32.2,
     "motor_rate3": 43.0,
@@ -162,12 +162,12 @@
     "start_timing": 0.06,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   },
   {
     "venue": "miyajima",
@@ -187,7 +187,7 @@
     "parts_exchange": null,
     "weight": 50.5,
     "weight_adjust": 1.5,
-    "fetched_at": "2026-05-18 11:37:02",
+    "fetched_at": "2026-05-18 11:50:16",
     "motor_no": 74,
     "motor_rate2": 24.2,
     "motor_rate3": 38.3,
@@ -196,11 +196,11 @@
     "start_timing": 0.2,
     "has_start_change": true,
     "weather": "晴",
-    "weather_degree": 21,
-    "water_degree": 19,
+    "weather_degree": 22,
+    "water_degree": 20,
     "wind_speed": 2,
     "wind_direction": 5,
     "wind_direction_text": "東",
-    "wave_height": 2
+    "wave_height": 3
   }
 ]
