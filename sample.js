@@ -2101,18 +2101,37 @@ function renderBuy(rno){
     const baseScore = Math.pow(baseNorm, wBase) *
                       Math.pow(tenkaiCoef, wTenkai) *
                       Math.pow(tenjiCoef,  wTenjiCourse);
-    // ── スリット補正: 加算ボーナス方式 ──
-    // 乗算だと base が低い艇は係数を掛けても絶対値が上がりにくいため、
-    // 「baseScore の平均値 × (slitCoef - 1.0) × SLIT_WEIGHT」を加算する。
-    // これにより base が低い外枠まくり艇でもスリット優位が最終確率に反映される。
-    // slitCoef=1.0 のとき bonus=0（影響なし）。
-    const SLIT_BONUS_BASE = 0.5;  // ボーナス基準値: 大きいほどスリット補正が強く効く（推奨: 0.3〜0.7）
-    const slitBonus = SLIT_BONUS_BASE * (slitCoef - 1.0) * SLIT_WEIGHT;
-    b._multi_score  = baseScore + slitBonus;
+
+    // 1パス目: slitCoef と baseScore を保存（後艇ペナルティ計算のため）
+    b._slitCoef  = slitCoef;
+    b._baseScore = baseScore;
     b.display_base   = baseNorm;
     b.display_tenkai = useMaster ? tenkaiCoef : null;
     b.display_tenji  = hasTenji  ? tenjiCoef  : null;
     b.display_slit   = hasTenji  ? slitCoef   : null;  // 表示用（展示データありの場合のみ）
+  });
+
+  // ── 2パス目: 後艇スリット優位による前艇ペナルティ適用 ──
+  // まくりアラートを受ける艇（後艇のslitCoefが高い＝自艇がまくられる側）の
+  // _multi_score を下げる。後艇のボーナスと対称的にペナルティを与える。
+  const SLIT_BONUS_BASE = 0.5;  // ボーナス基準値: 大きいほどスリット補正が強く効く（推奨: 0.3〜0.7）
+  ranked.forEach(b => {
+    const nextBoat = boatByNo[b.boat + 1] || null;
+    // 後艇のslitCoef（後艇から見た「自艇に対するまくり優位度」）
+    const nextSlitCoef = nextBoat?._slitCoef ?? 1.0;
+    // 後艇がまくり有利（nextSlitCoef>1）なら自艇にペナルティ（逆符号で加算）
+    const slitPenalty = SLIT_BONUS_BASE * (nextSlitCoef - 1.0) * SLIT_WEIGHT;
+    b._multi_score = b._baseScore
+      + SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT  // 自艇ボーナス
+      - slitPenalty;                                            // 後艇まくりペナルティ
+    // ペナルティ適用後のslitCoef表示: 合成した影響を係数換算して上書き
+    // (display用のみ。正確な合成値を見せるためnetSlitCoefに更新)
+    if(hasTenji){
+      const netBonus = SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT - slitPenalty;
+      // netBonus を係数に逆算: coef = 1 + netBonus / SLIT_BONUS_BASE / SLIT_WEIGHT
+      const netCoef = 1.0 + netBonus / (SLIT_BONUS_BASE * SLIT_WEIGHT);
+      b.display_slit = Math.min(2.0, Math.max(0.5, netCoef));
+    }
   });
 
   // 正規化して final_prob を確定
@@ -4843,7 +4862,7 @@ function buildTopPickupRaces() {
 
       // まくりアラート
       if (makuriBoats.length > 0) {
-        tags.push({ type:'makuri', label:`まくりアラート(${makuriBoats.join('・')}号艇)`, sub:'', color:'#e60012' });
+        tags.push({ type:'makuri', label:`⚡まくり(${makuriBoats.join('・')}号艇)`, sub:'', color:'#e60012' });
       }
 
       if (tags.length === 0) return;
@@ -4876,9 +4895,9 @@ function buildTopPickupRaces() {
         font-size:10px;font-weight:700;letter-spacing:.03em;
         background:${t.color}22;color:${t.color};
         border:1px solid ${t.color}55;
-        border-radius:4px;padding:2px 6px;
-        white-space:nowrap;line-height:1.4;
-        text-align:center;
+        border-radius:4px;padding:2px 5px;
+        white-space:normal;word-break:keep-all;line-height:1.4;
+        text-align:center;width:100%;box-sizing:border-box;
       ">${t.label}</div>`
     ).join('');
 
