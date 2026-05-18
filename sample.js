@@ -2646,11 +2646,21 @@ function renderBuy(rno){
 
       // ── 画面シナリオ表示と同一の「全kimari加重平均3着スコア」を買い目にも適用 ──
       // 旧: 単一kimariの calc3rdScores を直接使用 → 画面表示とずれが発生
-      // 新: 画面の calcMerged3rd と同じく、axisBoat の全kimariをscenarioProb重みで加重平均
-      function calcMerged3rdBuy(axisBoat, secondBoat){
-        const axisScens = kimariTypes
-          .map(k => ({ kimari: k, prob: scenarioProb[axisBoat]?.[k] ?? 0 }))
+      // 新: 画面の buildScenarioSection / calcMerged3rd と完全同一の構造
+      //     → 軸艇ごとに「全kimariをscenarioProb重みで加重平均」したキャッシュを先に作る
+      //     → scenariosToProcess のループ内でもこのキャッシュを参照する
+
+      // 軸艇ごとのallScens（画面の boatGroups.scenarios と同じ）を事前生成
+      const axisAllScensCache = {};
+      for(const winner of ranked2){
+        const allScens = kimariTypes
+          .map(k => ({ kimari: k, prob: scenarioProb[winner.boat]?.[k] ?? 0 }))
           .filter(x => x.prob > 0.001);
+        axisAllScensCache[winner.boat] = allScens;
+      }
+
+      function calcMerged3rdBuy(axisBoat, secondBoat){
+        const axisScens = axisAllScensCache[axisBoat] || [];
         const totalAxisProb = axisScens.reduce((s, x) => s + x.prob, 0) || 1;
         const r3Map = {};
         for(const scen of axisScens){
