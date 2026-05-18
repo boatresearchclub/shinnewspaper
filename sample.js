@@ -2501,20 +2501,21 @@ function renderBuy(rno){
           scenariosToProcess = [...dualScens, ...dualRest];
         }
       } else {
-        // ── 回収重視: final_prob 1位が1号艇でないとき穴軸展開 ──
-        // 【改修】旧: 1号艇 final_prob が場平均以下 → 新: 1位が1号艇でないとき
-        // 理由: 場平均との比較は閾値が緩く誤発動が多い。
-        //       「1号艇が最終確率1位でない」= モデルが明示的に他艇を上位評価しているケースのみ穴狙い。
-        const fp1stIsBoat1 = (ranked2[0]?.boat === 1);
-        if(!fp1stIsBoat1){
-          // final_prob 上位2艇を軸に展開シナリオを組み立てる
-          const top2FPBoats = [ranked2[0]?.boat, ranked2[1]?.boat].filter(Boolean);
+        // ── 回収重視: 1号艇 final_prob が場平均以下のとき穴軸展開 ──
+        // 設計方針: 1号艇の最終確率が場平均を下回る = 信頼度低い → 1号艇以外の上位2艇を軸に
+        // boat1AboveAvg は上位スコープ（2324行目）で定義済み
+        if(!boat1AboveAvg){
+          // 1号艇を除いた ranked2 の上位2艇を軸に展開シナリオを組み立てる
+          const top2ExBoat1 = ranked2
+            .filter(b => b.boat !== 1)
+            .slice(0, 2)
+            .map(b => b.boat);
           const recScens = allScenPairs
-            .filter(p => top2FPBoats.includes(p.boat))
+            .filter(p => top2ExBoat1.includes(p.boat))
             .slice(0, 4); // 2艇 × 最大2シナリオ（点数上限は後段で制御）
           scenariosToProcess = recScens.length > 0 ? recScens : top3Scen;
         } else {
-          // 1号艇が1位 → 通常フロー（top3Scen 順）
+          // 1号艇が場平均以上 → 通常フロー（top3Scen 順）
           scenariosToProcess = top3Scen;
         }
       }
@@ -4165,11 +4166,15 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
             btScenariosToProcess = [...dualScens_bt, ...dualRest_bt];
           }
         } else {
-          // rec: final_prob 1位が1号艇でないとき上位2艇軸展開（renderBuy と統一）
-          const fp1stIsBoat1_bt = (ranked2[0]?.boat === 1);
-          if(!fp1stIsBoat1_bt){
-            const top2FPBoats_bt = [ranked2[0]?.boat, ranked2[1]?.boat].filter(Boolean);
-            const recScens_bt    = allScenPairs.filter(p => top2FPBoats_bt.includes(p.boat)).slice(0, 4);
+          // rec: 1号艇 final_prob が場平均以下のとき穴軸展開（renderBuy と統一）
+          // boat1AboveAvg_bt は上位スコープで定義済み（grep: boat1AboveAvg_bt）
+          if(!boat1AboveAvg_bt){
+            // 1号艇を除いた ranked2 の上位2艇を軸に展開シナリオを組み立てる
+            const top2ExBoat1_bt = ranked2
+              .filter(b => b.boat !== 1)
+              .slice(0, 2)
+              .map(b => b.boat);
+            const recScens_bt = allScenPairs.filter(p => top2ExBoat1_bt.includes(p.boat)).slice(0, 4);
             btScenariosToProcess = recScens_bt.length > 0 ? recScens_bt : top3Scen;
           } else {
             btScenariosToProcess = top3Scen;
