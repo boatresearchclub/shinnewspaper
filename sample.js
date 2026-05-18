@@ -4828,9 +4828,6 @@ function buildTopPickupRaces() {
 
   section.style.display = 'block';
 
-  // カード幅: 正方形に近づける（モバイル想定 ~130px）
-  const CARD_W = 130;
-
   cardsEl.innerHTML = pickups.map(p => {
     // タグバッジ（ラベルのみ）
     const badgesHtml = p.tags.map(t =>
@@ -4839,7 +4836,7 @@ function buildTopPickupRaces() {
         background:${t.color}22;color:${t.color};
         border:1px solid ${t.color}55;
         border-radius:4px;padding:2px 6px;
-        white-space:normal;word-break:keep-all;line-height:1.4;
+        white-space:nowrap;line-height:1.4;
         text-align:center;
       ">${t.label}</div>`
     ).join('');
@@ -4848,18 +4845,18 @@ function buildTopPickupRaces() {
       <div onclick="jumpToPickup('${p.venue}',${p.rno})"
            style="
              flex:0 0 auto;
-             width:${CARD_W}px;
+             min-width:110px;max-width:160px;
              box-sizing:border-box;
              background:var(--bg2);border:1px solid var(--border);
              border-radius:var(--radius-sm);
-             padding:8px;
+             padding:8px 10px;
              cursor:pointer;transition:background 0.15s;
              display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
            "
            onmouseover="this.style.background='var(--bg3)'"
            onmouseout="this.style.background='var(--bg2)'">
-        <div style="font-size:10px;color:var(--text3);letter-spacing:.04em">${p.time} 発走</div>
-        <div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:.04em;white-space:nowrap">${p.time} 発走</div>
+        <div style="white-space:nowrap">
           <span style="font-size:15px;font-weight:700;color:var(--text)">${p.venue}</span>
           <span style="font-size:13px;font-weight:700;color:var(--accent2);margin-left:3px">${p.rno}R</span>
         </div>
@@ -4980,7 +4977,7 @@ function buildTopVenueChips() {
     const nameHtml    = `<span class="chip-name">${v}</span>`;
     const totalStr    = totalDays ? `${totalDays}日間開催` : '';
     const dayHtml     = (day || totalStr)
-      ? `<span class="chip-day">${[day, totalStr].filter(Boolean).join('<br>')}</span>`
+      ? `<span class="chip-day">${[day, totalStr].filter(Boolean).join('・')}</span>`
       : '';
 
     return `<span class="top-venue-chip" onclick="jumpToVenueForDate('${v}')" style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
