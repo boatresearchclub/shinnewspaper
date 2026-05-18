@@ -4701,9 +4701,9 @@ function buildTopPickupRaces() {
       const boat1 = boats.find(b => b.boat === 1);
       if (!boat1) return;
 
-      const base1 = boat1.base_rate ?? null;
-
-      // ── 最終確率: DATA/currentVenue を一時差し替えて計算 ──
+      // ── 最終確率 & 基準確率(display_base): DATA/currentVenue を一時差し替えて計算 ──
+      // base1: 6艇のprobを正規化した相対1着率（AI予想タブ「基準」列と同一）
+      let base1      = null;
       let finalProb1 = null;
       try {
         const arek   = rd.arek ?? 54.7;
@@ -4717,6 +4717,8 @@ function buildTopPickupRaces() {
           DATA = _pd; currentVenue = _pv;
         }
         const probTotal = ranked.reduce((s,b)=>s+b.prob,0)||1;
+        // base1: AI予想「基準」列と同じ正規化確率
+        base1 = (ranked.find(b=>b.boat===1)?.prob ?? 0) / probTotal;
         const { wBase, wTenkai, wTenji } = calcDynamicWeights(arek);
         const tenkaiOnlyTotal = ranked.reduce((s,x)=>s+(x.tenkai_score??x.tenkai_prob),0)||1;
         const boatByNo_p = {}; boats.forEach(b=>{ boatByNo_p[b.boat]=b; });
