@@ -10,22 +10,25 @@ const FINAL_PROB_WEIGHTS = {
 };
 
 // ── スリット補正パラメータ ──
-// 前艇（枠番-1）との ST差・展示タイム差から捲り/前艇有利を判定する。
-// 「後艇が前艇より有利」な場合に後艇を加点、前艇を減点する。
+// [2026-05-18 修正] 評価軸を「今日の展示1周タイム差」に統一
 //
-// ST差閾値（前艇ST - 後艇ST）: 正値=後艇が速い=捲り有効
-const SLIT_ST_THRESHOLDS = [
-  { min: 0.5,  coef: 1.30 },  // 差0.5以上: 捲り強
-  { min: 0.3,  coef: 1.15 },  // 差0.3〜0.5: 捲り中
-  { min: -0.3, coef: 1.00 },  // 差±0.3未満: 互角
-  { min: -Infinity, coef: 0.90 },  // 差-0.3以下: 前艇有利
-];
-// 展示タイム差閾値（前艇展示 - 後艇展示）: 正値=後艇が速い
-const SLIT_TENJI_THRESHOLDS = [
-  { min: 0.10,  coef: 1.20 },
-  { min: 0.05,  coef: 1.10 },
-  { min: -0.05, coef: 1.00 },
-  { min: -Infinity, coef: 0.90 },
+// 【設計思想】
+//   スリット戦の本質は「自艇が後艇より前に出られるか」。
+//   旧設計の問題点:
+//     ① _slitCoef（前艇比較）をペナルティにも流用 → 評価方向が曖昧
+//     ② ST差にマスタ長期データを使用 → 今日の実態と乖離することがある
+//   新設計:
+//     ① 自艇ボーナス: 「自艇 vs 前艇」の1周タイム差で判定
+//     ② ペナルティ:   「後艇 vs 自艇」の1周タイム差で独立して判定
+//     ③ 後艇が自艇より遅い/同等 → ペナルティゼロ（不当なマイナスを防止）
+//     ④ ST差（マスタ）は「まくりアラートボーナス」の強調にのみ補助的に使用
+//
+// 1周タイム差閾値（前艇lap1 - 後艇lap1）: 正値=後艇が速い=捲り有効
+const SLIT_LAP_THRESHOLDS = [
+  { min:  0.40, coef: 1.30 },  // 差0.4秒以上: 捲り強
+  { min:  0.20, coef: 1.15 },  // 差0.2〜0.4秒: 捲り中
+  { min: -0.20, coef: 1.00 },  // 差±0.2秒未満: 互角
+  { min: -Infinity, coef: 0.90 },  // 差-0.2秒以下: 前艇有利
 ];
 // スリット補正全体の適用強度（0=無効 / 1=フル）
 const SLIT_WEIGHT = 0.5;  // ← 変更可: 0.0〜1.0
@@ -2091,50 +2094,42 @@ function renderBuy(rno){
       }
     }
 
-    // ── スリット補正: 前艇(枠番-1)との ST差・展示タイム差から捲り優位を評価 ──
+    // ── スリット補正（1パス目）: 「自艇 vs 前艇」の1周タイム差でボーナス係数を算出 ──
     //
-    // 1枠は前艇なし → slitCoef=1.0（補正なし）
-    // ST差・展示タイム差それぞれから係数を取得し乗算する。
-    // SLIT_WEIGHT で全体の強度を調整（0=無効 / 1=フル適用）。
+    // [2026-05-18 修正] 評価軸を今日の展示1周タイム(lap1)差に統一
+    //   旧: ST差（マスタ長期データ）× 展示タイム差 の乗算 → 長期データとの乖離リスク
+    //   新: lap1差のみで判定 → 今日の実際のモーター出力を直接評価
+    //
+    // ※ ペナルティ（後艇が自艇を捲れるか）は2パス目で独立して計算する
+    // ※ 1枠は前艇なし → slitCoef=1.0（補正なし）
     //
     let slitCoef = 1.0;
     if(prevBoat && hasTenji && SLIT_WEIGHT > 0){
-      // ST差係数（平均ST: MASTER_EXT から取得）
-      const myStRank   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank;
-      const prevStRank = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank;
-      let stSlitCoef = 1.0;
-      if(myStRank != null && prevStRank != null){
-        const stDiff = prevStRank - myStRank;  // 正値: 後艇が速い
-        const found  = SLIT_ST_THRESHOLDS.find(t => stDiff >= t.min);
-        stSlitCoef   = found ? found.coef : 1.0;
-      }
+      // 自艇と前艇の1周タイムを取得（tenjiRawMap は展示タイム、lap1 は別途）
+      const myLap1   = tenjiData?.[b.boat]?.lap1    ?? null;
+      const prevLap1 = tenjiData?.[prevBoat.boat]?.lap1 ?? null;
 
-      // 展示タイム差係数
-      const myTenji2   = tenjiRawMap[b.boat]        ?? null;
-      const prevTenji2 = tenjiRawMap[prevBoat.boat] ?? null;
-      let tenjiSlitCoef = 1.0;
-      if(myTenji2 != null && prevTenji2 != null){
-        const tenjiDiff2 = prevTenji2 - myTenji2;  // 正値: 後艇が速い
-        const found2     = SLIT_TENJI_THRESHOLDS.find(t => tenjiDiff2 >= t.min);
-        tenjiSlitCoef    = found2 ? found2.coef : 1.0;
-      }
+      if(myLap1 != null && prevLap1 != null){
+        // lapDiff > 0: 自艇が前艇より速い（捲り有効）
+        const lapDiff = prevLap1 - myLap1;
+        const found   = SLIT_LAP_THRESHOLDS.find(t => lapDiff >= t.min);
+        const lapSlitCoef = found ? found.coef : 1.0;
 
-      // ST差・展示差の乗算でスリット係数を確定
-      const rawSlitCoef = stSlitCoef * tenjiSlitCoef;
-      // SLIT_WEIGHT で中立値(1.0)に引き寄せる（0なら常に1.0、1なら rawSlitCoef そのまま）
-      slitCoef = 1.0 + (rawSlitCoef - 1.0) * SLIT_WEIGHT;
+        // SLIT_WEIGHT で中立値(1.0)に引き寄せる
+        slitCoef = 1.0 + (lapSlitCoef - 1.0) * SLIT_WEIGHT;
+      }
 
       // ── まくりアラートボーナス ──
-      // アラート発動条件: ST差≥0.5 かつ 展示差≥0.1（両条件の最強ランク同時成立）
-      // 通常スリット補正に加えて追加ボーナスを付与する。
-      const MAKURI_ALERT_BONUS = 0.30;  // ← 変更可: 0.1〜0.5推奨
+      // 条件: 1周タイム差≥0.4秒（最強ランク）かつ ST差がマスタでも優位
+      // 「今日も長期的にも速い」両条件が揃った時だけ追加ボーナス
+      const MAKURI_ALERT_BONUS = 0.20;  // ← 変更可: 0.1〜0.3推奨
+      const myLap1A   = tenjiData?.[b.boat]?.lap1        ?? null;
+      const prevLap1A = tenjiData?.[prevBoat.boat]?.lap1 ?? null;
       const myStRankA   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null;
       const prevStRankA = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null;
-      const myTenji2A   = tenjiRawMap[b.boat]        ?? null;
-      const prevTenji2A = tenjiRawMap[prevBoat.boat] ?? null;
-      const stAlertOk    = (myStRankA != null && prevStRankA != null) && (prevStRankA - myStRankA >= 0.5);
-      const tenjiAlertOk = (myTenji2A != null && prevTenji2A != null) && (prevTenji2A - myTenji2A >= 0.1);
-      if(stAlertOk && tenjiAlertOk){
+      const lapAlertOk  = (myLap1A != null && prevLap1A != null) && (prevLap1A - myLap1A >= 0.40);
+      const stAlertOk   = (myStRankA != null && prevStRankA != null) && (prevStRankA - myStRankA >= 0.5);
+      if(lapAlertOk && stAlertOk){
         slitCoef += MAKURI_ALERT_BONUS;
       }
 
@@ -2185,11 +2180,30 @@ function renderBuy(rno){
     // ── 展示補正: 自艇ボーナスのみ ──
     const tenjiBonus  = BONUS_BASE_TENJI * (b._tenjiCoef - 1.0) * b._wTenjiCourse;
 
-    // ── スリット補正: 自艇ボーナス − 後艇まくり優位ペナルティ ──
-    // まくられる（後艇がスリット有利）という物理的因果があるためペナルティ適用
-    const slitBonus   = SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT;
-    const nextSlitCoef = nextBoat?._slitCoef ?? 1.0;
-    const slitPenalty = SLIT_BONUS_BASE * (nextSlitCoef - 1.0) * SLIT_WEIGHT;
+    // ── スリット補正: 自艇ボーナス + 後艇ペナルティ（独立計算）──
+    // [2026-05-18 修正]
+    //   旧: nextBoat._slitCoef（前艇比較値）をそのままペナルティに流用
+    //       → 後艇が前艇（=自艇）より遅い場合でも _slitCoef の計算次第でペナルティ発生
+    //   新: 後艇 vs 自艇 の lap1 差を直接計算
+    //       → 後艇が自艇より遅い/同等ならペナルティゼロを保証
+    const slitBonus = SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT;
+
+    let slitPenalty = 0;
+    if(nextBoat && hasTenji && SLIT_WEIGHT > 0){
+      const myLap1Next   = tenjiData?.[b.boat]?.lap1        ?? null;
+      const nextLap1     = tenjiData?.[nextBoat.boat]?.lap1 ?? null;
+      if(myLap1Next != null && nextLap1 != null){
+        // nextDiff > 0: 後艇が自艇より速い（捲られる危険）
+        const nextDiff = myLap1Next - nextLap1;
+        // 後艇が自艇より速い場合のみペナルティ（遅い/同等はゼロ）
+        if(nextDiff > 0){
+          const found      = SLIT_LAP_THRESHOLDS.find(t => nextDiff >= t.min);
+          const nextCoef   = found ? found.coef : 1.0;
+          slitPenalty = SLIT_BONUS_BASE * (nextCoef - 1.0) * SLIT_WEIGHT;
+        }
+        // nextDiff <= 0（後艇が遅い or 同等）→ slitPenalty = 0 のまま
+      }
+    }
 
     // baseNorm をそのまま基準スコアとして使用（指数乗算廃止）
     b._multi_score = Math.max(0.001,  // 確率がゼロ以下にならないよう下限保証
