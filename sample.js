@@ -4384,28 +4384,25 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 
       const buy3seen = new Set();
 
-      // pick3rd_local: renderBuy の calc3rdScores + R3_MIN_THRESHOLD と完全同一ロジック
-      // calc3rdScores はトップレベル関数のため computeBuy3 からも直接呼び出し可能
-      const R3_MIN_THRESHOLD_BT = 0.03;
-      function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
-        const p3Target = (buyMode === 'hit') ? 0.80 : 0.70;
-        // calc3rdScores を使って renderBuy と同一のスコアを算出
-        // DATA / currentVenue は computeBuy3 冒頭で vdata にセット済み
-        const thirdAll = calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat);
-        if(thirdAll.length === 0) return [];
-        const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
-        const picked = []; let cum = 0;
-        for(const x of thirdAll){
-          if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD_BT) continue; // 絶対値ガード
-          picked.push(x.boat);
-          cum += x.score / scoreTotal;
-          if(cum >= p3Target) break;
-        }
-        return picked;
-      }
-
       if (sd.valid) {
-        const { scenarioProb, scenarioPlace2, kimariTypes } = sd;
+        const { scenarioProb, scenarioPlace2, kimariTypes, merged3rdMap } = sd;
+
+        // pick3rd_local: merged3rdMap を直参照（renderBuy と完全同一）
+        const R3_MIN_THRESHOLD_BT = 0.03;
+        function pick3rd_local(winnerBoat, kimari, secondBoat, buyMode) {
+          const p3Target = (buyMode === 'hit') ? 0.80 : 0.70;
+          const thirdAll = merged3rdMap[winnerBoat]?.[secondBoat] || [];
+          if(thirdAll.length === 0) return [];
+          const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
+          const picked = []; let cum = 0;
+          for(const x of thirdAll){
+            if(x.r3 != null && x.r3 < R3_MIN_THRESHOLD_BT) continue;
+            picked.push(x.boat);
+            cum += x.score / scoreTotal;
+            if(cum >= p3Target) break;
+          }
+          return picked;
+        }
         function kimariToLc(k) {
           return { '逃げ': 'bl-nige', '差し': 'bl-sashi', 'まくり': 'bl-makuri', 'まくり差し': 'bl-makusas', '抜き': 'bl-nuki' }[k] || 'bl-nuki';
         }
@@ -4529,9 +4526,24 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         const P2b = p2A[1] || ranked[2];
         const lbNige = arek < 40 ? '逃げ' : arek > 60 ? 'まくり' : '差し';
         const lcNige = arek < 40 ? 'bl-nige' : arek > 60 ? 'bl-makuri' : 'bl-sashi';
+        const R3_MIN_BT_FB = 0.03;
+        function pick3rd_fallback(winnerBoat, kimari, secondBoat, buyMode) {
+          const p3Target = (buyMode === 'hit') ? 0.80 : 0.70;
+          const thirdAll = calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat);
+          if(thirdAll.length === 0) return [];
+          const scoreTotal = thirdAll.reduce((s, x) => s + x.score, 0) || 1;
+          const picked = []; let cum = 0;
+          for(const x of thirdAll){
+            if(x.r3 != null && x.r3 < R3_MIN_BT_FB) continue;
+            picked.push(x.boat);
+            cum += x.score / scoreTotal;
+            if(cum >= p3Target) break;
+          }
+          return picked;
+        }
         [[A.boat, P2a.boat], [A.boat, P2b ? P2b.boat : null]].forEach(([first, second]) => {
           if (!second) return;
-          pick3rd_local(first, null, second, 'hit').forEach(t => {
+          pick3rd_fallback(first, null, second, 'hit').forEach(t => {
             const key = `${first}-${second}-${t}`;
             if (first !== second && second !== t && first !== t && !buy3seen.has(key) && buy3.length < BUY_MAX_POINTS_BT) {
               buy3seen.add(key);
