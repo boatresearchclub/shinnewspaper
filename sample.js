@@ -2016,7 +2016,7 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
 
     // 各2着候補の行を生成
     const p2Lines = top4Place.map(item => {
-      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScoresLocal(grp.boat, grp.scenarios[0].kimari, item.boat)).slice(0, 3);
+      const third3     = (isMulti ? calcMerged3rd(item.boat) : calc3rdScoresLocal(grp.boat, grp.scenarios[0].kimari, item.boat));
       const third3html = third3.map(t3 =>
         `<span style="display:inline-flex;align-items:center;gap:2px;white-space:nowrap">
           ${boatCircle(t3.boat)}
