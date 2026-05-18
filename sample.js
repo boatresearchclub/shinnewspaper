@@ -3042,7 +3042,7 @@ function renderBuy(rno){
   // ── 合成オッズ判定関数 ──
   // 生成した買い目セットの合成オッズを計算し、目標未達なら空配列（見送り）を返す。
   // 買い目の中身は一切削らない。確率順に生成した買い目をそのまま判定する。
-  // targetSynth: 目標合成オッズ（hit=2.5, rec=4.0）
+  // targetSynth: 目標合成オッズ（hit=2.0, rec=4.0）
   // maxPts: 点数上限
   function checkSynthOdds(list, oddsMap, targetSynth, maxPts){
     const candidates = list.slice(0, maxPts);
@@ -3071,10 +3071,10 @@ function renderBuy(rno){
   }
 
   // ── 【改修】的中重視モード ──
-  // 生成済み buy3Hit_raw を最大10点、合成2.5倍以上にトリム
+  // 生成済み buy3Hit_raw を最大10点、合成2.0倍以上にトリム
   // 合成オッズ未達の場合は空配列（見送り）
   const HIT_MAX_PTS     = 10;
-  const HIT_SYNTH_MIN   = 2.5;
+  const HIT_SYNTH_MIN   = 2.0;
   const buy3Hit_checked  = checkSynthOdds(buy3Hit_raw, raceOdds3tEv, HIT_SYNTH_MIN, HIT_MAX_PTS);
   // 合成オッズ未達フラグ
   const hitUnderSynth    = buy3Hit_checked.length === 0;
@@ -3215,7 +3215,7 @@ function renderBuy(rno){
       <button id="buy-tab-hit" onclick="switchBuyMode('hit')"
         style="flex:1;padding:8px 4px;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;
                border-bottom:2px solid var(--accent);color:var(--accent);font-family:'Noto Sans JP',sans-serif;">
-        🎯 的中重視<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">合成2.5x以上</span>
+        🎯 的中重視<span style="font-size:9px;font-weight:400;color:var(--text3);margin-left:4px;">合成2.0x以上</span>
       </button>
       <button id="buy-tab-rec" onclick="switchBuyMode('rec')"
         style="flex:1;padding:8px 4px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;
@@ -4579,8 +4579,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       //    判定を信頼せず ODDS_DATA 不完全として見送りにする。
       const raceOdds3t_trim = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] ?? {};
 
-      // rec合成オッズ基準: 4.0倍固定（hit: 2.5倍固定）
-      const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.5;
+      // rec合成オッズ基準: 4.0倍固定（hit: 2.0倍固定）
+      const synthMin_trim   = buyMode === 'rec' ? 4.0 : 2.0;
       const maxPts_trim     = BUY_MAX_POINTS_BT;
 
       const candidates = buy3.slice(0, maxPts_trim);
@@ -4730,7 +4730,7 @@ function buildDateCard(dateStr, label) {
         <span style="font-size:11px;color:var(--text2)">${dateStr}</span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
-        ${modePanel(resultsHit, '🎯 的中重視', 2.5)}
+        ${modePanel(resultsHit, '🎯 的中重視', 2.0)}
         ${modePanel(resultsRec, '💰 回収重視', 4.0)}
         ${_buildScenPanel_dateCard(resultsScen, resultsScenAll)}
       </div>
@@ -4900,7 +4900,7 @@ function calcTopAIStats() {
         elHistory.innerHTML = `
           <div class="ai-stats-card" style="margin-bottom:0.6rem">
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
-              ${mode30Panel(allResultsHit, '🎯 的中重視', 2.5)}
+              ${mode30Panel(allResultsHit, '🎯 的中重視', 2.0)}
               ${mode30Panel(allResultsRec, '💰 回収重視', 4.0)}
               ${_buildScen30Panel(allResultsScen, allResultsScenAll)}
             </div>
@@ -5168,7 +5168,7 @@ function computeScenCombos(venue, vdata, rno) {
   return combos;
 }
 
-// ── シナリオ買い 1日分集計（合成オッズ2.5倍以上）──
+// ── シナリオ買い 1日分集計（合成オッズ2.0倍以上）──
 // ・合成オッズフィルター・見送り推奨フィルター なし
 // ・データ不足・進入変更・結果未確定は除外（最低限の品質確保）
 // includeAll=true のとき合成オッズフィルターをスキップ（フィルターなし全件集計用）
@@ -5213,7 +5213,7 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
       // ── 合成オッズフィルター: 2.5倍未満は見送り ──
       // ODDS_DATA未取得(null)の場合は参加扱い（オッズ欠損で除外しすぎない）
       // includeAll=true のときはフィルターをスキップ
-      const SCEN_SYNTH_MIN = 2.5;
+      const SCEN_SYNTH_MIN = 2.0;
       if (!includeAll && synthOdds !== null && synthOdds < SCEN_SYNTH_MIN) return;
 
       let isHit = false, hitOdds = 0, hitCombo = '';
@@ -5296,7 +5296,7 @@ function _buildScenPanel_dateCard(results, resultsAll) {
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.0倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
       ${_buildAllSubSection(resultsAll)}
     </div>`;
@@ -5379,7 +5379,7 @@ function _buildScenPanel_dateCard(results, resultsAll) {
   return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">合成オッズ2.5倍以上</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">合成オッズ2.0倍以上</div>
       <div style="display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
           <span style="font-size:10px;color:var(--text3)">的中率</span>
@@ -5418,7 +5418,7 @@ function _buildScen30Panel(results, resultsAll) {
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.0倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
       ${_buildScenAllSubSection30(resultsAll)}
     </div>`;
@@ -5478,7 +5478,7 @@ function _buildScen30Panel(results, resultsAll) {
   return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🎲 シナリオ買い</div>
-      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:10px">合成オッズ2.5倍以上</div>
+      <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:10px">合成オッズ2.0倍以上</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
           <span style="font-size:10px;color:var(--text3)">的中率</span>
@@ -5529,6 +5529,44 @@ function _buildScenAllSubSection30(rAll) {
   const aSynth  = rAll.filter(r => r.avgOdds != null);
   const aAvgSO  = aSynth.length > 0 ? aSynth.reduce((s, r) => s + r.avgOdds, 0) / aSynth.length : null;
   const aSOStr  = aAvgSO != null ? `${aAvgSO.toFixed(1)}倍` : '—';
+
+  // 会場別内訳（フィルターなし）
+  const aVenueMap = {};
+  rAll.forEach(r => { if (!aVenueMap[r.venue]) aVenueMap[r.venue] = []; aVenueMap[r.venue].push(r); });
+  const aVenueRows = VENUE_LIST.filter(v => aVenueMap[v]).map(v => {
+    const vrs  = aVenueMap[v];
+    const vHit = vrs.filter(r => r.isHit).length;
+    const vTot = vrs.length;
+    const vBet = vrs.reduce((s, r) => s + r.buyCnt * 100, 0);
+    const vRet = vrs.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+    const vRec = vBet > 0 ? vRet / vBet : 0;
+    const vHC  = (vHit/vTot) >= 0.7 ? 'var(--green)' : (vHit/vTot) >= 0.5 ? 'var(--orange)' : 'var(--text)';
+    const vRC  = vRec >= 1.0 ? 'var(--green)' : vRec >= 0.75 ? 'var(--orange)' : 'var(--text)';
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:3px 6px;font-size:11px;color:var(--text2);white-space:nowrap">${v}</td>
+      <td style="padding:3px 6px;text-align:right;font-size:11px;font-weight:700;color:${vHC}">${(vHit/vTot*100).toFixed(0)}%</td>
+      <td style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3)">${vHit}/${vTot}R</td>
+      <td style="padding:3px 6px;text-align:right;font-size:11px;font-weight:700;color:${vRC}">${(vRec*100).toFixed(0)}%</td>
+    </tr>`;
+  }).join('');
+  const aVenueDetail = aVenueRows ? `
+    <details style="margin-top:5px">
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0">
+        <span style="font-size:10px">▶</span> 会場別内訳
+      </summary>
+      <div style="overflow-x:auto;margin-top:4px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="border-bottom:1px solid var(--border)">
+            <th style="padding:3px 6px;text-align:left;font-size:10px;color:var(--text3);font-weight:500">会場</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">的中率</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">R数</th>
+            <th style="padding:3px 6px;text-align:right;font-size:10px;color:var(--text3);font-weight:500">回収率</th>
+          </tr></thead>
+          <tbody>${aVenueRows}</tbody>
+        </table>
+      </div>
+    </details>` : '';
+
   return `
     <details style="margin-top:6px">
       <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0">
@@ -5559,6 +5597,7 @@ function _buildScenAllSubSection30(rAll) {
           <span style="color:var(--text3)">合成オッズ</span>
           <span style="font-family:var(--mono);color:var(--text)">${aSOStr}</span>
         </div>
+        ${aVenueDetail}
       </div>
     </details>`;
 }
