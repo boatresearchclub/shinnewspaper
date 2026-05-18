@@ -4661,12 +4661,10 @@ function hideTopPage() {
 }
 
 // ── ピックアップレース ──
-// 以下の条件のいずれかに該当するレースをカード表示する。
-//   A: 1号艇の基準1着率(base_rate)が会場平均を下回る
-//   B: 1号艇の最終確率(final_prob)が会場平均を下回る
-//   C: 1号艇の基準1着率が70%以上
-//   D: 1号艇の最終確率が70%以上
-//   E: まくりアラート（2〜6号艇のいずれかが前艇より平均ST順0.5以上早い かつ 展示タイム0.1秒以上早い）
+// 以下の条件のいずれかに該当するレースを締め切り順・横スクロールカードで表示する。
+//   A/B: 1号艇の基準1着率 or 最終確率が会場平均を下回る → イン否定
+//   C/D: 1号艇の基準1着率 or 最終確率が70%以上          → イン鉄板
+//   E:   まくりアラート（前艇比 平均ST順0.5以上早い＋展示タイム0.1秒以上早い）
 // ※ 発走済みレースは除外、当日データのみ対象
 function buildTopPickupRaces() {
   const section  = document.getElementById('top-pickup-section');
@@ -4676,7 +4674,6 @@ function buildTopPickupRaces() {
   const dataForDate = getDataForDate(null); // 当日のみ
   const pickups = [];
 
-  // 会場スラッグマップ（_tenjiCache キー生成用）
   const SLUG_P = {
     "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
     "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
@@ -4696,33 +4693,28 @@ function buildTopPickupRaces() {
 
     Object.entries(vdata.races).sort((a,b)=>+a[0]-+b[0]).forEach(([rnoStr, rd]) => {
       if (!rd || !rd.boats || rd.boats.length < 2) return;
-      // 発走済みは除外
       if (isRacePast(rd.time)) return;
-      // データ不足は除外
       if (rd.boats.some(b => b.dq === 'insufficient')) return;
 
-      const rno    = parseInt(rnoStr);
-      const boats  = [...rd.boats].sort((a,b)=>a.boat-b.boat);
-      const boat1  = boats.find(b => b.boat === 1);
+      const rno   = parseInt(rnoStr);
+      const boats = [...rd.boats].sort((a,b)=>a.boat-b.boat);
+      const boat1 = boats.find(b => b.boat === 1);
       if (!boat1) return;
 
-      // ── 基準1着率 (base_rate) ──
       const base1 = boat1.base_rate ?? null;
 
-      // ── 最終確率 (final_prob): リアルタイム計算 ──
-      // calc* 関数は DATA / currentVenue に依存するため、一時的に差し替えて計算する
+      // ── 最終確率: DATA/currentVenue を一時差し替えて計算 ──
       let finalProb1 = null;
       try {
-        const arek      = rd.arek ?? 54.7;
-        const ranked    = calcTenkaiProbs_pickup(boats, arek, venue, vdata);
+        const arek   = rd.arek ?? 54.7;
+        const ranked = calcTenkaiProbs_pickup(boats, arek, venue, vdata);
         const tenjiData = _tenjiCache[tenjiKey(slug, date, rno)] || null;
         let tenjiScoreMap = null;
         if (tenjiData) {
-          // calcTenjiScore は DATA.venue を参照するため一時保存
-          const _prevData = DATA; const _prevVenue = currentVenue;
+          const _pd = DATA, _pv = currentVenue;
           DATA = vdata; currentVenue = venue;
           try { tenjiScoreMap = calcTenjiScore(ranked, tenjiData, venue, arek); } catch(e){}
-          DATA = _prevData; currentVenue = _prevVenue;
+          DATA = _pd; currentVenue = _pv;
         }
         const probTotal = ranked.reduce((s,b)=>s+b.prob,0)||1;
         const { wBase, wTenkai, wTenji } = calcDynamicWeights(arek);
@@ -4736,23 +4728,22 @@ function buildTopPickupRaces() {
         }
         const useMaster = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
         ranked.forEach(b=>{
-          const baseNorm   = b.prob/probTotal;
-          const prevBoat   = boatByNo_p[b.boat-1]||null;
-          let tenkaiCoef   = 1.0;
+          const baseNorm = b.prob/probTotal;
+          const prev     = boatByNo_p[b.boat-1]||null;
+          let tenkaiCoef = 1.0;
           if(useMaster && baseNorm>0){
-            const tenkaiNorm=(b.tenkai_score??b.tenkai_prob)/tenkaiOnlyTotal;
-            tenkaiCoef=Math.min(3.0,Math.max(0.3,tenkaiNorm/baseNorm));
+            const tn=(b.tenkai_score??b.tenkai_prob)/tenkaiOnlyTotal;
+            tenkaiCoef=Math.min(3.0,Math.max(0.3,tn/baseNorm));
           }
-          if(prevBoat){
+          if(prev){
             const my=MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank;
-            const pr=MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank;
+            const pr=MASTER_EXT?.course_master?.[prev.name]?.[String(prev.boat)]?.st_rank;
             if(my!=null&&pr!=null) tenkaiCoef=Math.min(3.0,Math.max(0.3,tenkaiCoef+(pr-my)*0.10));
           }
           let tenjiCoef=1.0;
           if(tenjiScoreMap) tenjiCoef=tenjiScoreMap[`__coef_${b.boat}`]??1.0;
-          if(prevBoat&&tenjiData){
-            const my=tenjiRawMap_p[b.boat]??null;
-            const pr=tenjiRawMap_p[prevBoat.boat]??null;
+          if(prev&&tenjiData){
+            const my=tenjiRawMap_p[b.boat]??null, pr=tenjiRawMap_p[prev.boat]??null;
             if(my!=null&&pr!=null) tenjiCoef=Math.min(2.0,Math.max(0.5,tenjiCoef+(pr-my)*0.50));
           }
           const wTenjiC=wTenji*(TENJI_WEIGHT_BY_COURSE[b.boat]??1.0);
@@ -4761,75 +4752,72 @@ function buildTopPickupRaces() {
         const multiTotal=ranked.reduce((s,b)=>s+b._multi_score,0)||1;
         ranked.forEach(b=>{ b.final_prob=b._multi_score/multiTotal; });
         finalProb1=ranked.find(b=>b.boat===1)?.final_prob??null;
-      } catch(e) {
-        finalProb1 = null;
-      }
+      } catch(e) { finalProb1 = null; }
 
-      // ── まくりアラート判定 ──
-      // 2〜6号艇のいずれかが「前艇より平均ST順0.5以上早い」かつ「展示タイム0.1秒以上早い」
-      let makuriAlert = false;
-      let makuriBoats = [];
+      // ── まくりアラート ──
+      const makuriBoats = [];
       const tenjiDataForRace = _tenjiCache[tenjiKey(slug, date, rno)] || null;
-      for (let boatNo = 2; boatNo <= 6; boatNo++) {
-        const thisBoat = boats.find(b=>b.boat===boatNo);
-        const prevBoat = boats.find(b=>b.boat===boatNo-1);
-        if (!thisBoat || !prevBoat) continue;
-        // 平均ST順
-        const myStRank   = MASTER_EXT?.course_master?.[thisBoat.name]?.[String(boatNo)]?.st_rank ?? null;
-        const prevStRank = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(boatNo-1)]?.st_rank ?? null;
-        const stOk = (myStRank!=null && prevStRank!=null) ? (prevStRank - myStRank >= 0.5) : false;
-        // 展示タイム
-        let tenjiOk = false;
+      for (let bn = 2; bn <= 6; bn++) {
+        const thisB = boats.find(b=>b.boat===bn);
+        const prevB = boats.find(b=>b.boat===bn-1);
+        if (!thisB||!prevB) continue;
+        const myStR  = MASTER_EXT?.course_master?.[thisB.name]?.[String(bn)]?.st_rank ?? null;
+        const prStR  = MASTER_EXT?.course_master?.[prevB.name]?.[String(bn-1)]?.st_rank ?? null;
+        const stOk   = (myStR!=null&&prStR!=null) ? (prStR-myStR>=0.5) : false;
+        let tenjiOk  = false;
         if (tenjiDataForRace) {
-          const myTenji   = tenjiDataForRace[String(boatNo)]?.tenji   ?? null;
-          const prevTenji = tenjiDataForRace[String(boatNo-1)]?.tenji ?? null;
-          if (myTenji!=null && prevTenji!=null) tenjiOk = (prevTenji - myTenji >= 0.1);
+          const myT=tenjiDataForRace[String(bn)]?.tenji??null;
+          const prT=tenjiDataForRace[String(bn-1)]?.tenji??null;
+          if(myT!=null&&prT!=null) tenjiOk=(prT-myT>=0.1);
         }
-        if (stOk && tenjiOk) {
-          makuriAlert = true;
-          makuriBoats.push(boatNo);
-        }
+        if(stOk&&tenjiOk) makuriBoats.push(bn);
       }
 
-      // ── 条件判定 ──
+      // ── タグ構築 ──
       const tags = [];
       const avgStr = venueAvg1!=null ? `${(venueAvg1*100).toFixed(1)}%` : null;
 
-      // A: 基準1着率が場平均を下回る
-      if (base1!=null && venueAvg1!=null && base1 < venueAvg1) {
-        tags.push({ type:'below_base', label:`穴狙い`, sub:`基準1着率 ${(base1*100).toFixed(1)}% ＜ 場平均 ${avgStr}`, color:'var(--orange)' });
+      // イン否定（基準 or 最終が場平均以下）
+      const belowBase  = base1!=null && venueAvg1!=null && base1 < venueAvg1;
+      const belowFinal = finalProb1!=null && venueAvg1!=null && finalProb1 < venueAvg1;
+      if (belowBase || belowFinal) {
+        const subParts = [];
+        if (belowBase)  subParts.push(`基準 ${(base1*100).toFixed(1)}%`);
+        if (belowFinal) subParts.push(`最終 ${(finalProb1*100).toFixed(1)}%`);
+        if (avgStr) subParts.push(`場平均 ${avgStr}`);
+        tags.push({ type:'in_neg', label:'イン否定', sub: subParts.join(' ／ '), color:'var(--orange)' });
       }
-      // B: 最終確率が場平均を下回る
-      if (finalProb1!=null && venueAvg1!=null && finalProb1 < venueAvg1) {
-        // Aと重複しないよう別タグ
-        if (!tags.some(t=>t.type==='below_base')) {
-          tags.push({ type:'below_final', label:`穴展開`, sub:`最終確率 ${(finalProb1*100).toFixed(1)}% ＜ 場平均 ${avgStr}`, color:'var(--orange)' });
-        } else {
-          tags.push({ type:'below_final', label:`最終確率も場平均以下`, sub:`最終 ${(finalProb1*100).toFixed(1)}%`, color:'var(--orange)' });
-        }
+
+      // イン鉄板（基準 or 最終が70%以上）
+      const strongBase  = base1!=null && base1>=0.70;
+      const strongFinal = finalProb1!=null && finalProb1>=0.70;
+      if (strongBase || strongFinal) {
+        const subParts = [];
+        if (strongBase)  subParts.push(`基準 ${(base1*100).toFixed(1)}%`);
+        if (strongFinal) subParts.push(`最終 ${(finalProb1*100).toFixed(1)}%`);
+        tags.push({ type:'in_tetsup', label:'イン鉄板', sub: subParts.join(' ／ '), color:'var(--accent2)' });
       }
-      // C: 基準1着率70%以上
-      if (base1!=null && base1 >= 0.70) {
-        tags.push({ type:'strong_base', label:`鉄板`, sub:`基準1着率 ${(base1*100).toFixed(1)}%`, color:'var(--accent2)' });
-      }
-      // D: 最終確率70%以上
-      if (finalProb1!=null && finalProb1 >= 0.70) {
-        if (!tags.some(t=>t.type==='strong_base')) {
-          tags.push({ type:'strong_final', label:`最終確率鉄板`, sub:`最終確率 ${(finalProb1*100).toFixed(1)}%`, color:'var(--accent2)' });
-        } else {
-          tags.push({ type:'strong_final', label:`最終確率も70%超`, sub:`最終 ${(finalProb1*100).toFixed(1)}%`, color:'var(--accent2)' });
-        }
-      }
-      // E: まくりアラート
-      if (makuriAlert) {
-        tags.push({ type:'makuri', label:`まくりアラート`, sub:`${makuriBoats.map(n=>n+'号艇').join('・')}`, color:'#e60012' });
+
+      // まくりアラート
+      if (makuriBoats.length > 0) {
+        tags.push({ type:'makuri', label:`まくりアラート(${makuriBoats.join('・')}号艇)`, sub:'', color:'#e60012' });
       }
 
       if (tags.length === 0) return;
 
-      pickups.push({ venue, rno, time: rd.time||'', tags, base1, finalProb1, venueAvg1 });
+      // 締め切り時刻を分単位に変換（ソート用）
+      let timeMin = 9999;
+      if (rd.time && /^\d{1,2}:\d{2}$/.test(rd.time.trim())) {
+        const [h,m] = rd.time.trim().split(':').map(Number);
+        timeMin = h*60+m;
+      }
+
+      pickups.push({ venue, rno, time: rd.time||'', timeMin, tags });
     });
   });
+
+  // 締め切り順（同時刻は会場名順）
+  pickups.sort((a,b) => a.timeMin!==b.timeMin ? a.timeMin-b.timeMin : a.venue.localeCompare(b.venue,'ja'));
 
   if (pickups.length === 0) {
     section.style.display = 'none';
@@ -4838,33 +4826,53 @@ function buildTopPickupRaces() {
 
   section.style.display = 'block';
 
+  // カード幅: 正方形に近づける（モバイル想定 ~130px）
+  const CARD_W = 130;
+
   cardsEl.innerHTML = pickups.map(p => {
-    const tagHtml = p.tags.map(t => `
-      <div style="display:flex;align-items:flex-start;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
-        <span style="
-          display:inline-block;white-space:nowrap;
-          font-size:10px;font-weight:700;letter-spacing:.04em;
-          background:${t.color}22;color:${t.color};
-          border:1px solid ${t.color}55;
-          border-radius:4px;padding:1px 7px;margin-top:1px;flex-shrink:0
-        ">${t.label}</span>
-        <span style="font-size:11px;color:var(--text2);line-height:1.5">${t.sub}</span>
-      </div>`).join('');
+    // タグバッジ（ラベルのみ、1行に並べる）
+    const badgesHtml = p.tags.map(t =>
+      `<div style="
+        font-size:10px;font-weight:700;letter-spacing:.03em;
+        background:${t.color}22;color:${t.color};
+        border:1px solid ${t.color}55;
+        border-radius:4px;padding:2px 6px;
+        white-space:normal;word-break:keep-all;line-height:1.4;
+        text-align:center;
+      ">${t.label}</div>`
+    ).join('');
+
+    // 補足テキスト（subがあるタグだけ）
+    const subsHtml = p.tags.filter(t=>t.sub).map(t =>
+      `<div style="font-size:9px;color:var(--text3);line-height:1.4;text-align:center;margin-top:1px">${t.sub}</div>`
+    ).join('');
 
     return `
       <div onclick="jumpToPickup('${p.venue}',${p.rno})"
-           style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);
-                  padding:10px 12px;cursor:pointer;transition:background 0.15s"
+           style="
+             flex:0 0 auto;
+             width:${CARD_W}px;min-height:${CARD_W}px;
+             box-sizing:border-box;
+             background:var(--bg2);border:1px solid var(--border);
+             border-radius:var(--radius-sm);
+             padding:9px 8px 8px;
+             cursor:pointer;transition:background 0.15s;
+             display:flex;flex-direction:column;gap:5px;
+           "
            onmouseover="this.style.background='var(--bg3)'"
            onmouseout="this.style.background='var(--bg2)'">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:14px;font-weight:700;color:var(--text)">${p.venue}</span>
-            <span style="font-size:13px;font-weight:700;color:var(--accent2)">${p.rno}R</span>
-          </div>
-          <span style="font-size:11px;color:var(--text3)">${p.time} 発走</span>
+        <!-- 時刻 -->
+        <div style="font-size:10px;color:var(--text3);text-align:center;letter-spacing:.04em">${p.time} 発走</div>
+        <!-- 会場・レース -->
+        <div style="text-align:center">
+          <span style="font-size:15px;font-weight:700;color:var(--text)">${p.venue}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--accent2);margin-left:4px">${p.rno}R</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:0">${tagHtml}</div>
+        <!-- タグバッジ群 -->
+        <div style="display:flex;flex-direction:column;gap:3px;margin-top:2px">
+          ${badgesHtml}
+          ${subsHtml}
+        </div>
       </div>`;
   }).join('');
 }
