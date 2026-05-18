@@ -3431,6 +3431,18 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
 
   const totalPts = allCombos.length;
 
+  // 合成オッズ計算
+  const _synthDenom = allCombos.reduce((d, c) => {
+    const ov = raceOdds3tEv?.[normalizeCombo(c)] ?? null;
+    return (ov != null && ov > 0) ? d + 1/ov : d;
+  }, 0);
+  const _synthCnt = allCombos.filter(c => (raceOdds3tEv?.[normalizeCombo(c)] ?? null) != null).length;
+  const scenSynth = (_synthCnt > 0 && _synthDenom > 0) ? 1 / _synthDenom : null;
+  const scenSynthColor = scenSynth == null ? 'var(--text3)' : scenSynth >= 3.0 ? 'var(--green)' : scenSynth >= 1.5 ? 'var(--text2)' : 'var(--red)';
+  const scenSynthHtml = scenSynth != null
+    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${scenSynthColor}">合成${scenSynth.toFixed(2)}倍</span>`
+    : '';
+
   return `
     <div id="buy-mode-scen" style="display:none">
       <div class="buy-grid">
@@ -3438,6 +3450,7 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
           <div class="buy-card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span>🎲 シナリオ買い（3連単）</span>
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
+            ${scenSynthHtml}
           </div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:6px;line-height:1.6">
             最終確率1位: ${boatBadge(fp1st)} 　2位: ${boatBadge(fp2nd)}<br>
