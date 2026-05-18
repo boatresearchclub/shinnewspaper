@@ -4757,10 +4757,23 @@ function calcTopAIStats() {
   }
 
   // ── ② 過去30日 集計サマリーエリア ──
+  // 集計完了時刻を見出し横のタイムスタンプ要素に反映
+  function updateHistoryTimestamp() {
+    const el = document.getElementById('top-ai-stats-history-updated');
+    if (!el) return;
+    const now = new Date();
+    const mm  = String(now.getMonth() + 1).padStart(2, '0');
+    const dd  = String(now.getDate()).padStart(2, '0');
+    const hh  = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    el.textContent = `更新：${mm}/${dd} ${hh}:${min}`;
+  }
+
   if (elHistory) {
     const past30 = histDates.slice(0, 30);
     if (past30.length === 0) {
       elHistory.innerHTML = `<div class="ai-stats-card"><div style="color:var(--text3);font-size:12px;text-align:center;padding:0.5rem 0">過去データがありません</div></div>`;
+      updateHistoryTimestamp();
     } else {
       // ── 的中重視・回収重視 それぞれ集計 ──
       const allResultsHit = [];
@@ -4780,6 +4793,7 @@ function calcTopAIStats() {
 
       if (allResultsHit.length === 0 && allResultsRec.length === 0) {
         elHistory.innerHTML = `<div class="ai-stats-card"><div style="color:var(--text3);font-size:12px;text-align:center;padding:0.5rem 0">確定レースがありません</div></div>`;
+        updateHistoryTimestamp();
       } else {
         function mode30Panel(results, modeName, synthMin) {
           const total = results.length;
@@ -4881,6 +4895,7 @@ function calcTopAIStats() {
               ${_buildScen30Panel(allResultsScen, allResultsScenAll)}
             </div>
           </div>`;
+        updateHistoryTimestamp();
       }
     }
   }
