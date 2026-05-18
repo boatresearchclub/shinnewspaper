@@ -3372,7 +3372,8 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   // ── HTML生成 ──
   const boatBadge = n => `<span class="boat-circle b${n}" style="width:22px;height:22px;font-size:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;vertical-align:middle">${n}</span>`;
   function comboToHtml(combo){
-    return combo.replace(/(\d)/g, m => boatBadge(parseInt(m))).replace(/-/g,'<span style="color:var(--text3);margin:0 1px;font-size:11px">-</span>');
+    const sep = '<span style="color:var(--text3);margin:0 1px;font-size:11px">-</span>';
+    return combo.split('-').map(n => boatBadge(parseInt(n))).join(sep);
   }
 
   function blockHeader(label, winner, second){
