@@ -4367,6 +4367,14 @@ function buildDateCard(dateStr, label) {
             <span style="font-size:15px;font-weight:700;font-family:var(--mono);color:${recColor}">${(recoveryRate*100).toFixed(0)}%</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+            <span style="font-size:10px;color:var(--text3)">総投資</span>
+            <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${totalBet.toLocaleString()}円</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
+            <span style="font-size:10px;color:var(--text3)">総回収</span>
+            <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:${recColor}">${totalReturn.toLocaleString()}円</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
             <span style="font-size:10px;color:var(--text3)">集計R</span>
             <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${total}R</span>
           </div>
@@ -4509,8 +4517,15 @@ function calcTopAIStats() {
                   <span style="font-size:10px;color:var(--text3)">回収率</span>
                   <div style="text-align:right">
                     <span style="font-size:18px;font-weight:700;font-family:var(--mono);color:${recColor}">${(recoveryRate*100).toFixed(0)}%</span>
-                    <div style="font-size:10px;color:var(--text3)">${totalReturn.toLocaleString()}円</div>
                   </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+                  <span style="font-size:10px;color:var(--text3)">総投資</span>
+                  <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${totalBet.toLocaleString()}円</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:5px">
+                  <span style="font-size:10px;color:var(--text3)">総回収</span>
+                  <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:${recColor}">${totalReturn.toLocaleString()}円</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:center">
                   <span style="font-size:10px;color:var(--text3)">集計R</span>
