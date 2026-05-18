@@ -2012,12 +2012,16 @@ function buildScenarioSection(ranked2, place2Map, rawBoats, tenjiScoreMap, hasTe
         </span>`
       ).join('<span style="color:var(--text3);margin:0 3px;font-size:11px">/</span>');
 
-      return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
-        <span style="font-size:11px;color:var(--text3);flex-shrink:0">2着</span>
-        ${boatCircle(item.boat)}
-        <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text);min-width:2.8em">${(item.p2*100).toFixed(0)}%</span>
-        <span style="font-size:11px;color:var(--text3);flex-shrink:0;margin-left:2px">ー 3着</span>
-        ${third3html}
+      return `<div style="padding:4px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:11px;color:var(--text3);flex-shrink:0">2着</span>
+          ${boatCircle(item.boat)}
+          <span style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text);min-width:2.8em">${(item.p2*100).toFixed(0)}%</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding-left:4px">
+          <span style="font-size:11px;color:var(--text3);flex-shrink:0">└ 3着</span>
+          ${third3html}
+        </div>
       </div>`;
     }).join('');
 
