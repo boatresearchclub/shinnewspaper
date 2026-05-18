@@ -5154,14 +5154,15 @@ function collectResultsForDateScen(dateStr) {
         ? new Set([normalizeCombo(resultRd.sanrentan[0].combo)])
         : new Set();
 
-      // ODDS_DATA からコンボごとのオッズを取得して平均を計算
+      // ODDS_DATA からコンボごとのオッズを取得して合成オッズを計算
+      // 合成オッズ = 1 / Σ(1/各コンボオッズ)  ← 的中率×合成オッズ≒回収率の分母
       const oddsMap3t = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] ?? {};
-      let oddsSum = 0, oddsCount = 0;
+      let synthDenom = 0, synthCount = 0;
       combos.forEach(c => {
         const ov = oddsMap3t[normalizeCombo(c)] ?? null;
-        if (ov != null && ov > 0) { oddsSum += ov; oddsCount++; }
+        if (ov != null && ov > 0) { synthDenom += 1 / ov; synthCount++; }
       });
-      const avgOdds = oddsCount > 0 ? oddsSum / oddsCount : null;
+      const synthOdds = (synthCount > 0 && synthDenom > 0) ? 1 / synthDenom : null;
 
       let isHit = false, hitOdds = 0, hitCombo = '';
       for (const c of combos) {
@@ -5178,7 +5179,7 @@ function collectResultsForDateScen(dateStr) {
         venue, rno,
         buyCnt: combos.length,
         isHit, hitOdds, hitCombo,
-        avgOdds,   // 買い目全体の平均オッズ（ODDS_DATA未取得時は null）
+        avgOdds: synthOdds,   // 合成オッズ（ODDS_DATA未取得時は null）
         actualResult: resultRd.sanrentan?.[0]?.combo || '',
       });
     });
@@ -5205,12 +5206,14 @@ function _buildScenPanel_dateCard(results) {
   const hitColor = hitRate      >= 0.7 ? 'var(--green)' : hitRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
   const recColor = recoveryRate >= 1.0 ? 'var(--green)' : recoveryRate >= 0.75 ? 'var(--orange)' : 'var(--text)';
 
-  // 全レースの平均オッズ（avgOdds が取れているレースだけ集計）
-  const oddsResults  = results.filter(r => r.avgOdds != null);
-  const overallAvgOdds = oddsResults.length > 0
-    ? oddsResults.reduce((s, r) => s + r.avgOdds, 0) / oddsResults.length
+  // 合成オッズの全レース平均（合成オッズが取れているレースだけ集計）
+  // 合成オッズ = 1 / Σ(1/各コンボオッズ)  ← 各レースで collectResultsForDateScen が計算済み
+  // ここでは「レース単位の合成オッズ」を算術平均して傾向を把握する
+  const synthResults  = results.filter(r => r.avgOdds != null);
+  const avgSynthOdds  = synthResults.length > 0
+    ? synthResults.reduce((s, r) => s + r.avgOdds, 0) / synthResults.length
     : null;
-  const avgOddsStr = overallAvgOdds != null ? `${overallAvgOdds.toFixed(1)}倍` : '—';
+  const synthOddsStr  = avgSynthOdds != null ? `${avgSynthOdds.toFixed(1)}倍` : '—';
 
   const venueMap = {};
   results.forEach(r => { if (!venueMap[r.venue]) venueMap[r.venue] = []; venueMap[r.venue].push(r); });
@@ -5296,8 +5299,8 @@ function _buildScenPanel_dateCard(results) {
           <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${total}R</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:4px">
-          <span style="font-size:10px;color:var(--text3)">平均オッズ</span>
-          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${avgOddsStr}</span>
+          <span style="font-size:10px;color:var(--text3)">合成オッズ</span>
+          <span style="font-size:12px;font-weight:700;font-family:var(--mono);color:var(--text)">${synthOddsStr}</span>
         </div>
       </div>
       ${detailHtml}
@@ -5322,12 +5325,12 @@ function _buildScen30Panel(results) {
   const hitColor = hitRate      >= 0.7 ? 'var(--green)' : hitRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
   const recColor = recoveryRate >= 1.0 ? 'var(--green)' : recoveryRate >= 0.75 ? 'var(--orange)' : 'var(--text)';
 
-  // 全レースの平均オッズ（avgOdds が取れているレースだけ集計）
-  const oddsResults30    = results.filter(r => r.avgOdds != null);
-  const overallAvgOdds30 = oddsResults30.length > 0
-    ? oddsResults30.reduce((s, r) => s + r.avgOdds, 0) / oddsResults30.length
+  // 合成オッズの全レース平均（合成オッズが取れているレースだけ集計）
+  const synthResults30    = results.filter(r => r.avgOdds != null);
+  const avgSynthOdds30    = synthResults30.length > 0
+    ? synthResults30.reduce((s, r) => s + r.avgOdds, 0) / synthResults30.length
     : null;
-  const avgOddsStr30 = overallAvgOdds30 != null ? `${overallAvgOdds30.toFixed(1)}倍` : '—';
+  const synthOddsStr30    = avgSynthOdds30 != null ? `${avgSynthOdds30.toFixed(1)}倍` : '—';
 
   const venueMap30 = {};
   results.forEach(r => { if (!venueMap30[r.venue]) venueMap30[r.venue] = []; venueMap30[r.venue].push(r); });
@@ -5397,8 +5400,8 @@ function _buildScen30Panel(results) {
           <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${total}R</span>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);padding-top:5px">
-          <span style="font-size:10px;color:var(--text3)">平均オッズ</span>
-          <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${avgOddsStr30}</span>
+          <span style="font-size:10px;color:var(--text3)">合成オッズ</span>
+          <span style="font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text)">${synthOddsStr30}</span>
         </div>
       </div>
       ${venueDetail30}
