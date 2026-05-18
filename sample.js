@@ -3336,18 +3336,12 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   }
 
   // ── 3点（折り返し込み6点）生成ヘルパー ──
-  // 3着候補ごとに「正（second先）→折り返し（third先）」をペアで連続出力
+  // winner-second-third を全候補分 → その後 winner-third-second（折り返し）を全候補分
   function makeBlock(winner, second, thirdCandidates){
-    const seen = new Set();
-    const combos = [];
-    thirdCandidates.forEach(third => {
-      if(third === winner || third === second) return;
-      const a = `${winner}-${second}-${third}`;
-      const b = `${winner}-${third}-${second}`;
-      if(!seen.has(a)){ seen.add(a); combos.push(a); }
-      if(!seen.has(b)){ seen.add(b); combos.push(b); }
-    });
-    return combos;
+    const thirds = thirdCandidates.filter(t => t !== winner && t !== second);
+    const forward  = thirds.map(t => `${winner}-${second}-${t}`);
+    const backward = thirds.map(t => `${winner}-${t}-${second}`);
+    return [...forward, ...backward];
   }
 
   // ── ① fp1st → 2着1位 → 3着上位3 × 折り返し = 6点 ──
