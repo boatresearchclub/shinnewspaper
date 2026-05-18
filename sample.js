@@ -4600,9 +4600,10 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
 function buildDateCard(dateStr, label) {
   const { results: resultsHit } = collectResultsForDate(dateStr, 'hit');
   const { results: resultsRec, excludedList } = collectResultsForDate(dateStr, 'rec');
-  const resultsScen = collectResultsForDateScen(dateStr);
+  const resultsScen    = collectResultsForDateScen(dateStr);
+  const resultsScenAll = collectResultsForDateScen(dateStr, true);
 
-  if (resultsHit.length === 0 && resultsRec.length === 0 && excludedList.length === 0 && resultsScen.length === 0) return '';
+  if (resultsHit.length === 0 && resultsRec.length === 0 && excludedList.length === 0 && resultsScen.length === 0 && resultsScenAll.length === 0) return '';
 
   function modePanel(results, modeName, synthMin) {
     const total = results.length;
@@ -4721,7 +4722,7 @@ function buildDateCard(dateStr, label) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
         ${modePanel(resultsHit, '🎯 的中重視', 2.5)}
         ${modePanel(resultsRec, '💰 回収重視', 4.0)}
-        ${_buildScenPanel_dateCard(resultsScen)}
+        ${_buildScenPanel_dateCard(resultsScen, resultsScenAll)}
       </div>
     </div>`;
 }
@@ -4765,13 +4766,16 @@ function calcTopAIStats() {
       const allResultsHit = [];
       const allResultsRec = [];
       const allResultsScen = [];
+      const allResultsScenAll = [];
       past30.forEach(d => {
         const { results: rh } = collectResultsForDate(d, 'hit');
         const { results: rr } = collectResultsForDate(d, 'rec');
-        const rs = collectResultsForDateScen(d);
+        const rs    = collectResultsForDateScen(d);
+        const rsAll = collectResultsForDateScen(d, true);
         allResultsHit.push(...rh);
         allResultsRec.push(...rr);
         allResultsScen.push(...rs);
+        allResultsScenAll.push(...rsAll);
       });
 
       if (allResultsHit.length === 0 && allResultsRec.length === 0) {
@@ -4874,7 +4878,7 @@ function calcTopAIStats() {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
               ${mode30Panel(allResultsHit, '🎯 的中重視', 2.5)}
               ${mode30Panel(allResultsRec, '💰 回収重視', 4.0)}
-              ${_buildScen30Panel(allResultsScen)}
+              ${_buildScen30Panel(allResultsScen, allResultsScenAll)}
             </div>
           </div>`;
       }
@@ -5136,7 +5140,8 @@ function computeScenCombos(venue, vdata, rno) {
 // ── シナリオ買い 1日分集計（合成オッズ2.5倍以上）──
 // ・合成オッズフィルター・見送り推奨フィルター なし
 // ・データ不足・進入変更・結果未確定は除外（最低限の品質確保）
-function collectResultsForDateScen(dateStr) {
+// includeAll=true のとき合成オッズフィルターをスキップ（フィルターなし全件集計用）
+function collectResultsForDateScen(dateStr, includeAll = false) {
   const dataForDate = getDataForDate(dateStr);
   const results = [];
 
@@ -5176,8 +5181,9 @@ function collectResultsForDateScen(dateStr) {
 
       // ── 合成オッズフィルター: 2.5倍未満は見送り ──
       // ODDS_DATA未取得(null)の場合は参加扱い（オッズ欠損で除外しすぎない）
+      // includeAll=true のときはフィルターをスキップ
       const SCEN_SYNTH_MIN = 2.5;
-      if (synthOdds !== null && synthOdds < SCEN_SYNTH_MIN) return;
+      if (!includeAll && synthOdds !== null && synthOdds < SCEN_SYNTH_MIN) return;
 
       let isHit = false, hitOdds = 0, hitCombo = '';
       for (const c of combos) {
@@ -5204,13 +5210,64 @@ function collectResultsForDateScen(dateStr) {
 }
 
 // ── シナリオ買い 日別カード内パネル ──
-function _buildScenPanel_dateCard(results) {
+// resultsAll: 合成オッズフィルターなしの全件（比較表示用）
+function _buildScenPanel_dateCard(results, resultsAll) {
   const total = results.length;
+
+  // フィルターなしのサブ集計HTML（resultsAll が渡された場合のみ表示）
+  function _buildAllSubSection(rAll) {
+    if (!rAll || rAll.length === 0) return '';
+    const aTotal  = rAll.length;
+    const aHit    = rAll.filter(r => r.isHit).length;
+    const aRate   = aHit / aTotal;
+    const aBet    = rAll.reduce((s, r) => s + r.buyCnt * 100, 0);
+    const aReturn = rAll.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+    const aRec    = aBet > 0 ? aReturn / aBet : 0;
+    const aHC     = aRate >= 0.7 ? 'var(--green)' : aRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
+    const aRC     = aRec  >= 1.0 ? 'var(--green)' : aRec  >= 0.75 ? 'var(--orange)' : 'var(--text)';
+    const aSynth  = rAll.filter(r => r.avgOdds != null);
+    const aAvgSO  = aSynth.length > 0 ? aSynth.reduce((s, r) => s + r.avgOdds, 0) / aSynth.length : null;
+    const aSOStr  = aAvgSO != null ? `${aAvgSO.toFixed(1)}倍` : '—';
+    return `
+      <details style="margin-top:6px">
+        <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0">
+          <span style="font-size:10px">▶</span> フィルターなし参考
+        </summary>
+        <div style="margin-top:5px;padding:7px 8px;background:var(--bg4);border-radius:6px;border:1px dashed var(--border);font-size:11px">
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px;margin-bottom:3px">
+            <span style="color:var(--text3)">的中率</span>
+            <span style="font-weight:700;font-family:var(--mono);color:${aHC}">${(aRate*100).toFixed(0)}% <span style="font-size:10px;font-weight:400;color:var(--text3)">${aHit}/${aTotal}R</span></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px;margin-bottom:3px">
+            <span style="color:var(--text3)">回収率</span>
+            <span style="font-weight:700;font-family:var(--mono);color:${aRC}">${(aRec*100).toFixed(0)}%</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px;margin-bottom:3px">
+            <span style="color:var(--text3)">総投資</span>
+            <span style="font-family:var(--mono);color:var(--text)">${aBet.toLocaleString()}円</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px;margin-bottom:3px">
+            <span style="color:var(--text3)">総回収</span>
+            <span style="font-family:var(--mono);color:${aRC}">${aReturn.toLocaleString()}円</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px;margin-bottom:3px">
+            <span style="color:var(--text3)">集計R</span>
+            <span style="font-family:var(--mono);color:var(--text)">${aTotal}R</span>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text3)">合成オッズ</span>
+            <span style="font-family:var(--mono);color:var(--text)">${aSOStr}</span>
+          </div>
+        </div>
+      </details>`;
+  }
+
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
       <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
+      ${_buildAllSubSection(resultsAll)}
     </div>`;
 
   const hitCount     = results.filter(r => r.isHit).length;
@@ -5319,17 +5376,20 @@ function _buildScenPanel_dateCard(results) {
         </div>
       </div>
       ${detailHtml}
+      ${_buildAllSubSection(resultsAll)}
     </div>`;
 }
 
 // ── シナリオ買い 30日集計サマリーパネル ──
-function _buildScen30Panel(results) {
+// resultsAll: 合成オッズフィルターなしの全件（比較表示用）
+function _buildScen30Panel(results, resultsAll) {
   const total = results.length;
   if (total === 0) return `
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
       <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">🎲 シナリオ買い</div>
       <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:4px">合成オッズ2.5倍以上</div>
       <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計対象なし</div>
+      ${_buildScenAllSubSection30(resultsAll)}
     </div>`;
 
   const hitCount     = results.filter(r => r.isHit).length;
@@ -5420,10 +5480,57 @@ function _buildScen30Panel(results) {
         </div>
       </div>
       ${venueDetail30}
+      ${_buildScenAllSubSection30(resultsAll)}
     </div>`;
 }
 
-// ── バックテスト CSV エクスポート ──
+// ── シナリオ買い 30日フィルターなしサブセクション ──
+function _buildScenAllSubSection30(rAll) {
+  if (!rAll || rAll.length === 0) return '';
+  const aTotal  = rAll.length;
+  const aHit    = rAll.filter(r => r.isHit).length;
+  const aRate   = aHit / aTotal;
+  const aBet    = rAll.reduce((s, r) => s + r.buyCnt * 100, 0);
+  const aReturn = rAll.filter(r => r.isHit).reduce((s, r) => s + r.hitOdds, 0);
+  const aRec    = aBet > 0 ? aReturn / aBet : 0;
+  const aHC     = aRate >= 0.7 ? 'var(--green)' : aRate >= 0.5 ? 'var(--orange)' : 'var(--text)';
+  const aRC     = aRec  >= 1.0 ? 'var(--green)' : aRec  >= 0.75 ? 'var(--orange)' : 'var(--text)';
+  const aSynth  = rAll.filter(r => r.avgOdds != null);
+  const aAvgSO  = aSynth.length > 0 ? aSynth.reduce((s, r) => s + r.avgOdds, 0) / aSynth.length : null;
+  const aSOStr  = aAvgSO != null ? `${aAvgSO.toFixed(1)}倍` : '—';
+  return `
+    <details style="margin-top:6px">
+      <summary style="font-size:11px;font-weight:700;color:var(--text3);cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;padding:2px 0">
+        <span style="font-size:10px">▶</span> フィルターなし参考
+      </summary>
+      <div style="margin-top:5px;padding:8px 10px;background:var(--bg4);border-radius:6px;border:1px dashed var(--border);font-size:11px;display:flex;flex-direction:column;gap:4px">
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px">
+          <span style="color:var(--text3)">的中率</span>
+          <span style="font-weight:700;font-family:var(--mono);color:${aHC}">${(aRate*100).toFixed(0)}% <span style="font-size:10px;font-weight:400;color:var(--text3)">${aHit}/${aTotal}R</span></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px">
+          <span style="color:var(--text3)">回収率</span>
+          <span style="font-weight:700;font-family:var(--mono);color:${aRC}">${(aRec*100).toFixed(0)}%</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px">
+          <span style="color:var(--text3)">総投資</span>
+          <span style="font-family:var(--mono);color:var(--text)">${aBet.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px">
+          <span style="color:var(--text3)">総回収</span>
+          <span style="font-family:var(--mono);color:${aRC}">${aReturn.toLocaleString()}円</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:3px">
+          <span style="color:var(--text3)">集計R</span>
+          <span style="font-family:var(--mono);color:var(--text)">${aTotal}R</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text3)">合成オッズ</span>
+          <span style="font-family:var(--mono);color:var(--text)">${aSOStr}</span>
+        </div>
+      </div>
+    </details>`;
+}
 // ── CSV 生成共通ヘルパー ──
 function _buildBacktestRows(buyMode) {
   const allDates  = getAvailableDates().slice().reverse();
