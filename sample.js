@@ -79,6 +79,15 @@ function calcDynamicWeights(arek) {
 // スライダーUIから変更可能。単位: % (例: 2.0 → 2%)
 let BUY_PROB_THRESHOLD = 2.0;
 
+// ── 的中重視: 1着軸を1艇固定にするための乖離率閾値 ──
+// final_prob 1位と2位の差がこの値（%）以上のとき、1位艇を1艇固定軸として組み立てる。
+// 下回る場合は僅差2頭軸（isDualAxis）として2軸展開する。
+// 根拠: 全国平均1コース確率≒50%, 2コース≒15% → 典型的な「明確な軸」レースで差は15%前後。
+//       10%では拮抗レースでも固定軸になりすぎ回収悪化、15%では条件過剰で殆ど非該当。
+//       12% = 1位の確率が2位の約1.25倍以上を「明確な1艇軸」と定義する仮置き値。
+//       バックテスト後に調整すること（推奨範囲: 8〜15%）。
+let DIVERGENCE_THRESHOLD_HIT = 12.0; // 単位: % ← スライダーUIから変更可
+
 
 
 
@@ -2195,8 +2204,11 @@ function renderBuy(rno){
       ? `${A.name}（${A.boat}号）軸だが、まくり・差しが入りやすい展開。`
       : `${A.name}（${A.boat}号）中心だが${B.name}（${B.boat}号）との競り合いも。`;
 
-  const probDiff  = A.final_prob - B.final_prob;
-  const isDualAxis = probDiff <= 0.05;
+  const probDiff   = A.final_prob - B.final_prob;
+  // 乖離率（%）: DIVERGENCE_THRESHOLD_HIT と同一単位で比較する
+  // 旧: probDiff <= 0.05（固定5%）→ 新: DIVERGENCE_THRESHOLD_HIT（デフォルト12%）未満を僅差とみなす
+  const probDiffPct = probDiff * 100;
+  const isDualAxis  = probDiffPct < DIVERGENCE_THRESHOLD_HIT;
 
   // ─ STEP4 & STEP5: 展開シナリオベースの買い目生成
   //
@@ -2255,23 +2267,23 @@ function renderBuy(rno){
   const venueAvg1_buy = cRates_buy[1] ?? 0.45;
   const top1FinalProb = ranked2[0]?.final_prob ?? 0;
 
-  // ── 【改修】的中重視モード: 1号艇固定軸の採用条件 ──
-  // 仕様:
-  //   ① 1号艇の1着率（final_prob）が場平均以上
-  //   ② 最終確率順位が上位2艇以内
-  //   ③ 上位2艇には必ず1号艇を含む（=②と同義）
-  // すべて満たす場合のみ1号艇を1着固定軸として採用する。
+  // ── 【改修】的中重視モード: 1着固定軸の採用条件 ──
+  // 仕様（変更）:
+  //   ① final_prob 1位と2位の乖離率 ≥ DIVERGENCE_THRESHOLD_HIT（デフォルト12%）
+  //   ② その1位艇の最終確率順位が1位（= 実質同義だが明示）
+  // → 乖離が十分に大きい場合のみ1位艇を1艇固定軸とする。
+  //    乖離が閾値未満（isDualAxis=true）の場合は2頭軸展開に自動移行。
+  // ※ 旧条件「1号艇が場平均以上 AND top2以内」は廃止。
+  //    1号艇かどうかは axisReliable の判定に含めない（rec側で制御）。
   const boat1ForAxis   = ranked2.find(b => b.boat === 1);
   const boat1FinalProb = boat1ForAxis?.final_prob ?? 0;
   const boat1RankAmongFinal = [...ranked2]
     .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
-    .findIndex(b => b.boat === 1); // 0始まり（0=1位、1=2位…）
-  // 条件①: 1号艇final_prob ≥ 場平均1コース1着率
-  const boat1AboveAvg  = boat1FinalProb >= venueAvg1_buy;
-  // 条件②③: 1号艇の最終確率順位が上位2艇以内（0か1）
-  const boat1InTop2    = boat1RankAmongFinal <= 1;
-  // hit軸信頼フラグ（旧: axisReliable）
-  const axisReliable   = boat1AboveAvg && boat1InTop2;
+    .findIndex(b => b.boat === 1);
+  // axisReliable: 乖離率が閾値以上（= isDualAxis が偽）のとき真
+  const axisReliable = !isDualAxis; // isDualAxis=true（僅差）のとき false になる
+  // 後方互換: boat1AboveAvg は rec 側の判定で引き続き使用
+  const boat1AboveAvg = boat1FinalProb >= venueAvg1_buy;
 
   // ── 【改修】3着候補絞り込み関数（画面表示と同一データベース）──
   //
@@ -2419,63 +2431,52 @@ function renderBuy(rno){
       // ── 【改修】1着軸の決定（モード別）──
       //
       // ① 的中重視(hit):
-      //   axisReliable（1号艇final_prob≥場平均 かつ 最終確率順位上位2艇以内）が真:
-      //     isDualAxis（1・2位差 ≤5%）→ 1号艇＋2位艇の2軸展開（各軸の最有力シナリオ）
-      //     通常（差 >5%）           → 1号艇固定軸（1号艇の全シナリオ＋他艇補完）
-      //   axisReliable が偽:
-      //     final_prob 1位艇を必ず軸先頭に強制し、top3Scen の残りを補完
-      //     （偽でも確率最上位を外さないことで的中率を安定させる）
+      //   axisReliable（乖離率 ≥ DIVERGENCE_THRESHOLD_HIT）が真:
+      //     1位艇を1艇固定軸（全シナリオ展開 + 他艇補完）
+      //   axisReliable が偽（isDualAxis=true: 乖離率 < 閾値）:
+      //     final_prob 1位艇 + 2位艇の2軸展開（各軸の最有力シナリオ）
+      //     ※ 旧: axisReliable 偽のときも1位を強制先頭にしていたが、
+      //        isDualAxis 経路で吸収するため廃止。
       //
       // ② 回収重視(rec):
-      //   1号艇の final_prob が場平均以下 → 1号艇を否定し穴軸を探す。
-      //   allScenPairs（シナリオ確率降順）から1号艇を除いた上位3シナリオを採用。
-      //   1号艇が場平均以上 → top3Scen 順（1号艇も自然に候補に入る）。
+      //   【改修】final_prob 1位が1号艇でないとき → 1・2位艇の両シナリオを展開（穴狙い）
+      //   1号艇が1位のとき → top3Scen 順（通常フロー）
       let scenariosToProcess;
       if(buyMode === 'hit'){
         if(axisReliable){
-          if(isDualAxis){
-            // ── 僅差2頭軸: 1号艇＋final_prob 2位艇の両シナリオを処理 ──
-            // ranked2 は final_prob 降順ソート済み。1号艇以外の先頭を2位艇とする
-            const fp2ndBoat = ranked2.filter(b => b.boat !== 1)[0]
-                              ?? ranked2[1]; // 全艇が1号艇の場合の安全弁（実際には起きない）
-            const dualAxes = [1, fp2ndBoat?.boat].filter(Boolean);
-            const dualScens = dualAxes.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
-            // 残りシナリオ（決まり手カバー）を最大1本補完
-            const dualRest = top3Scen.filter(s => !dualAxes.includes(s.boat)).slice(0, 1);
-            scenariosToProcess = [...dualScens, ...dualRest];
+          // ── 乖離率 ≥ 閾値: final_prob 1位艇を1艇固定軸 ──
+          const fp1stBoat = ranked2[0]; // final_prob 降順ソート済みの先頭
+          const boat1Scens = top3Scen.filter(s => s.boat === fp1stBoat.boat);
+          if(boat1Scens.length === 0){
+            const fp1stBest = allScenPairs.find(p => p.boat === fp1stBoat.boat);
+            scenariosToProcess = fp1stBest ? [fp1stBest, ...top3Scen.filter(s => s.boat !== fp1stBoat.boat)] : top3Scen;
           } else {
-            // ── 通常1号艇固定軸 ──
-            const boat1Scens = top3Scen.filter(s => s.boat === 1);
-            if(boat1Scens.length === 0){
-              const boat1Best = allScenPairs.find(p => p.boat === 1);
-              scenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
-            } else {
-              scenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
-            }
+            scenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== fp1stBoat.boat)];
           }
         } else {
-          // ── axisReliable 偽: final_prob 1位を必ず先頭に強制 ──
-          const fp1stBoat = ranked2[0]?.boat; // ranked2 は final_prob 降順ソート済み
-          const fp1stScen = allScenPairs.find(p => p.boat === fp1stBoat)
-                            ?? top3Scen.find(s => s.boat === fp1stBoat);
-          if(fp1stScen){
-            const rest = top3Scen.filter(s => s.boat !== fp1stBoat);
-            scenariosToProcess = [fp1stScen, ...rest];
-          } else {
-            scenariosToProcess = top3Scen;
-          }
+          // ── 乖離率 < 閾値（isDualAxis）: final_prob 1位 + 2位の2軸展開 ──
+          const fp1stBoat = ranked2[0];
+          const fp2ndBoat = ranked2[1];
+          const dualAxes  = [fp1stBoat?.boat, fp2ndBoat?.boat].filter(Boolean);
+          const dualScens = dualAxes.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
+          const dualRest  = top3Scen.filter(s => !dualAxes.includes(s.boat)).slice(0, 1);
+          scenariosToProcess = [...dualScens, ...dualRest];
         }
       } else {
-        // 回収重視: 1号艇否定 → allScenPairs ベースで穴軸を選出
-        if(!boat1AboveAvg){
-          // allScenPairs（シナリオ確率降順）から1号艇を除いた上位3シナリオ
-          // final_prob ではなくシナリオ発生確率で選ぶことで穴展開を正確に掴む
+        // ── 回収重視: final_prob 1位が1号艇でないとき穴軸展開 ──
+        // 【改修】旧: 1号艇 final_prob が場平均以下 → 新: 1位が1号艇でないとき
+        // 理由: 場平均との比較は閾値が緩く誤発動が多い。
+        //       「1号艇が最終確率1位でない」= モデルが明示的に他艇を上位評価しているケースのみ穴狙い。
+        const fp1stIsBoat1 = (ranked2[0]?.boat === 1);
+        if(!fp1stIsBoat1){
+          // final_prob 上位2艇を軸に展開シナリオを組み立てる
+          const top2FPBoats = [ranked2[0]?.boat, ranked2[1]?.boat].filter(Boolean);
           const recScens = allScenPairs
-            .filter(p => p.boat !== 1)
-            .slice(0, 3);
+            .filter(p => top2FPBoats.includes(p.boat))
+            .slice(0, 4); // 2艇 × 最大2シナリオ（点数上限は後段で制御）
           scenariosToProcess = recScens.length > 0 ? recScens : top3Scen;
         } else {
-          // 1号艇が場平均以上なら top3Scen 順（1号艇も自然に候補に入る）
+          // 1号艇が1位 → 通常フロー（top3Scen 順）
           scenariosToProcess = top3Scen;
         }
       }
@@ -2627,7 +2628,7 @@ function renderBuy(rno){
   }).join('');
 
   const dualNote = isDualAxis
-    ? `<span style="color:var(--orange);font-size:11px;font-weight:700">⚡ 僅差2頭軸（${A.boat}号・${B.boat}号 差${(probDiff*100).toFixed(1)}%）</span>`
+    ? `<span style="color:var(--orange);font-size:11px;font-weight:700">⚡ 僅差2頭軸（${A.boat}号・${B.boat}号 差${probDiffPct.toFixed(1)}% / 閾値${DIVERGENCE_THRESHOLD_HIT}%）</span>`
     : '';
 
   // ── 会場平均率テーブル ──
@@ -4099,44 +4100,37 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
         }
         // 【改修】バックテスト: モード別1着軸決定（renderBuy と完全同一仕様）
         const BT_MODE = buyMode;
-        // isDualAxis: final_prob 1・2位の差が ≤5% なら僅差とみなす
-        const probDiff_bt = (ranked2[0]?.final_prob ?? 0) - (ranked2[1]?.final_prob ?? 0);
-        const isDualAxis_bt = probDiff_bt <= 0.05;
+        // isDualAxis: 乖離率が DIVERGENCE_THRESHOLD_HIT 未満なら僅差2頭軸
+        const probDiff_bt    = ((ranked2[0]?.final_prob ?? 0) - (ranked2[1]?.final_prob ?? 0)) * 100;
+        const isDualAxis_bt  = probDiff_bt < DIVERGENCE_THRESHOLD_HIT;
+        const axisReliable_bt = !isDualAxis_bt; // 乖離率 ≥ 閾値のとき1艇固定軸
         let btScenariosToProcess;
         if(BT_MODE === 'hit'){
-          if(axisReliable){
-            if(isDualAxis_bt){
-              // 僅差2頭軸: 1号艇＋final_prob 2位艇の両シナリオを処理
-              const fp2ndBoat_bt = ranked2.filter(b => b.boat !== 1)[0];
-              const dualAxes_bt  = [1, fp2ndBoat_bt?.boat].filter(Boolean);
-              const dualScens_bt = dualAxes_bt.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
-              const dualRest_bt  = top3Scen.filter(s => !dualAxes_bt.includes(s.boat)).slice(0, 1);
-              btScenariosToProcess = [...dualScens_bt, ...dualRest_bt];
+          if(axisReliable_bt){
+            // 乖離率 ≥ 閾値: final_prob 1位艇を1艇固定軸
+            const fp1stBoat_bt = ranked2[0];
+            const boat1Scens_bt = top3Scen.filter(s => s.boat === fp1stBoat_bt.boat);
+            if(boat1Scens_bt.length === 0){
+              const fp1stBest_bt = allScenPairs.find(p => p.boat === fp1stBoat_bt.boat);
+              btScenariosToProcess = fp1stBest_bt ? [fp1stBest_bt, ...top3Scen.filter(s => s.boat !== fp1stBoat_bt.boat)] : top3Scen;
             } else {
-              // 通常1号艇固定軸
-              const boat1Scens = top3Scen.filter(s => s.boat === 1);
-              if(boat1Scens.length === 0){
-                const boat1Best = allScenPairs.find(p => p.boat === 1);
-                btScenariosToProcess = boat1Best ? [boat1Best, ...top3Scen.filter(s => s.boat !== 1)] : top3Scen;
-              } else {
-                btScenariosToProcess = [...boat1Scens, ...top3Scen.filter(s => s.boat !== 1)];
-              }
+              btScenariosToProcess = [...boat1Scens_bt, ...top3Scen.filter(s => s.boat !== fp1stBoat_bt.boat)];
             }
           } else {
-            // axisReliable 偽: final_prob 1位を必ず先頭に強制
-            const fp1stBoat_bt = ranked2[0]?.boat;
-            const fp1stScen_bt = allScenPairs.find(p => p.boat === fp1stBoat_bt)
-                                 ?? top3Scen.find(s => s.boat === fp1stBoat_bt);
-            if(fp1stScen_bt){
-              btScenariosToProcess = [fp1stScen_bt, ...top3Scen.filter(s => s.boat !== fp1stBoat_bt)];
-            } else {
-              btScenariosToProcess = top3Scen;
-            }
+            // 乖離率 < 閾値（isDualAxis_bt）: final_prob 1位 + 2位の2軸展開
+            const fp1stBoat_bt = ranked2[0];
+            const fp2ndBoat_bt = ranked2[1];
+            const dualAxes_bt  = [fp1stBoat_bt?.boat, fp2ndBoat_bt?.boat].filter(Boolean);
+            const dualScens_bt = dualAxes_bt.map(ax => allScenPairs.find(p => p.boat === ax)).filter(Boolean);
+            const dualRest_bt  = top3Scen.filter(s => !dualAxes_bt.includes(s.boat)).slice(0, 1);
+            btScenariosToProcess = [...dualScens_bt, ...dualRest_bt];
           }
         } else {
-          // rec: allScenPairs ベースで穴軸を選出（renderBuy と統一）
-          if(!boat1AboveAvg_bt){
-            const recScens_bt = allScenPairs.filter(p => p.boat !== 1).slice(0, 3);
+          // rec: final_prob 1位が1号艇でないとき上位2艇軸展開（renderBuy と統一）
+          const fp1stIsBoat1_bt = (ranked2[0]?.boat === 1);
+          if(!fp1stIsBoat1_bt){
+            const top2FPBoats_bt = [ranked2[0]?.boat, ranked2[1]?.boat].filter(Boolean);
+            const recScens_bt    = allScenPairs.filter(p => top2FPBoats_bt.includes(p.boat)).slice(0, 4);
             btScenariosToProcess = recScens_bt.length > 0 ? recScens_bt : top3Scen;
           } else {
             btScenariosToProcess = top3Scen;
