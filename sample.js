@@ -4960,6 +4960,17 @@ function buildTopPickupRaces() {
 
       if (tags.length === 0) return;
 
+      // ── AI条件該当チェック（的中重視・回収重視どちらかで参加可能か）──
+      let aiHit = false;
+      let aiRec = false;
+      try {
+        const b3hit = computeBuy3(venue, vdata, rno, 'hit');
+        const b3rec = computeBuy3(venue, vdata, rno, 'rec');
+        aiHit = b3hit.length > 0;
+        aiRec = b3rec.length > 0;
+      } catch(e) {}
+      const aiParticipate = aiHit || aiRec;
+
       // 締め切り時刻を分単位に変換（ソート用）
       let timeMin = 9999;
       if (rd.time && /^\d{1,2}:\d{2}$/.test(rd.time.trim())) {
@@ -4967,7 +4978,7 @@ function buildTopPickupRaces() {
         timeMin = h*60+m;
       }
 
-      pickups.push({ venue, rno, time: rd.time||'', timeMin, tags });
+      pickups.push({ venue, rno, time: rd.time||'', timeMin, tags, aiHit, aiRec, aiParticipate });
     });
   });
 
@@ -4994,6 +5005,22 @@ function buildTopPickupRaces() {
       ">${t.label}</div>`
     ).join('');
 
+    // AI条件該当バッジ
+    const aiLabel = p.aiHit && p.aiRec ? 'AI条件該当 🎯💰'
+                  : p.aiHit            ? 'AI条件該当 🎯'
+                  : p.aiRec            ? 'AI条件該当 💰'
+                  : '';
+    const aiBadgeHtml = aiLabel
+      ? `<div style="
+          font-size:10px;font-weight:700;letter-spacing:.03em;
+          background:var(--green,#00c853)22;color:var(--green,#00c853);
+          border:1px solid var(--green,#00c853)88;
+          border-radius:4px;padding:2px 6px;
+          white-space:nowrap;line-height:1.4;
+          text-align:center;
+        ">${aiLabel}</div>`
+      : '';
+
     return `
       <div onclick="jumpToPickup('${p.venue}',${p.rno})"
            style="
@@ -5015,6 +5042,7 @@ function buildTopPickupRaces() {
         </div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%">
           ${badgesHtml}
+          ${aiBadgeHtml ? `<div style="width:100%;border-top:1px solid var(--border);margin:2px 0"></div>${aiBadgeHtml}` : ''}
         </div>
       </div>`;
   }).join('');
