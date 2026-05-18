@@ -2092,45 +2092,84 @@ function renderBuy(rno){
       const rawSlitCoef = stSlitCoef * tenjiSlitCoef;
       // SLIT_WEIGHT で中立値(1.0)に引き寄せる（0なら常に1.0、1なら rawSlitCoef そのまま）
       slitCoef = 1.0 + (rawSlitCoef - 1.0) * SLIT_WEIGHT;
+
+      // ── まくりアラートボーナス ──
+      // アラート発動条件: ST差≥0.5 かつ 展示差≥0.1（両条件の最強ランク同時成立）
+      // 通常スリット補正に加えて追加ボーナスを付与する。
+      const MAKURI_ALERT_BONUS = 0.30;  // ← 変更可: 0.1〜0.5推奨
+      const myStRankA   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null;
+      const prevStRankA = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null;
+      const myTenji2A   = tenjiRawMap[b.boat]        ?? null;
+      const prevTenji2A = tenjiRawMap[prevBoat.boat] ?? null;
+      const stAlertOk    = (myStRankA != null && prevStRankA != null) && (prevStRankA - myStRankA >= 0.5);
+      const tenjiAlertOk = (myTenji2A != null && prevTenji2A != null) && (prevTenji2A - myTenji2A >= 0.1);
+      if(stAlertOk && tenjiAlertOk){
+        slitCoef += MAKURI_ALERT_BONUS;
+      }
+
       slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
     }
 
-    // 枠番別展示指数: FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
+    // 枠番別展示指数
     const wTenjiCourse = wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
-    // 指数重みスコア: coef^weight（weight=0 → 1.0、weight=1 → 素の値）
-    const baseScore = Math.pow(baseNorm, wBase) *
-                      Math.pow(tenkaiCoef, wTenkai) *
-                      Math.pow(tenjiCoef,  wTenjiCourse);
 
-    // 1パス目: slitCoef と baseScore を保存（後艇ペナルティ計算のため）
-    b._slitCoef  = slitCoef;
-    b._baseScore = baseScore;
+    // 1パス目: 各係数と baseNorm を保存（2パス目で後艇参照するため）
+    b._baseNorm   = baseNorm;
+    b._tenkaiCoef = tenkaiCoef;
+    b._tenjiCoef  = tenjiCoef;
+    b._wTenjiCourse = wTenjiCourse;
+    b._slitCoef   = slitCoef;
     b.display_base   = baseNorm;
     b.display_tenkai = useMaster ? tenkaiCoef : null;
     b.display_tenji  = hasTenji  ? tenjiCoef  : null;
-    b.display_slit   = hasTenji  ? slitCoef   : null;  // 表示用（展示データありの場合のみ）
+    b.display_slit   = hasTenji  ? slitCoef   : null;
   });
 
-  // ── 2パス目: 後艇スリット優位による前艇ペナルティ適用 ──
-  // まくりアラートを受ける艇（後艇のslitCoefが高い＝自艇がまくられる側）の
-  // _multi_score を下げる。後艇のボーナスと対称的にペナルティを与える。
-  const SLIT_BONUS_BASE = 0.5;  // ボーナス基準値: 大きいほどスリット補正が強く効く（推奨: 0.3〜0.7）
+  // ══════════════════════════════════════════════════════════════════
+  // 2パス目: 展開補正・展示補正・スリット補正を「加算ボーナス方式」で統一適用
+  //
+  // 【設計思想】
+  //   従来の乗算方式では tenkaiCoef・tenjiCoef が baseNorm に依存して生成されるため、
+  //   どれだけ係数が大きくても prob が低い艇の最終確率はほとんど変わらなかった。
+  //   → 各補正を「全艇共通の基準値 × (係数-1.0) × 重み」として加算することで、
+  //     prob に関わらず補正の絶対量が一定になり、外枠まくり艇が適切に評価される。
+  //
+  //   さらに後艇が有利（まくり・差し）な場合、前艇も対称的にペナルティを受ける。
+  //
+  // BONUS_BASE: 加算量の基準値（≒6艇均等時のbaseNorm=1/6に相当、調整可）
+  // ══════════════════════════════════════════════════════════════════
+  const BONUS_BASE_TENKAI = 0.15;  // 展開補正の加算強度（推奨: 0.10〜0.20）
+  const BONUS_BASE_TENJI  = 0.15;  // 展示補正の加算強度（推奨: 0.10〜0.20）
+  const SLIT_BONUS_BASE   = 0.15;  // スリット補正の加算強度（推奨: 0.10〜0.20）
+
   ranked.forEach(b => {
     const nextBoat = boatByNo[b.boat + 1] || null;
-    // 後艇のslitCoef（後艇から見た「自艇に対するまくり優位度」）
+
+    // ── 展開補正: 自艇ボーナスのみ ──
+    // 後艇の展開適性は自艇の展開評価とは独立（物理的な因果なし）
+    const tenkaiBonus = BONUS_BASE_TENKAI * (b._tenkaiCoef - 1.0) * wTenkai;
+
+    // ── 展示補正: 自艇ボーナスのみ ──
+    const tenjiBonus  = BONUS_BASE_TENJI * (b._tenjiCoef - 1.0) * b._wTenjiCourse;
+
+    // ── スリット補正: 自艇ボーナス − 後艇まくり優位ペナルティ ──
+    // まくられる（後艇がスリット有利）という物理的因果があるためペナルティ適用
+    const slitBonus   = SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT;
     const nextSlitCoef = nextBoat?._slitCoef ?? 1.0;
-    // 後艇がまくり有利（nextSlitCoef>1）なら自艇にペナルティ（逆符号で加算）
     const slitPenalty = SLIT_BONUS_BASE * (nextSlitCoef - 1.0) * SLIT_WEIGHT;
-    b._multi_score = b._baseScore
-      + SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT  // 自艇ボーナス
-      - slitPenalty;                                            // 後艇まくりペナルティ
-    // ペナルティ適用後のslitCoef表示: 合成した影響を係数換算して上書き
-    // (display用のみ。正確な合成値を見せるためnetSlitCoefに更新)
+
+    // baseNorm をそのまま基準スコアとして使用（指数乗算廃止）
+    b._multi_score = Math.max(0.001,  // 確率がゼロ以下にならないよう下限保証
+      b._baseNorm
+      + tenkaiBonus
+      + tenjiBonus
+      + slitBonus - slitPenalty
+    );
+
+    // display_slit を net係数に更新（表示用）
     if(hasTenji){
-      const netBonus = SLIT_BONUS_BASE * (b._slitCoef - 1.0) * SLIT_WEIGHT - slitPenalty;
-      // netBonus を係数に逆算: coef = 1 + netBonus / SLIT_BONUS_BASE / SLIT_WEIGHT
-      const netCoef = 1.0 + netBonus / (SLIT_BONUS_BASE * SLIT_WEIGHT);
-      b.display_slit = Math.min(2.0, Math.max(0.5, netCoef));
+      const netSlit = 1.0 + (slitBonus - slitPenalty) / (SLIT_BONUS_BASE * Math.max(SLIT_WEIGHT, 0.001));
+      b.display_slit = Math.min(2.0, Math.max(0.5, netSlit));
     }
   });
 
@@ -4862,7 +4901,7 @@ function buildTopPickupRaces() {
 
       // まくりアラート
       if (makuriBoats.length > 0) {
-        tags.push({ type:'makuri', label:`⚡まくり(${makuriBoats.join('・')}号艇)`, sub:'', color:'#e60012' });
+        tags.push({ type:'makuri', label:`まくりアラート(${makuriBoats.join('・')}号艇)`, sub:'', color:'#e60012' });
       }
 
       if (tags.length === 0) return;
@@ -4895,9 +4934,9 @@ function buildTopPickupRaces() {
         font-size:10px;font-weight:700;letter-spacing:.03em;
         background:${t.color}22;color:${t.color};
         border:1px solid ${t.color}55;
-        border-radius:4px;padding:2px 5px;
-        white-space:normal;word-break:keep-all;line-height:1.4;
-        text-align:center;width:100%;box-sizing:border-box;
+        border-radius:4px;padding:2px 6px;
+        white-space:nowrap;line-height:1.4;
+        text-align:center;
       ">${t.label}</div>`
     ).join('');
 
