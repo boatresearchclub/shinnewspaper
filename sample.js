@@ -2098,11 +2098,17 @@ function renderBuy(rno){
     // 枠番別展示指数: FINAL_PROB_WEIGHTS.tenji × TENJI_WEIGHT_BY_COURSE[枠番]
     const wTenjiCourse = wTenji * (TENJI_WEIGHT_BY_COURSE[b.boat] ?? 1.0);
     // 指数重みスコア: coef^weight（weight=0 → 1.0、weight=1 → 素の値）
-    // スリット補正は乗算で直接適用（指数重みなし）
-    b._multi_score  = Math.pow(baseNorm, wBase) *
+    const baseScore = Math.pow(baseNorm, wBase) *
                       Math.pow(tenkaiCoef, wTenkai) *
-                      Math.pow(tenjiCoef,  wTenjiCourse) *
-                      slitCoef;
+                      Math.pow(tenjiCoef,  wTenjiCourse);
+    // ── スリット補正: 加算ボーナス方式 ──
+    // 乗算だと base が低い艇は係数を掛けても絶対値が上がりにくいため、
+    // 「baseScore の平均値 × (slitCoef - 1.0) × SLIT_WEIGHT」を加算する。
+    // これにより base が低い外枠まくり艇でもスリット優位が最終確率に反映される。
+    // slitCoef=1.0 のとき bonus=0（影響なし）。
+    const SLIT_BONUS_BASE = 0.5;  // ボーナス基準値: 大きいほどスリット補正が強く効く（推奨: 0.3〜0.7）
+    const slitBonus = SLIT_BONUS_BASE * (slitCoef - 1.0) * SLIT_WEIGHT;
+    b._multi_score  = baseScore + slitBonus;
     b.display_base   = baseNorm;
     b.display_tenkai = useMaster ? tenkaiCoef : null;
     b.display_tenji  = hasTenji  ? tenjiCoef  : null;
