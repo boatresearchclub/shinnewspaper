@@ -3278,6 +3278,43 @@ function switchBuyMode(mode){
   }
 }
 
+// ── シナリオ買い: 1組合せの推定的中確率を計算 ──
+// comboStr  : "1-2-3" 形式の3連単組合せ
+// winnerBoat: 1着軸艇番（comboStr の先頭と一致）
+// sd        : calcScenarioData の戻り値
+// 戻り値    : 推定確率（0〜1）or null（確率不明）
+function calcScenarioComboProb(comboStr, winnerBoat, sd) {
+  const parts = comboStr.split('-').map(Number);
+  const [first, second, third] = parts;
+  if (first !== winnerBoat) return 0;
+
+  const { scenarioProb, scenarioPlace2, merged3rdMap, kimariTypes } = sd;
+  if (!scenarioProb?.[winnerBoat] || !kimariTypes?.length) return null;
+
+  let probSum = 0;
+  let hasAnyData = false;
+
+  for (const kimari of kimariTypes) {
+    const scenProb = scenarioProb[winnerBoat]?.[kimari] ?? 0;
+    if (scenProb <= 0) continue;
+
+    const p2List = scenarioPlace2?.[winnerBoat]?.[kimari] || [];
+    const p2Item = p2List.find(x => x.boat === second);
+    const p2     = p2Item?.p2 ?? 0;
+    if (p2 <= 0) continue;
+
+    const thirdList = merged3rdMap?.[winnerBoat]?.[second] || [];
+    const r3Item    = thirdList.find(x => x.boat === third);
+    const r3        = r3Item?.r3 ?? null;
+    if (r3 == null) continue;
+
+    probSum    += scenProb * p2 * r3;
+    hasAnyData  = true;
+  }
+
+  return hasAnyData ? probSum : null;
+}
+
 // ── シナリオ買いパネル生成 ──
 // ranked2      : final_prob 降順ソート済み艇リスト
 // sd           : calcScenarioData の戻り値 ({ scenarioPlace2, ... })
@@ -3439,6 +3476,26 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
 
   const totalPts = allCombos.length;
 
+  // ── 合算的中率の計算 ──
+  let _hitRateSum   = 0;
+  let _hitRateKnown = 0;
+  allCombos.forEach(c => {
+    const winner = parseInt(c.split('-')[0]);
+    const p = calcScenarioComboProb(c, winner, sd);
+    if (p != null) { _hitRateSum += p; _hitRateKnown++; }
+  });
+  const _hitRatePct   = _hitRateSum * 100;
+  const _hitRateStr   = _hitRatePct.toFixed(1) + '%';
+  const _hitRateColor = _hitRatePct >= 30 ? 'var(--green)'
+                      : _hitRatePct >= 20 ? 'var(--orange)'
+                      : 'var(--red)';
+  const _hitRateNote  = _hitRateKnown < allCombos.length
+    ? `<span style="font-size:9px;color:var(--text3)">※${allCombos.length - _hitRateKnown}点は確率不明</span>`
+    : '';
+  const hitRateHtml = _hitRateKnown > 0
+    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_hitRateColor}">的中率${_hitRateStr}</span>${_hitRateNote}`
+    : '';
+
   // 合成オッズ計算
   const _synthDenom = allCombos.reduce((d, c) => {
     const ov = raceOdds3tEv?.[normalizeCombo(c)] ?? null;
@@ -3459,6 +3516,7 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
             <span>🎲 シナリオ買い（3連単）</span>
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
             ${scenSynthHtml}
+            ${hitRateHtml}
           </div>
           <div style="font-size:10px;color:var(--text3);margin-bottom:6px;line-height:1.6">
             最終確率1位: ${boatBadge(fp1st)} 　2位: ${boatBadge(fp2nd)}<br>
