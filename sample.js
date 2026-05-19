@@ -5360,12 +5360,37 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
         }
       }
 
+      // ── 指数値・予想情報（hit/rec と同等に揃える）──
+      const probTotal_sc = rd.boats.reduce((s, b) => s + (b.prob ?? 0), 0) || 1;
+      const tenkaiTotal_sc = rd.boats.reduce((s, b) => s + (b.tenkai_score ?? b.prob ?? 0), 0) || 1;
+      const ranked_sc = rd.boats.map(b => {
+        const baseNorm   = (b.prob ?? 0) / probTotal_sc;
+        const tenkaiCoef = (baseNorm > 0 && b.tenkai_score != null)
+          ? Math.min(3.0, Math.max(0.3, (b.tenkai_score / tenkaiTotal_sc) / baseNorm))
+          : 1.0;
+        const tenjiCoef  = b.tenji_score != null ? b.tenji_score : null;
+        return { ...b, _csv_base: baseNorm, _csv_tenkai: tenkaiCoef, _csv_tenji: tenjiCoef };
+      }).sort((a, b) => (b.prob ?? 0) - (a.prob ?? 0));
+      const boat1data_sc = ranked_sc.find(b => b.boat === 1);
+
       results.push({
         venue, rno,
         buyCnt: combos.length,
+        buyCombos: combos.join(' / '),
         isHit, hitOdds, hitCombo,
-        avgOdds: synthOdds,   // 合成オッズ（ODDS_DATA未取得時は null）
+        avgOdds: synthOdds,
+        arek:      (rd.arek ?? 54.7).toFixed(1),
+        hasTenji:  !!(ranked_sc[0]?._csv_tenji !== null),
+        predTop3:  ranked_sc.slice(0, 3).map(b => b.boat).join('-'),
+        pred1boat:    ranked_sc[0]?.boat    || '',
+        pred1_base:   ranked_sc[0]?._csv_base   != null ? ranked_sc[0]._csv_base.toFixed(4)   : '',
+        pred1_tenkai: ranked_sc[0]?._csv_tenkai  != null ? ranked_sc[0]._csv_tenkai.toFixed(4)  : '',
+        pred1_tenji:  ranked_sc[0]?._csv_tenji   != null ? ranked_sc[0]._csv_tenji.toFixed(4)   : '',
+        boat1_base:   boat1data_sc?._csv_base   != null ? boat1data_sc._csv_base.toFixed(4)   : '',
+        boat1_tenkai: boat1data_sc?._csv_tenkai  != null ? boat1data_sc._csv_tenkai.toFixed(4)  : '',
+        boat1_tenji:  boat1data_sc?._csv_tenji   != null ? boat1data_sc._csv_tenji.toFixed(4)   : '',
         actualResult: resultRd.sanrentan?.[0]?.combo || '',
+        actualKimari: resultRd.kimari || '',
       });
     });
   });
@@ -5748,28 +5773,28 @@ function _buildBacktestRows(buyMode) {
     const { results } = collectResultsForDate(dateStr, buyMode);
     results.forEach(r => {
       output.push({
-        日付: dateStr,
-        日前: dateLabels[dateStr] || '',
-        会場: r.venue,
-        R番号: r.rno,
-        あれ指数: r.arek || '',
-        展示あり: r.hasTenji ? '○' : '×',
-        予想TOP3: r.predTop3 || '',
-        予想1位艇: r.pred1boat || '',
-        予想1位_base: r.pred1_base || '',
+        日付:           dateStr,
+        日前:           dateLabels[dateStr] || '',
+        会場:           r.venue,
+        R番号:          r.rno,
+        あれ指数:       r.arek || '',
+        展示あり:       r.hasTenji ? '○' : '×',
+        予想TOP3:       r.predTop3 || '',
+        予想1位艇:      r.pred1boat || '',
+        予想1位_base:   r.pred1_base || '',
         予想1位_tenkai: r.pred1_tenkai || '',
-        予想1位_tenji: r.pred1_tenji || '',
-        '1号艇_base': r.boat1_base || '',
+        予想1位_tenji:  r.pred1_tenji || '',
+        '1号艇_base':   r.boat1_base || '',
         '1号艇_tenkai': r.boat1_tenkai || '',
-        '1号艇_tenji': r.boat1_tenji || '',
-        パターン: r.opt_pattern || '',
-        推奨点数: r.opt_points != null ? r.opt_points : '',
-        買い目点数: r.buy3cnt,
-        買い目組合せ: r.buy3combos || '',
-        的中: r.isHit ? '的中' : '外れ',
-        払戻金: r.isHit ? r.hitOdds : '',
-        的中組合せ: r.hitCombo || '',
-        実際の結果: r.actualResult || '',
+        '1号艇_tenji':  r.boat1_tenji || '',
+        パターン:       r.opt_pattern || '',
+        推奨点数:       r.opt_points != null ? r.opt_points : '',
+        買い目点数:     r.buy3cnt,
+        買い目組合せ:   r.buy3combos || '',
+        的中:           r.isHit ? '的中' : '外れ',
+        払戻金:         r.isHit ? r.hitOdds : '',
+        的中組合せ:     r.hitCombo || '',
+        実際の結果:     r.actualResult || '',
         実際の決まり手: r.actualKimari || '',
       });
     });
@@ -5858,17 +5883,34 @@ function _buildScenBacktestRows(includeAll = false) {
   allDates.forEach(dateStr => {
     const results = collectResultsForDateScen(dateStr, includeAll);
     results.forEach(r => {
+      const invest = r.buyCnt * 100;
+      const ret    = r.isHit ? r.hitOdds : 0;
+      const pnl    = ret - invest;
       output.push({
-        日付:       dateStr,
-        日前:       dateLabels[dateStr] || '',
-        会場:       r.venue,
-        R番号:      r.rno,
-        買い目点数: r.buyCnt,
-        合成オッズ: r.avgOdds != null ? r.avgOdds.toFixed(2) : '',
-        的中:       r.isHit ? '的中' : '外れ',
-        払戻金:     r.isHit ? r.hitOdds : '',
-        的中組合せ: r.hitCombo || '',
-        実際の結果: r.actualResult || '',
+        日付:           dateStr,
+        日前:           dateLabels[dateStr] || '',
+        会場:           r.venue,
+        R番号:          r.rno,
+        あれ指数:       r.arek || '',
+        展示あり:       r.hasTenji ? '○' : '×',
+        予想TOP3:       r.predTop3 || '',
+        予想1位艇:      r.pred1boat || '',
+        予想1位_base:   r.pred1_base || '',
+        予想1位_tenkai: r.pred1_tenkai || '',
+        予想1位_tenji:  r.pred1_tenji || '',
+        '1号艇_base':   r.boat1_base || '',
+        '1号艇_tenkai': r.boat1_tenkai || '',
+        '1号艇_tenji':  r.boat1_tenji || '',
+        合成オッズ:     r.avgOdds != null ? r.avgOdds.toFixed(2) : '',
+        買い目点数:     r.buyCnt,
+        買い目組合せ:   r.buyCombos || '',
+        的中:           r.isHit ? '的中' : '外れ',
+        投資額:         invest,
+        払戻金:         ret || '',
+        損益:           pnl,
+        的中組合せ:     r.hitCombo || '',
+        実際の結果:     r.actualResult || '',
+        実際の決まり手: r.actualKimari || '',
       });
     });
   });
