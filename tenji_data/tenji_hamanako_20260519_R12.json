@@ -22,7 +22,14 @@
     "motor_rate2": 45.7,
     "motor_rate3": 80.0,
     "motor_rank": 3,
-    "prev_user": "板橋 侑我"
+    "prev_user": "板橋 侑我",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -47,7 +54,14 @@
     "motor_rate2": 44.0,
     "motor_rate3": 76.0,
     "motor_rank": 4,
-    "prev_user": "廣瀬 真也"
+    "prev_user": "廣瀬 真也",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -72,7 +86,14 @@
     "motor_rate2": 24.1,
     "motor_rate3": 41.4,
     "motor_rank": 26,
-    "prev_user": "長野 道臣"
+    "prev_user": "長野 道臣",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -97,7 +118,14 @@
     "motor_rate2": 25.0,
     "motor_rate3": 40.0,
     "motor_rank": 25,
-    "prev_user": "宇野 博之"
+    "prev_user": "宇野 博之",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -122,7 +150,14 @@
     "motor_rate2": 34.4,
     "motor_rate3": 50.0,
     "motor_rank": 10,
-    "prev_user": "芝田 浩治"
+    "prev_user": "芝田 浩治",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   },
   {
     "venue": "hamanako",
@@ -147,6 +182,13 @@
     "motor_rate2": 33.3,
     "motor_rate3": 45.5,
     "motor_rank": 12,
-    "prev_user": "倉田 郁美"
+    "prev_user": "倉田 郁美",
+    "weather": "晴",
+    "weather_degree": 23,
+    "water_degree": 24,
+    "wind_speed": 4,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 2
   }
 ]
