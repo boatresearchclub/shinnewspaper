@@ -1,0 +1,47 @@
+{
+  "venue": "津",
+  "venue_slug": "tsu",
+  "date": "20260520",
+  "race": 8,
+  "fetched_at": "2026-05-20 14:06:20",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 420,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 110,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 200,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-4",
+      "odds": 3260,
+      "ninki": 8
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-4-6",
+      "odds": 4680,
+      "ninki": 17
+    }
+  ],
+  "cancelled": false
+}
