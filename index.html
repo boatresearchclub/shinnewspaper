@@ -15,6 +15,10 @@
   /* 管理者モード時に表示 */
   body.admin-mode .admin-only { display: revert !important; }
 
+  /* 管理者モード時にロック画面を非表示 */
+  body.admin-mode #user-lock-detail2 { display: none !important; }
+  body.admin-mode #user-lock-ai-stats { display: none !important; }
+
   /* 管理者バッジ（ヘッダー内） */
   #admin-badge {
     display: none;
@@ -208,28 +212,14 @@
   </div>
   <!-- ▲▲▲ CSVダウンロードボタン群 ここまで ▲▲▲ -->
 
-  <!-- ▼▼▼ 管理者専用パネル: BETTING_PARAMS + AI詳細設定 ▼▼▼ -->
-  <div id="admin-panel-section" class="admin-only">
-    <div class="admin-panel-title">🔑 管理者パネル</div>
-
-    <!-- BETTING_PARAMS 表示 -->
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:0.5rem">⚙ BETTING_PARAMS（現在値）</div>
-    <div class="admin-param-grid" id="admin-params-display">
-      <!-- JS で動的に挿入 -->
-      <span style="color:var(--text3);font-size:11px">読み込み中...</span>
-    </div>
-
-    <!-- AI予想 重みスライダー -->
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin:1rem 0 0.5rem">🤖 AI確率ウェイト（FINAL_PROB_WEIGHTS）</div>
-    <div id="admin-weight-sliders" style="display:flex;flex-direction:column;gap:8px;font-size:11px">
-      <!-- JS で動的に挿入 -->
-      <span style="color:var(--text3);font-size:11px">読み込み中...</span>
-    </div>
+  <!-- 各日詳細: 常時表示、中身は管理者のみ -->
+  <div class="top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
+  <!-- 非管理者向けロックカード -->
+  <div id="user-lock-ai-stats" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
+    <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
+    <div style="font-size:13px;line-height:1.6">管理者のみ表示されます</div>
   </div>
-  <!-- ▲▲▲ 管理者専用パネル ここまで ▲▲▲ -->
-
-  <!-- 各日詳細: 管理者のみ表示 -->
-  <div class="admin-only top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
+  <!-- 管理者のみ: 各日詳細本体 -->
   <div id="top-ai-stats" class="admin-only">
     <span style="color:var(--text3);font-size:12px">集計中...</span>
   </div>
@@ -249,8 +239,8 @@
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
     <button class="tab-btn" data-tab="odds" onclick="switchTab('odds')">オッズ</button>
-    <!-- AI予想タブ: 管理者のみ表示 -->
-    <button class="tab-btn admin-only" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
+    <!-- AI予想タブ: 常時表示 -->
+    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
     <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手情報</button>
     <button class="tab-btn" data-tab="result" onclick="switchTab('result')">結果</button>
   </div>
@@ -260,16 +250,14 @@
     <div id="inline-detail"></div>
   </div>
 
-  <!-- AI予想タブ: 管理者のみコンテンツ表示 -->
+  <!-- AI予想タブ -->
   <div id="tab-detail2" style="display:none">
-    <!-- 未認証時のブロック画面 -->
-    <div id="admin-lock-detail2" class="admin-only" style="display:none !important">
-      <!-- 管理者モード時は非表示（admin-onlyで制御） -->
-    </div>
     <!-- 未認証時に表示するロック画面（管理者モードでは非表示） -->
     <div id="user-lock-detail2">
-      <div class="lock-icon">🔒</div>
-      <div class="lock-msg">AI予想は管理者限定です。</div>
+      <div style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
+        <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
+        <div style="font-size:13px;line-height:1.6">管理者のみ表示されます</div>
+      </div>
     </div>
     <!-- 管理者のみ: 本体パネル -->
     <div id="detail2-panel" class="admin-only">
