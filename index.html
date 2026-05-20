@@ -343,7 +343,7 @@
   // ── 管理者モードを有効化 ─────────────────────────────────
   function activateAdminMode() {
     document.body.classList.add('admin-mode');
-    sessionStorage.setItem('brc_admin', '1');
+    localStorage.setItem('brc_admin', '1');
 
     // AI予想タブのロック画面を非表示、本体パネルを表示
     const lockEl = document.getElementById('user-lock-detail2');
@@ -437,7 +437,7 @@
   // ── 認証フロー ────────────────────────────────────────────
   async function init() {
     // ① セッション内で既に認証済みなら即時有効化
-    if (sessionStorage.getItem('brc_admin') === '1') {
+    if (localStorage.getItem('brc_admin') === '1') {
       activateAdminMode();
       return;
     }
