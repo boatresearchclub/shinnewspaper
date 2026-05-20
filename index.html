@@ -228,9 +228,9 @@
   </div>
   <!-- ▲▲▲ 管理者専用パネル ここまで ▲▲▲ -->
 
-  <!-- 各日詳細 -->
-  <div class="top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
-  <div id="top-ai-stats">
+  <!-- 各日詳細: 管理者のみ表示 -->
+  <div class="admin-only top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
+  <div id="top-ai-stats" class="admin-only">
     <span style="color:var(--text3);font-size:12px">集計中...</span>
   </div>
 
@@ -325,7 +325,7 @@
   //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
   // で生成したハッシュ文字列を貼る。
   // デフォルトパスワード: "brc-admin-2026"
-  const ADMIN_TOKEN_HASH = 'f2b9a3c7d1e4f6a8b0c2d4e6f8a0b2c4d6e8f0a2b4c6d8e0f2b4c6d8e0f2b4';
+  const ADMIN_TOKEN_HASH = 'd72c16f080bee83fbbc47219c5e2be868364de15163e40d60972f64eceda5468';
   // ↑ 必ず本番用ハッシュに書き換えること
 
   // ── ハッシュ比較（Web Crypto API） ──────────────────────
