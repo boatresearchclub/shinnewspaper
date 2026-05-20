@@ -334,28 +334,26 @@
     return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
   }
 
-  // ── URLパラメータからトークンを取得 ─────────────────────
-  // 使い方: https://yoursite.github.io/?admin=brc-admin-2026
+  // ── URLハッシュ（#以降）からトークンを取得 ──────────────
+  // 使い方: https://boatresearchclub.github.io/shinnewspaper/#admin=brc-admin-2026
+  // #以降はサーバーに送信されず、iOSホーム画面保存URLにもそのまま残る。
   function getAdminParam() {
-    return new URLSearchParams(window.location.search).get('admin') || '';
+    const hash = window.location.hash.slice(1); // '#' を除去
+    return new URLSearchParams(hash).get('admin') || '';
   }
 
   // ── 管理者モードを有効化 ─────────────────────────────────
   function activateAdminMode() {
     document.body.classList.add('admin-mode');
-    localStorage.setItem('brc_admin', '1');
 
-    // AI予想タブのロック画面を非表示、本体パネルを表示
+    // AI予想タブのロック画面を非表示
     const lockEl = document.getElementById('user-lock-detail2');
     if (lockEl) lockEl.style.display = 'none';
 
     // BETTING_PARAMS と FINAL_PROB_WEIGHTS を管理者パネルに表示
     renderAdminParams();
 
-    // URLのadminパラメータをセッション中は消す（履歴汚染防止）
-    const url = new URL(window.location.href);
-    url.searchParams.delete('admin');
-    history.replaceState(null, '', url.toString());
+    // #admin=... はURLに残す（ホーム画面ブックマーク維持のため消さない）
   }
 
   // ── BETTING_PARAMS をパネルに描画 ────────────────────────
@@ -436,27 +434,17 @@
 
   // ── 認証フロー ────────────────────────────────────────────
   async function init() {
-    // ① セッション内で既に認証済みなら即時有効化
-    if (localStorage.getItem('brc_admin') === '1') {
-      activateAdminMode();
-      return;
-    }
-
-    // ② URLパラメータにトークンがあればハッシュ検証
+    // URLハッシュ #admin=パスワード を毎回検証（localStorageは使わない）
     const param = getAdminParam();
     if (param) {
       const hash = await sha256hex(param);
       if (hash === ADMIN_TOKEN_HASH) {
         activateAdminMode();
       } else {
-        // パスワード不一致: URLパラメータを消してトースト表示
-        const url = new URL(window.location.href);
-        url.searchParams.delete('admin');
-        history.replaceState(null, '', url.toString());
         showAuthError();
       }
     }
-    // ③ パラメータなし → ユーザーモードのまま（何もしない）
+    // パラメータなし → ユーザーモードのまま
   }
 
   function showAuthError() {
