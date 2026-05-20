@@ -6,6 +6,83 @@
 <title>Boat Research Club</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="sample.css?v=20260515101558">
+
+<!-- ══ 管理者認証スタイル ══ -->
+<style>
+  /* 管理者限定要素: デフォルトで非表示 */
+  .admin-only { display: none !important; }
+
+  /* 管理者モード時に表示 */
+  body.admin-mode .admin-only { display: revert !important; }
+
+  /* 管理者バッジ（ヘッダー内） */
+  #admin-badge {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(90deg, #b8860b, #daa520);
+    border-radius: 4px;
+    padding: 2px 7px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(184,134,11,0.4);
+  }
+  body.admin-mode #admin-badge { display: flex; }
+
+  /* 管理者パネル (BETTING_PARAMS / AI詳細設定) */
+  #admin-panel-section {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    border: 1px solid #daa520;
+    border-radius: 10px;
+    background: rgba(184,134,11,0.06);
+  }
+  #admin-panel-section .admin-panel-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #daa520;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .admin-param-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 12px;
+    font-size: 11px;
+  }
+  .admin-param-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .admin-param-label {
+    color: var(--text3, #888);
+    font-size: 10px;
+  }
+  .admin-param-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text1, #eee);
+    background: var(--bg2, #1a1a2e);
+    border: 1px solid var(--border, #333);
+    border-radius: 4px;
+    padding: 3px 7px;
+  }
+
+  /* AI予想タブ: 未認証時のブロック画面 */
+  #admin-lock-detail2 {
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    color: var(--text3, #888);
+  }
+  #admin-lock-detail2 .lock-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  #admin-lock-detail2 .lock-msg  { font-size: 13px; line-height: 1.6; }
+</style>
 </head>
 <body>
 
@@ -17,6 +94,8 @@
     </div>
     <div class="header-right">
       <div class="header-meta-area">
+        <!-- 管理者バッジ -->
+        <div id="admin-badge">🔑 管理者</div>
         <div class="header-meta" id="header-meta"></div>
         <div class="date-nav" id="date-nav" style="display:none">
           <button class="date-nav-btn" id="date-prev" onclick="shiftDate(-1)" title="前日">‹</button>
@@ -111,7 +190,9 @@
   <div id="top-ai-stats-history-summary">
     <span style="color:var(--text3);font-size:12px">集計中...</span>
   </div>
-  <div style="margin-bottom:0.7rem;padding:0 0.1rem;display:flex;flex-wrap:wrap;gap:6px">
+
+  <!-- ▼▼▼ CSVダウンロードボタン群: 管理者のみ表示 ▼▼▼ -->
+  <div class="admin-only" style="margin-bottom:0.7rem;padding:0 0.1rem;display:flex;flex-wrap:wrap;gap:6px">
     <button onclick="exportBacktestCSV('hit')" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
       ⬇ 🎯 的中重視 CSV
     </button>
@@ -125,6 +206,27 @@
       ⬇ 全部ダウンロード
     </button>
   </div>
+  <!-- ▲▲▲ CSVダウンロードボタン群 ここまで ▲▲▲ -->
+
+  <!-- ▼▼▼ 管理者専用パネル: BETTING_PARAMS + AI詳細設定 ▼▼▼ -->
+  <div id="admin-panel-section" class="admin-only">
+    <div class="admin-panel-title">🔑 管理者パネル</div>
+
+    <!-- BETTING_PARAMS 表示 -->
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:0.5rem">⚙ BETTING_PARAMS（現在値）</div>
+    <div class="admin-param-grid" id="admin-params-display">
+      <!-- JS で動的に挿入 -->
+      <span style="color:var(--text3);font-size:11px">読み込み中...</span>
+    </div>
+
+    <!-- AI予想 重みスライダー -->
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin:1rem 0 0.5rem">🤖 AI確率ウェイト（FINAL_PROB_WEIGHTS）</div>
+    <div id="admin-weight-sliders" style="display:flex;flex-direction:column;gap:8px;font-size:11px">
+      <!-- JS で動的に挿入 -->
+      <span style="color:var(--text3);font-size:11px">読み込み中...</span>
+    </div>
+  </div>
+  <!-- ▲▲▲ 管理者専用パネル ここまで ▲▲▲ -->
 
   <!-- 各日詳細 -->
   <div class="top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
@@ -147,7 +249,8 @@
     <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
     <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
     <button class="tab-btn" data-tab="odds" onclick="switchTab('odds')">オッズ</button>
-    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
+    <!-- AI予想タブ: 管理者のみ表示 -->
+    <button class="tab-btn admin-only" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
     <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手情報</button>
     <button class="tab-btn" data-tab="result" onclick="switchTab('result')">結果</button>
   </div>
@@ -157,9 +260,19 @@
     <div id="inline-detail"></div>
   </div>
 
-  <!-- AI予想タブ -->
+  <!-- AI予想タブ: 管理者のみコンテンツ表示 -->
   <div id="tab-detail2" style="display:none">
-    <div id="detail2-panel">
+    <!-- 未認証時のブロック画面 -->
+    <div id="admin-lock-detail2" class="admin-only" style="display:none !important">
+      <!-- 管理者モード時は非表示（admin-onlyで制御） -->
+    </div>
+    <!-- 未認証時に表示するロック画面（管理者モードでは非表示） -->
+    <div id="user-lock-detail2">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-msg">AI予想は管理者限定です。</div>
+    </div>
+    <!-- 管理者のみ: 本体パネル -->
+    <div id="detail2-panel" class="admin-only">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
     </div>
   </div>
@@ -196,6 +309,191 @@
 
 <script src="data.js?v=20260515101558"></script>
 <script src="sample_obf.js?v=20260515101558"></script>
+
+<!-- ══ 管理者認証スクリプト ══
+     ⚠️  パスワードを変える場合は ADMIN_TOKEN の値だけ書き換える。
+     ⚠️  このファイルは sample_obf.js で難読化してから GitHub Push すること。
+     ⚠️  GitHub Pages は静的配信のため、クライアント側認証は「見せる/隠す」の
+         セキュリティレベル。機密データはサーバー側で保護すること。
+-->
+<script>
+(function () {
+  // ── パスワード設定 ──────────────────────────────────────
+  // SHA-256ハッシュで保存（平文をそのまま書かない）
+  // 例: "mypassword" → ブラウザコンソールで
+  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('mypassword'))
+  //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+  // で生成したハッシュ文字列を貼る。
+  // デフォルトパスワード: "brc-admin-2026"
+  const ADMIN_TOKEN_HASH = 'f2b9a3c7d1e4f6a8b0c2d4e6f8a0b2c4d6e8f0a2b4c6d8e0f2b4c6d8e0f2b4';
+  // ↑ 必ず本番用ハッシュに書き換えること
+
+  // ── ハッシュ比較（Web Crypto API） ──────────────────────
+  async function sha256hex(str) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+
+  // ── URLパラメータからトークンを取得 ─────────────────────
+  // 使い方: https://yoursite.github.io/?admin=brc-admin-2026
+  function getAdminParam() {
+    return new URLSearchParams(window.location.search).get('admin') || '';
+  }
+
+  // ── 管理者モードを有効化 ─────────────────────────────────
+  function activateAdminMode() {
+    document.body.classList.add('admin-mode');
+    sessionStorage.setItem('brc_admin', '1');
+
+    // AI予想タブのロック画面を非表示、本体パネルを表示
+    const lockEl = document.getElementById('user-lock-detail2');
+    if (lockEl) lockEl.style.display = 'none';
+
+    // BETTING_PARAMS と FINAL_PROB_WEIGHTS を管理者パネルに表示
+    renderAdminParams();
+
+    // URLのadminパラメータをセッション中は消す（履歴汚染防止）
+    const url = new URL(window.location.href);
+    url.searchParams.delete('admin');
+    history.replaceState(null, '', url.toString());
+  }
+
+  // ── BETTING_PARAMS をパネルに描画 ────────────────────────
+  function renderAdminParams() {
+    // sample.js / sample_obf.js のグローバル変数を参照
+    // DOMContentLoaded後に呼ぶため、変数が存在しない場合は "未読込" と表示
+    const grid = document.getElementById('admin-params-display');
+    if (!grid) return;
+
+    const bp = (typeof BETTING_PARAMS !== 'undefined') ? BETTING_PARAMS : null;
+    const fw = (typeof FINAL_PROB_WEIGHTS !== 'undefined') ? FINAL_PROB_WEIGHTS : null;
+
+    if (!bp) {
+      grid.innerHTML = '<span style="color:var(--text3)">BETTING_PARAMS 未読込（sample.js 読み込み後に再表示）</span>';
+      return;
+    }
+
+    // Set型は配列表示に変換
+    function fmt(v) {
+      if (v instanceof Set) return [...v].join(', ') || '（なし）';
+      if (typeof v === 'number') return v;
+      return String(v);
+    }
+
+    const rows = [
+      ['hit_allowed_venues', fmt(bp.hit_allowed_venues)],
+      ['skip_venues',        fmt(bp.skip_venues)],
+      ['are_hit_max',        bp.are_hit_max],
+      ['sweet_base_min',     bp.sweet_base_min],
+      ['sweet_base_max',     bp.sweet_base_max],
+      ['sweet_tenkai_max',   bp.sweet_tenkai_max],
+      ['hd1_tenkai_max',     bp.hd1_tenkai_max],
+      ['hd1_rec_base_min',   bp.hd1_rec_base_min],
+      ['hd1_rec_are_min',    bp.hd1_rec_are_min],
+      ['hd1_rec_are_max',    bp.hd1_rec_are_max],
+      ['premium_are_min',    bp.premium_are_min],
+      ['premium_are_max',    bp.premium_are_max],
+      ['hit_min_points',     bp.hit_min_points],
+    ];
+
+    grid.innerHTML = rows.map(([k, v]) => `
+      <div class="admin-param-row">
+        <span class="admin-param-label">${k}</span>
+        <span class="admin-param-val">${v}</span>
+      </div>
+    `).join('');
+
+    // FINAL_PROB_WEIGHTS スライダー
+    const sliderWrap = document.getElementById('admin-weight-sliders');
+    if (!sliderWrap || !fw) return;
+
+    const weights = [
+      { key: 'base',   label: 'ベース1着率 (base)',   min: 0.5, max: 2.0, step: 0.1 },
+      { key: 'tenkai', label: '展開補正 (tenkai)',     min: 0.5, max: 2.0, step: 0.1 },
+      { key: 'tenji',  label: '展示補正 (tenji)',      min: 0.0, max: 2.0, step: 0.1 },
+      { key: 'slit',   label: 'スリット補正 (slit)',   min: 0.0, max: 1.0, step: 0.1 },
+    ];
+
+    sliderWrap.innerHTML = weights.map(w => `
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="min-width:180px;color:var(--text2)">${w.label}</span>
+        <input type="range" min="${w.min}" max="${w.max}" step="${w.step}"
+          value="${fw[w.key] ?? 1.0}"
+          style="flex:1;min-width:100px;accent-color:#daa520"
+          oninput="
+            if(typeof FINAL_PROB_WEIGHTS!=='undefined'){
+              FINAL_PROB_WEIGHTS['${w.key}']=parseFloat(this.value);
+            }
+            this.nextElementSibling.textContent=parseFloat(this.value).toFixed(1);
+          "
+        >
+        <span style="font-family:monospace;min-width:28px;color:#daa520;font-size:12px">
+          ${(fw[w.key] ?? 1.0).toFixed(1)}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  // ── 認証フロー ────────────────────────────────────────────
+  async function init() {
+    // ① セッション内で既に認証済みなら即時有効化
+    if (sessionStorage.getItem('brc_admin') === '1') {
+      activateAdminMode();
+      return;
+    }
+
+    // ② URLパラメータにトークンがあればハッシュ検証
+    const param = getAdminParam();
+    if (param) {
+      const hash = await sha256hex(param);
+      if (hash === ADMIN_TOKEN_HASH) {
+        activateAdminMode();
+      } else {
+        // パスワード不一致: URLパラメータを消してトースト表示
+        const url = new URL(window.location.href);
+        url.searchParams.delete('admin');
+        history.replaceState(null, '', url.toString());
+        showAuthError();
+      }
+    }
+    // ③ パラメータなし → ユーザーモードのまま（何もしない）
+  }
+
+  function showAuthError() {
+    // toast 関数が存在すればそれを使う、なければ alert
+    if (typeof showToast === 'function') {
+      showToast('管理者パスワードが違います');
+    } else {
+      const t = document.getElementById('toast');
+      if (t) {
+        t.textContent = '管理者パスワードが違います';
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+      }
+    }
+  }
+
+  // ── ロック画面の初期表示（非管理者向け） ─────────────────
+  function initLockScreen() {
+    const lockEl = document.getElementById('user-lock-detail2');
+    if (lockEl) {
+      lockEl.innerHTML = `
+        <div style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
+          <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
+          <div style="font-size:13px;line-height:1.6">AI予想は管理者限定です。</div>
+        </div>`;
+    }
+  }
+
+  // ── DOMロード後に実行 ────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { initLockScreen(); init(); });
+  } else {
+    initLockScreen();
+    init();
+  }
+})();
+</script>
 
 <!-- ── 展開シミュ モーダル ── -->
 <div id="sim-modal-overlay" onclick="if(event.target===this)closeSimModal()">
