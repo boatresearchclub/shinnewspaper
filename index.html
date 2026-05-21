@@ -17,6 +17,19 @@
   /* 管理者限定要素: デフォルトで非表示 */
   .admin-only { display: none !important; }
 
+  /* ヘッダーmeta サブ行（種別・開催日程） */
+  .header-meta-sub {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--text3, #888);
+    line-height: 1.4;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* 管理者モード時に表示 */
   body.admin-mode .admin-only { display: revert !important; }
 
