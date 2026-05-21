@@ -1337,6 +1337,518 @@ input[type="range"] {
   .top-hero { padding: 36px 32px; }
   .top-hero-title { font-size: 32px; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   出走表・展示情報・コメント・買い目パネル用クラス
+   （sample.js が生成するHTMLに対応）
+   ══════════════════════════════════════════════════════════ */
+
+/* ── 出走表グリッド ── */
+.detail-panel {
+  background: var(--bg1);
+}
+
+.bt-head-simple {
+  display: grid;
+  padding: 6px 10px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  gap: 4px;
+  align-items: center;
+}
+.bt-head-simple span { text-align: center; }
+
+.bt-row {
+  display: grid;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(56,120,220,0.08);
+  gap: 4px;
+  align-items: center;
+  transition: background .15s;
+}
+.bt-row:hover { background: rgba(46,124,246,0.04); }
+.bt-row.top1 { background: rgba(46,124,246,0.05); }
+
+.bt-grade {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* ── ボートサークル（枠番カラー丸） ── */
+.boat-circle {
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.b1 { background: linear-gradient(135deg,#1d4ed8,#3b82f6); color:#fff; }
+.b2 { background: linear-gradient(135deg,#065f46,#10b981); color:#fff; }
+.b3 { background: linear-gradient(135deg,#92400e,#f59e0b); color:#fff; }
+.b4 { background: linear-gradient(135deg,#7f1d1d,#ef4444); color:#fff; }
+.b5 { background: linear-gradient(135deg,#1e1b4b,#8b5cf6); color:#fff; }
+.b6 { background: linear-gradient(135deg,#1c1917,#78716c); color:#fff; }
+
+/* ── 水面気象情報バー ── */
+.weather-bar {
+  padding: 10px 12px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.weather-bar-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
+}
+.weather-bar-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.weather-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.wi-label {
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.wi-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 風向バッジ */
+.wind-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
+.wind-badge.tail         { background: rgba(34,197,94,0.2);  color: #4ade80; border: 1px solid rgba(34,197,94,0.4); }
+.wind-badge.head         { background: rgba(239,68,68,0.2);  color: #f87171; border: 1px solid rgba(239,68,68,0.4); }
+.wind-badge.cross_right,
+.wind-badge.cross_left   { background: rgba(249,115,22,0.2); color: #fb923c; border: 1px solid rgba(249,115,22,0.4); }
+
+/* ── 展示情報セクション ── */
+.tenji-section {
+  border-top: 1px solid var(--border);
+}
+.tenji-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 8px 12px 4px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.tenji-waiting {
+  display: block;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text3);
+  text-align: center;
+}
+.tenji-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.tenji-table th {
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.tenji-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(56,120,220,0.08);
+  text-align: center;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+}
+.tenji-table tr:hover td { background: rgba(46,124,246,0.04); }
+.tenji-best { color: var(--green) !important; font-weight: 700; }
+.tenji-rank1 { color: var(--gold); font-weight: 700; }
+.tenji-tilt {
+  font-size: 10px;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── 進入変更バナー ── */
+.course-order-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  background: rgba(249,115,22,0.08);
+  border-top: 1px solid rgba(249,115,22,0.3);
+  border-bottom: 1px solid rgba(249,115,22,0.3);
+  flex-wrap: wrap;
+}
+.cb-icon { color: var(--orange); font-size: 12px; flex-shrink: 0; }
+.cb-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange);
+  flex-shrink: 0;
+}
+.cb-order {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.cb-sep {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+/* ── 買い目パネル ── */
+.buy-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin: 8px 14px;
+}
+.buy-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.buy-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.buy-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .15s;
+}
+.buy-row:hover { border-color: var(--border2); background: var(--bg4); }
+.buy-row.hit { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.06); }
+.buy-combo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 60px;
+}
+.buy-label {
+  font-size: 10px;
+  color: var(--text3);
+  flex: 1;
+}
+.buy-weight {
+  display: flex;
+  gap: 2px;
+  align-items: center;
+}
+.wdot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px rgba(46,124,246,0.5);
+}
+.wdot.empty { background: var(--border); box-shadow: none; }
+.hit-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(34,197,94,0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34,197,94,0.4);
+}
+.ev-cell {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-left: auto;
+}
+
+/* ── 選手コメント ── */
+.comment-section {
+  padding: 0 14px 12px;
+}
+.comment-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comment-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(46,124,246,0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(46,124,246,0.35);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.comment-badge.waiting {
+  background: rgba(100,116,139,0.2);
+  color: #94a3b8;
+  border-color: rgba(100,116,139,0.3);
+}
+.comment-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 6px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(56,120,220,0.08);
+  align-items: start;
+}
+.comment-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  grid-column: 2;
+  grid-row: 1;
+}
+.comment-text {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+  grid-column: 2;
+  grid-row: 2;
+}
+.comment-empty {
+  font-size: 11px;
+  color: var(--text3);
+}
+.comment-keyword {
+  font-weight: 700;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+.comment-keyword.good { color: var(--green); }
+.comment-keyword.bad  { color: var(--red); }
+
+/* ── 締め切りアラートカード ── */
+.alert-card {
+  flex-shrink: 0;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.alert-card.urgent {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+}
+.alert-card:hover { background: var(--bg4); }
+.alert-card-time {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.alert-card-venue {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.alert-card-race {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.alert-card-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-top: 3px;
+}
+
+/* ── 荒れ度バッジ ── */
+.arek-lo { color: var(--green);  font-weight: 700; }
+.arek-md { color: var(--orange); font-weight: 700; }
+.arek-hi { color: var(--red);    font-weight: 700; }
+
+/* ── 確率テーブル ── */
+.prob-table-wrap {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.prob-table-wrap::-webkit-scrollbar { display: none; }
+.prob-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.prob-table th {
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 8px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.prob-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(56,120,220,0.08);
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text2);
+}
+
+/* ── レースボタン（会場・レース選択行） ── */
+.race-btn-no {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+}
+.race-btn-time {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── 不足データバナー ── */
+.insufficient-banner, .insuf-boats {
+  padding: 8px 12px;
+  background: rgba(249,115,22,0.08);
+  border: 1px solid rgba(249,115,22,0.3);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--orange);
+  margin: 8px 14px;
+}
+
+/* ── 結果パネル ── */
+.result-panel-inner { padding: 0 14px 12px; }
+.result-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 10px 0 6px;
+}
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(56,120,220,0.08);
+}
+.result-combo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 64px;
+}
+.result-odds {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 700;
+}
+.result-odds.r-hot  { color: var(--red); }
+.result-odds.r-warm { color: var(--orange); }
+.result-ninki {
+  font-size: 10px;
+  color: var(--text3);
+}
+.result-meta-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text2);
+  padding: 4px 0;
+}
+.result-meta-label {
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+}
+.result-henkan-row {
+  padding: 4px 0;
+  font-size: 11px;
+  color: var(--orange);
+}
+
+/* ── 会場タブ（縦並びモード対応） ── */
+.vtab-day {
+  font-size: 9px;
+  color: var(--text3);
+  text-align: center;
+}
+
+/* ── シナリオ期待値カード（scen-ev-*） ── */
+/* ※ 管理者認証スタイルブロックで定義済みのため省略 */
+
+/* ── col-name （確率テーブル選手名列） ── */
+.col-name {
+  text-align: left !important;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 80px;
+}
 </style>
 
 <!-- ══ 管理者認証スタイル ══ -->
