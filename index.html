@@ -374,23 +374,10 @@
 <script src="top_page_obf.js?v=20260520214511"></script>
 <script src="sample_obf.js?v=20260520214511"></script>
 
-<!-- ══ 管理者認証スクリプト ══
-     ⚠️  パスワードを変える場合は ADMIN_TOKEN の値だけ書き換える。
-     ⚠️  このファイルは sample_obf.js で難読化してから GitHub Push すること。
-     ⚠️  GitHub Pages は静的配信のため、クライアント側認証は「見せる/隠す」の
-         セキュリティレベル。機密データはサーバー側で保護すること。
--->
+<!-- ══ 管理者認証スクリプト ══ -->
 <script>
 (function () {
-  // ── パスワード設定 ──────────────────────────────────────
-  // SHA-256ハッシュで保存（平文をそのまま書かない）
-  // 例: "mypassword" → ブラウザコンソールで
-  //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('mypassword'))
-  //     .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-  // で生成したハッシュ文字列を貼る。
-  // デフォルトパスワード: "brc-admin-2026"
   const ADMIN_TOKEN_HASH = 'd72c16f080bee83fbbc47219c5e2be868364de15163e40d60972f64eceda5468';
-  // ↑ 必ず本番用ハッシュに書き換えること
 
   // ── ハッシュ比較（Web Crypto API） ──────────────────────
   async function sha256hex(str) {
@@ -399,7 +386,6 @@
   }
 
   // ── URLハッシュ（#以降）からトークンを取得 ──────────────
-  // 使い方: https://boatresearchclub.github.io/shinnewspaper/#admin=brc-admin-2026
   // #以降はサーバーに送信されず、iOSホーム画面保存URLにもそのまま残る。
   function getAdminParam() {
     const hash = window.location.hash.slice(1); // '#' を除去
