@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Boat Research Club</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- フォントをnon-blockingで読み込む（preconnect + media=print hack でレンダーブロック除去） -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="sample.css?v=20260520214511">
 
 <!-- ══ 管理者認証スタイル ══ -->
@@ -359,14 +364,17 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- data.js は同期（グローバル変数を即時定義するため defer 不可） -->
 <script src="data.js?v=20260521150004"></script>
-<script src="params_obf.js?v=20260520214511"></script>
-<script src="csv_export_obf.js?v=20260520214511"></script>
-<script src="sim_obf.js?v=20260520214511"></script>
-<script src="backtest_obf.js?v=20260520214511"></script>
-<script src="top_stats_obf.js?v=20260520214511"></script>
-<script src="top_page_obf.js?v=20260520214511"></script>
-<script src="sample_obf.js?v=20260520214511"></script>
+<!-- 残りのスクリプトは defer で並列ダウンロード・DOMContentLoaded後に順序保証付き実行 -->
+<!-- これによりHTMLパース・初期描画をブロックしなくなる -->
+<script defer src="params_obf.js?v=20260520214511"></script>
+<script defer src="csv_export_obf.js?v=20260520214511"></script>
+<script defer src="sim_obf.js?v=20260520214511"></script>
+<script defer src="backtest_obf.js?v=20260520214511"></script>
+<script defer src="top_stats_obf.js?v=20260520214511"></script>
+<script defer src="top_page_obf.js?v=20260520214511"></script>
+<script defer src="sample_obf.js?v=20260520214511"></script>
 
 <!-- ══ 管理者認証スクリプト ══ -->
 <script>
