@@ -17,7 +17,7 @@
     "parts_exchange": null,
     "weight": 54,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 70,
     "motor_rate2": 42.3,
     "motor_rate3": 65.4,
@@ -28,10 +28,10 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   },
   {
     "venue": "biwako",
@@ -51,7 +51,7 @@
     "parts_exchange": null,
     "weight": 52,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 18,
     "motor_rate2": 56.7,
     "motor_rate3": 66.7,
@@ -62,10 +62,10 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   },
   {
     "venue": "biwako",
@@ -85,7 +85,7 @@
     "parts_exchange": null,
     "weight": 50.5,
     "weight_adjust": 1.5,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 72,
     "motor_rate2": 32.1,
     "motor_rate3": 50.0,
@@ -96,10 +96,10 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   },
   {
     "venue": "biwako",
@@ -119,7 +119,7 @@
     "parts_exchange": null,
     "weight": 52,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 49,
     "motor_rate2": 31.0,
     "motor_rate3": 34.5,
@@ -130,10 +130,10 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   },
   {
     "venue": "biwako",
@@ -153,7 +153,7 @@
     "parts_exchange": null,
     "weight": 52.3,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 64,
     "motor_rate2": 31.0,
     "motor_rate3": 51.7,
@@ -164,10 +164,10 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   },
   {
     "venue": "biwako",
@@ -187,7 +187,7 @@
     "parts_exchange": null,
     "weight": 52,
     "weight_adjust": 0,
-    "fetched_at": "2026-05-21 12:44:55",
+    "fetched_at": "2026-05-21 12:50:46",
     "motor_no": 67,
     "motor_rate2": 43.8,
     "motor_rate3": 65.6,
@@ -198,9 +198,9 @@
     "weather": "雨",
     "weather_degree": 22,
     "water_degree": 24,
-    "wind_speed": 7,
-    "wind_direction": 1,
-    "wind_direction_text": "北",
-    "wave_height": 7
+    "wind_speed": 6,
+    "wind_direction": 15,
+    "wind_direction_text": "北西",
+    "wave_height": 6
   }
 ]
