@@ -1,0 +1,47 @@
+{
+  "venue": "下関",
+  "venue_slug": "shimonoseki",
+  "date": "20260522",
+  "race": 4,
+  "fetched_at": "2026-05-22 19:10:49",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 660,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 220,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 730,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-2",
+      "odds": 14620,
+      "ninki": 23
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-2-6",
+      "odds": 35370,
+      "ninki": 60
+    }
+  ],
+  "cancelled": false
+}
