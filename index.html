@@ -21,28 +21,29 @@
   #race-meta-bar {
     padding: 6px 14px 5px;
     font-size: 12px;
-    color: var(--text2, #aaa);
-    border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+    color: var(--text1, #1a1a1a);
+    border-bottom: 1px solid var(--border, rgba(0,0,0,0.10));
     line-height: 1.5;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   #race-meta-bar .rmb-venue {
     font-weight: 700;
     font-size: 13px;
-    color: var(--text1, #eee);
+    color: var(--text1, #1a1a1a);
   }
   #race-meta-bar .rmb-rno {
     font-weight: 700;
     font-size: 13px;
-    color: var(--text1, #eee);
-    margin-left: 0.4em;
+    color: var(--text1, #1a1a1a);
   }
-  #race-meta-bar .rmb-sub {
-    margin-left: 0.7em;
+  #race-meta-bar .rmb-day {
     font-size: 11px;
-    color: var(--text3, #888);
+    color: var(--text2, #666);
   }
 
   /* 管理者モード時に表示 */
