@@ -18,6 +18,10 @@
 
 (function () {
 
+  // calibration.js の先頭に追加
+  const _isAdmin = new URLSearchParams(location.search).has('admin');
+  if (!_isAdmin) return; // adminパラメータがなければ何もしない
+
   // ── ビン定義 ──
   // hitProbEst の値域 [0, 1] を6段階に分割
   const BINS = [
