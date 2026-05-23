@@ -19,7 +19,7 @@
 (function () {
 
   // calibration.js の先頭に追加
-  const _isAdmin = new URLSearchParams(location.search).has('admin');
+  const _isAdmin = location.search.includes('admin') || location.hash.includes('admin');
   if (!_isAdmin) return; // adminパラメータがなければ何もしない
 
   // ── ビン定義 ──
