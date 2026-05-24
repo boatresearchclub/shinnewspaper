@@ -179,61 +179,6 @@
   }
   #admin-lock-detail2 .lock-icon { font-size: 2rem; margin-bottom: 0.5rem; }
   #admin-lock-detail2 .lock-msg  { font-size: 13px; line-height: 1.6; }
-
-  /* ── 的中速報カード ── */
-  #top-hit-flash-cards::-webkit-scrollbar { display: none; }
-  .hit-flash-card {
-    flex: 0 0 auto;
-    min-width: 110px;
-    background: linear-gradient(135deg, rgba(255,215,0,0.12) 0%, rgba(255,165,0,0.06) 100%);
-    border: 1.5px solid rgba(255,215,0,0.45);
-    border-radius: 10px;
-    padding: 10px 12px 9px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    box-shadow: 0 2px 8px rgba(255,200,0,0.10);
-  }
-  .hit-flash-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-  }
-  .hit-flash-venue {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text, #eee);
-    white-space: nowrap;
-  }
-  .hit-flash-icon {
-    font-size: 13px;
-    line-height: 1;
-  }
-  .hit-flash-combo {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 17px;
-    font-weight: 700;
-    color: #ffd700;
-    letter-spacing: 0.04em;
-    line-height: 1.2;
-  }
-  .hit-flash-odds {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--orange, #f59e0b);
-  }
-  .hit-flash-tag {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--text3, #888);
-    background: var(--bg3, rgba(255,255,255,0.06));
-    border-radius: 4px;
-    padding: 2px 6px;
-    align-self: flex-start;
-    white-space: nowrap;
-  }
 </style>
 </head>
 <body>
@@ -283,21 +228,10 @@
 <!-- ══ TOP PAGE ══ -->
 <div id="top-page">
   <div class="top-hero">
-    <div class="top-hero-icon">⛵</div>
-    <div class="top-hero-title">Boat Research Club</div>
-    <div class="top-hero-sub">競艇レース分析・予想システム</div>
-  </div>
-
-  <!-- 的中速報 -->
-  <div id="top-hit-flash-section" style="display:none;margin-bottom:0.8rem">
-    <div class="top-section-label" style="margin-bottom:0.5rem">🎯 的中速報</div>
-    <div id="top-hit-flash-cards" style="
-      display:flex;flex-direction:row;gap:8px;
-      overflow-x:auto;
-      padding-bottom:6px;
-      scrollbar-width:none;
-      -webkit-overflow-scrolling:touch;
-    "></div>
+    <div class="top-hero-eyebrow">BOAT RESEARCH CLUB</div>
+    <div class="top-hero-title">Race<br>Intelligence<br>System</div>
+    <div class="top-hero-sub">競艇レース分析・AI予想プラットフォーム</div>
+    <div class="top-hero-line"></div>
   </div>
 
   <!-- 締め切りアラート -->

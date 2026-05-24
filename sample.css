@@ -426,29 +426,41 @@ body {
 
 #top-page {
   display: none;
-  padding: 2rem 1rem 3rem;
+  padding: 0 1rem 3rem;
   max-width: 960px;
   margin: 0 auto;
 }
 .top-hero {
-  text-align: center;
-  padding: 2.5rem 1rem 2rem;
+  padding: 1.6rem 0 1.4rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.4rem;
 }
-.top-hero-icon {
-  font-size: 52px;
-  margin-bottom: 0.75rem;
-  line-height: 1;
+.top-hero-eyebrow {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .22em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-family: var(--mono);
 }
 .top-hero-title {
-  font-size: 1.6rem;
+  font-size: 2.6rem;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 0.4rem;
-  letter-spacing: .03em;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  margin-bottom: 0.7rem;
+  font-family: 'Noto Sans JP', sans-serif;
 }
 .top-hero-sub {
-  font-size: 0.875rem;
+  font-size: 0.78rem;
   color: var(--text3);
+  letter-spacing: .04em;
+}
+.top-hero-line {
+  display: none;
 }
 
 .top-section-label {
@@ -653,7 +665,7 @@ body {
 }
 
 @media (max-width: 600px) {
-  .top-hero-title { font-size: 1.3rem; }
+  .top-hero-title { font-size: 2rem; }
   .top-nav-card { padding: 1rem; }
   .top-nav-card-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 10px; }
 }
