@@ -19,8 +19,12 @@
 
   /* 会場・レース・種別・開催日程バー（進入変更バナーの上） */
   #race-meta-bar {
-    padding: 6px 14px 5px;
-    font-size: 12px;
+    position: sticky;
+    top: 52px;
+    z-index: 85;
+    background: var(--bg2, #fff);
+    padding: 7px 14px 7px;
+    font-size: 13px;
     color: var(--text1, #1a1a1a);
     border-bottom: 1px solid var(--border, rgba(0,0,0,0.10));
     line-height: 1.5;
@@ -29,20 +33,20 @@
     text-overflow: ellipsis;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
   }
   #race-meta-bar .rmb-venue {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text1, #1a1a1a);
   }
   #race-meta-bar .rmb-rno {
     font-weight: 700;
-    font-size: 13px;
+    font-size: 15px;
     color: var(--text1, #1a1a1a);
   }
   #race-meta-bar .rmb-day {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--text2, #666);
   }
 
@@ -218,9 +222,6 @@
       <div id="venue-tabs"></div>
     </div>
   </div>
-</div>
-<!-- sticky nav（下段）: レース選択バー ← 常に固定 -->
-<div class="sticky-nav sticky-nav--lower">
   <div class="sticky-nav-race">
     <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto">
       <div class="sticky-nav-race-inner" id="race-bar"></div>
@@ -231,9 +232,9 @@
 <!-- ══ TOP PAGE ══ -->
 <div id="top-page">
   <div class="top-hero">
-    <div class="top-hero-icon">⛵</div>
-    <div class="top-hero-title">Boat Research Club</div>
-    <div class="top-hero-sub">競艇レース分析・予想システム</div>
+    <div class="top-hero-eyebrow">BOAT RESEARCH CLUB</div>
+    <div class="top-hero-title">Race<br>Intelligence<br>System</div>
+    <div class="top-hero-sub">競艇レース分析・AI予想プラットフォーム</div>
   </div>
 
   <!-- 締め切りアラート -->
