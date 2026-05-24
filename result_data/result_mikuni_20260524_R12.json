@@ -1,0 +1,52 @@
+{
+  "venue": "三国",
+  "venue_slug": "mikuni",
+  "date": "20260524",
+  "race": 12,
+  "fetched_at": "2026-05-24 14:12:22",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 190,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 240,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-4",
+      "odds": 310,
+      "ninki": 1
+    },
+    {
+      "combo": "1-2-6",
+      "odds": 840,
+      "ninki": 4
+    }
+  ],
+  "cancelled": false
+}
