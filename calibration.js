@@ -18,9 +18,9 @@
 
 (function () {
 
-  // calibration.js の先頭に追加
+  // admin 判定（URLに ?admin or #admin が含まれる場合のみパネルを描画）
+  // ※ 関数定義自体は必ず行う（top_stats.js から呼ばれるため）
   const _isAdmin = location.search.includes('admin') || location.hash.includes('admin');
-  if (!_isAdmin) return; // adminパラメータがなければ何もしない
 
   // ── ビン定義 ──
   // hitProbEst の値域 [0, 1] を6段階に分割
@@ -197,7 +197,9 @@
   }
 
   // ── 公開関数（これだけ既存コードから呼ぶ）──
+  // 関数は常に定義する。admin でない場合は中でスキップするだけ。
   window._renderCalibrationPanel = function (allResultsScenAll) {
+    if (!_isAdmin) return; // adminパラメータがなければ描画しない
     try {
       const container  = _ensureContainer();
       const binStats   = calcCalibration(allResultsScenAll || []);
