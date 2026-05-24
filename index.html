@@ -232,12 +232,14 @@
 <!-- ══ TOP PAGE ══ -->
 <div id="top-page">
   <div class="top-hero">
-    <div class="top-hero-title">BOAT<br>RESEARCH<br>CLUB</div>
+    <div class="top-hero-eyebrow">BOAT RESEARCH CLUB</div>
+    <div class="top-hero-title">Race<br>Intelligence<br>System</div>
     <div class="top-hero-sub">競艇レース分析・AI予想プラットフォーム</div>
   </div>
 
   <!-- 🎯 的中速報（top_stats.js の _buildHitSokuhoPanel が書き込む） -->
-  <div id="top-scen-ev-section"></div>
+  <div class="top-section-label">🎯 本日の的中速報</div>
+  <div id="top-scen-ev-section" style="margin-bottom:0.8rem"></div>
 
   <!-- 締め切りアラート -->
   <div id="top-alert-strip">
@@ -259,9 +261,9 @@
   </div>
 
   <!-- 会場クイックジャンプ -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;gap:8px">
-    <div class="top-section-label" id="top-venue-date-label" style="margin-bottom:0">🏟 本日の開催場</div>
-    <div class="date-nav" id="top-date-nav" style="display:none">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:0.6rem">
+    <div class="top-section-label" id="top-venue-date-label" style="margin-bottom:0;flex:1;min-width:0">🏟 本日の開催場</div>
+    <div class="date-nav" id="top-date-nav" style="display:none;flex-shrink:0">
       <button class="date-nav-btn" id="top-date-prev" onclick="topShiftDate(-1)" title="前日">‹</button>
       <span class="date-nav-label" id="top-date-nav-label"></span>
       <button class="date-nav-btn" id="top-date-next" onclick="topShiftDate(+1)" title="翌日">›</button>
