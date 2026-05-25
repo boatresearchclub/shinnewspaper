@@ -604,10 +604,10 @@ body {
   letter-spacing: .03em;
   flex-shrink: 0;
 }
-.chip-grade.cg-sg     { background: #7c3aed; color: #fff; }
-.chip-grade.cg-g1     { background: #dc2626; color: #fff; }
-.chip-grade.cg-g2     { background: #ea580c; color: #fff; }
-.chip-grade.cg-g3     { background: #0284c7; color: #fff; }
+.chip-grade.cg-sg { background: #e53935; }
+.chip-grade.cg-g1 { background: #d4a017; }
+.chip-grade.cg-g2 { background: #7cb342; }
+.chip-grade.cg-g3 { background: #3f51b5; }
 .chip-grade.cg-ippan  { background: var(--bg4); color: var(--text3); }
 .chip-grade.cg-joshi  { background: #db2777; color: #fff; }
 /* ── TOP ALERT STRIP ── */
