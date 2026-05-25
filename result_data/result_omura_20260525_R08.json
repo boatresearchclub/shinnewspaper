@@ -1,0 +1,47 @@
+{
+  "venue": "大村",
+  "venue_slug": "omura",
+  "date": "20260525",
+  "race": 8,
+  "fetched_at": "2026-05-25 18:49:09",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 290,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 110,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-1",
+      "odds": 570,
+      "ninki": 2
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-1-6",
+      "odds": 3760,
+      "ninki": 11
+    }
+  ],
+  "cancelled": false
+}
