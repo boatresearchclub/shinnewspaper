@@ -53,13 +53,8 @@
   /* 管理者モード時に表示 */
   body.admin-mode .admin-only { display: revert !important; }
 
-  /* 非管理者向けロックタブ: デフォルト表示 → 管理者モードで非表示 */
-  .user-only-tab { display: flex !important; }
+  /* 非管理者向けロックタブ: 管理者モードで非表示 */
   body.admin-mode .user-only-tab { display: none !important; }
-
-  /* 非管理者向けロックパネル: デフォルト表示 → 管理者モードで非表示 */
-  .user-only-buy-lock { display: block !important; }
-  body.admin-mode .user-only-buy-lock { display: none !important; }
 
   /* 管理者モード時にロック画面を非表示 */
   body.admin-mode #user-lock-detail2 { display: none !important; }
