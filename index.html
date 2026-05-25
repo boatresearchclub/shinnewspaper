@@ -57,8 +57,6 @@
   body.admin-mode .user-only-tab { display: none !important; }
 
   /* 管理者モード時にロック画面を非表示 */
-  body.admin-mode #user-lock-detail2 { display: none !important; }
-  body.admin-mode #user-lock-ai-stats { display: none !important; }
 
   /* 管理者バッジ（ヘッダー内） */
   #admin-badge {
@@ -362,15 +360,8 @@
 
   <!-- AI予想タブ -->
   <div id="tab-detail2" style="display:none">
-    <!-- 未認証時に表示するロック画面（管理者モードでは非表示） -->
-    <div id="user-lock-detail2">
-      <div style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
-        <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
-        <div style="font-size:13px;line-height:1.6">管理者のみ表示されます</div>
-      </div>
-    </div>
-    <!-- 管理者のみ: 本体パネル -->
-    <div id="detail2-panel" class="admin-only">
+    <!-- 全ユーザーに公開: 的中重視・回収重視のみ管理者限定（JS側で制御） -->
+    <div id="detail2-panel">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
     </div>
   </div>
@@ -439,10 +430,6 @@
   // ── 管理者モードを有効化 ─────────────────────────────────
   function activateAdminMode() {
     document.body.classList.add('admin-mode');
-
-    // AI予想タブのロック画面を非表示
-    const lockEl = document.getElementById('user-lock-detail2');
-    if (lockEl) lockEl.style.display = 'none';
 
     // BETTING_PARAMS と FINAL_PROB_WEIGHTS を管理者パネルに表示
     renderAdminParams();
@@ -555,23 +542,10 @@
     }
   }
 
-  // ── ロック画面の初期表示（非管理者向け） ─────────────────
-  function initLockScreen() {
-    const lockEl = document.getElementById('user-lock-detail2');
-    if (lockEl) {
-      lockEl.innerHTML = `
-        <div style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
-          <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
-          <div style="font-size:13px;line-height:1.6">AI予想は管理者限定です。</div>
-        </div>`;
-    }
-  }
-
   // ── DOMロード後に実行 ────────────────────────────────────
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { initLockScreen(); init(); });
+    document.addEventListener('DOMContentLoaded', () => { init(); });
   } else {
-    initLockScreen();
     init();
   }
 })();
