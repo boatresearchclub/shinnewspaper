@@ -1,0 +1,121 @@
+{
+  "venue": "丸亀",
+  "venue_slug": "marugame",
+  "date": "20260526",
+  "race": 2,
+  "fetched_at": "2026-05-26 17:42:25",
+  "kimari": "まくり",
+  "henkan": [],
+  "racetime": "1'49\"8",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 3,
+      "name": "伊藤誠二",
+      "reg_no": "3713",
+      "time": "1'49\"8"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "桑原将光",
+      "reg_no": "4318",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "3",
+      "boat": 1,
+      "name": "間嶋仁志",
+      "reg_no": "3362",
+      "time": "1'53\"8"
+    },
+    {
+      "rank": "4",
+      "boat": 2,
+      "name": "柳橋宏紀",
+      "reg_no": "4146",
+      "time": "1'54\"8"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "新出浩司",
+      "reg_no": "4325",
+      "time": "1'56\"0"
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "今村暢孝",
+      "reg_no": "3265",
+      "time": "1'56\"1"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.27,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.14,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 560,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 160,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 260,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-4",
+      "odds": 930,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-4-1",
+      "odds": 2980,
+      "ninki": 5
+    }
+  ],
+  "cancelled": false
+}
