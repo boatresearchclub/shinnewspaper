@@ -66,7 +66,7 @@
   // 推定値が上がるほど実際の的中率も上がっているか（理想的な予測モデルの条件）
   // 有効ビン間で「逆転」が何回起きているかを返す
   function countMonotonicViolations(binStats) {
-    const valid = binStats.filter(b => b.total >= 5 && b.actual != null);
+    const valid = binStats.filter(b => b.total >= 10 && b.actual != null); // 修正: N<10は参考値のため単調性チェックから除外
     let violations = 0;
     for (let i = 1; i < valid.length; i++) {
       if (valid[i].actual < valid[i - 1].actual - 0.02) violations++;
@@ -201,11 +201,32 @@
   window._renderCalibrationPanel = function (allResultsScenAll) {
     if (!_isAdmin) return; // adminパラメータがなければ描画しない
     try {
-      const container  = _ensureContainer();
-      const binStats   = calcCalibration(allResultsScenAll || []);
+      const container = _ensureContainer();
+      const all       = allResultsScenAll || [];
+      const totalAll  = all.length;
+      const totalValid = all.filter(r => r.hitProbEst != null).length;
+
+      // 診断ログ: データ件数を常に出力して「0件」の原因を追いやすくする
+      console.debug('[calibration] allResultsScenAll:', totalAll, '件 / hitProbEst有効:', totalValid, '件');
+
+      // 修正: allResultsScenAll が [] のまま呼ばれたとき（非同期計算完了前）は
+      // 「集計中」表示にしてデータ不足と区別する
+      if (totalAll === 0) {
+        container.innerHTML = `
+          <div class="ai-stats-card" style="margin-bottom:0.6rem">
+            <div style="display:grid;grid-template-columns:1fr;gap:10px">
+              <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+                <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">📐 確率キャリブレーション</div>
+                <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計中...</div>
+              </div>
+            </div>
+          </div>`;
+        return;
+      }
+
+      const binStats   = calcCalibration(all);
       const calError   = calcCalibrationError(binStats);
       const violations = countMonotonicViolations(binStats);
-      const totalValid = (allResultsScenAll || []).filter(r => r.hitProbEst != null).length;
       container.innerHTML = `
         <div class="ai-stats-card" style="margin-bottom:0.6rem">
           <div style="display:grid;grid-template-columns:1fr;gap:10px">
