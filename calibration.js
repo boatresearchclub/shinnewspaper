@@ -199,15 +199,18 @@
   // ── 公開関数（これだけ既存コードから呼ぶ）──
   // 関数は常に定義する。admin でない場合は中でスキップするだけ。
   window._renderCalibrationPanel = function (allResultsScenAll) {
-    if (!_isAdmin) return; // adminパラメータがなければ描画しない
+    // 診断ログ: _isAdmin チェックより前に出力し、admin 未設定でも件数が確認できる
+    // console.debug は Chrome デフォルトで非表示のため console.log に変更
+    const _diagAll   = (allResultsScenAll || []).length;
+    const _diagValid = (allResultsScenAll || []).filter(r => r.hitProbEst != null).length;
+    console.log('[calibration] allResultsScenAll:', _diagAll, '件 / hitProbEst有効:', _diagValid, '件');
+
+    if (!_isAdmin) return; // adminパラメータがなければ描画しない（ログは上で出力済み）
     try {
       const container = _ensureContainer();
       const all       = allResultsScenAll || [];
       const totalAll  = all.length;
-      const totalValid = all.filter(r => r.hitProbEst != null).length;
-
-      // 診断ログ: データ件数を常に出力して「0件」の原因を追いやすくする
-      console.debug('[calibration] allResultsScenAll:', totalAll, '件 / hitProbEst有効:', totalValid, '件');
+      const totalValid = _diagValid;
 
       // 修正: allResultsScenAll が [] のまま呼ばれたとき（非同期計算完了前）は
       // 「集計中」表示にしてデータ不足と区別する
