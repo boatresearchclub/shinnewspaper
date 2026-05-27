@@ -131,6 +131,54 @@
     }
   };
 
+  // ── 当日レース用ブレンド関数 ──
+  // selectRace() の冒頭に以下を1行追加するだけで動作する:
+  //   if (typeof _blendInnDataInn2Place === 'function') _blendInnDataInn2Place();
+  //
+  // DATA.inn_data.inn_2place（当日個別データ）と
+  // MASTER_EXT.venue_stats[venue].inn_2place（動的補正済み会場値）を
+  // W_LIVE_BLEND の比率でブレンドして DATA.inn_data.inn_2place を上書きする。
+  //
+  // W_LIVE_BLEND: 動的補正値のウェイト（0=当日データのみ、1=動的補正のみ）
+  // 当日データの信頼性が高いため控えめな値を推奨。
+
+  const W_LIVE_BLEND = 0.25; // 動的補正値のウェイト（25%）
+
+  window._blendInnDataInn2Place = function () {
+    try {
+      if (!DATA || !DATA.inn_data) return;
+      if (!MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place) return;
+
+      const liveVal = DATA.inn_data.inn_2place;
+      if (!liveVal || typeof liveVal !== 'object' || Array.isArray(liveVal)) return;
+      if (Object.keys(liveVal).length === 0) return;
+
+      const dynamicVal = MASTER_EXT.venue_stats[DATA.venue].inn_2place;
+
+      const blended = {};
+      ['2', '3', '4', '5', '6'].forEach(boat => {
+        const live = liveVal[boat] ?? null;
+        const dyn  = dynamicVal[boat] ?? null;
+        if (live != null && dyn != null) {
+          blended[boat] = live * (1 - W_LIVE_BLEND) + dyn * W_LIVE_BLEND;
+        } else if (live != null) {
+          blended[boat] = live;
+        } else if (dyn != null) {
+          blended[boat] = dyn * W_LIVE_BLEND;
+        }
+      });
+
+      // 正規化
+      const total = Object.values(blended).reduce((s, v) => s + v, 0) || 1;
+      Object.keys(blended).forEach(k => { blended[k] = blended[k] / total; });
+
+      DATA.inn_data.inn_2place = blended;
+
+    } catch (e) {
+      console.warn('[dynamic_inn2place] _blendInnDataInn2Place エラー:', e);
+    }
+  };
+
   // ── リセット関数（デバッグ用）──
   // 静的マスタに戻したいときは _resetDynamicInn2Place() をコンソールで実行
   window._resetDynamicInn2Place = function () {
