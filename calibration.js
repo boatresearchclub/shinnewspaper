@@ -74,6 +74,97 @@
     return violations;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // 2着 calibration
+  // ──────────────────────────────────────────────────────────────────
+  // results[] の各レースで「実際の2着枠番が予測リストの何位だったか」を集計する。
+  // pred2ndRank: top_stats.js の collectResultsForDateScen が付与するフィールド。
+  //   1 = 買い目中で最多出現の2着枠番と一致（予測1位的中）
+  //   2 = 2番目に多い2着枠番と一致
+  //   null = 買い目に実際の2着枠番が含まれていない or データなし
+  function calcPlace2Calibration(results) {
+    const valid = results.filter(r => r.pred2ndRank != null || r.actual2nd != null);
+    const total = valid.length;
+    if (total === 0) return null;
+    const rank1 = valid.filter(r => r.pred2ndRank === 1).length;
+    const top2  = valid.filter(r => r.pred2ndRank != null && r.pred2ndRank <= 2).length;
+    const top3  = valid.filter(r => r.pred2ndRank != null && r.pred2ndRank <= 3).length;
+    const miss  = valid.filter(r => r.pred2ndRank == null).length;
+    return { rank1Rate: rank1/total, top2Rate: top2/total, top3Rate: top3/total, missRate: miss/total, total };
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  // 3着 calibration
+  // ──────────────────────────────────────────────────────────────────
+  // pred3rdRank と同様の集計。3着は選択肢が多い（4〜5枠番）ため
+  // top3Rate が実用上の下限目標になる。
+  function calcPlace3Calibration(results) {
+    const valid = results.filter(r => r.pred3rdRank != null || r.actual3rd != null);
+    const total = valid.length;
+    if (total === 0) return null;
+    const rank1 = valid.filter(r => r.pred3rdRank === 1).length;
+    const top2  = valid.filter(r => r.pred3rdRank != null && r.pred3rdRank <= 2).length;
+    const top3  = valid.filter(r => r.pred3rdRank != null && r.pred3rdRank <= 3).length;
+    const miss  = valid.filter(r => r.pred3rdRank == null).length;
+    return { rank1Rate: rank1/total, top2Rate: top2/total, top3Rate: top3/total, missRate: miss/total, total };
+  }
+
+  // ── 2着・3着 calibration HTML生成 ──
+  function buildPlace2CalibHTML(p2, p3) {
+    function barRow(label, rate, threshGood, threshWarn, note) {
+      if (rate == null) return '';
+      const pct   = (rate * 100).toFixed(0) + '%';
+      const color = rate >= threshGood ? 'var(--green)'
+                  : rate >= threshWarn ? 'var(--orange)'
+                  : 'var(--red, #e05)';
+      const w     = Math.round(rate * 120);
+      return `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:3px 6px;font-size:10px;color:var(--text3);white-space:nowrap">${label}</td>
+          <td style="padding:3px 6px;min-width:96px">
+            <div style="height:14px;background:var(--bg2);border-radius:2px;overflow:hidden">
+              <div style="height:100%;width:${w}px;background:${color};border-radius:2px;opacity:0.85"></div>
+            </div>
+          </td>
+          <td style="padding:3px 6px;text-align:right;font-size:11px;font-weight:700;color:${color}">${pct}</td>
+          <td style="padding:3px 6px;font-size:9px;color:var(--text3)">${note}</td>
+        </tr>`;
+    }
+    const p2Section = p2 ? `
+      <div style="font-size:10px;font-weight:700;color:var(--text3);margin:6px 0 2px">2着予測精度（${p2.total}件）</div>
+      <table style="width:100%;border-collapse:collapse"><tbody>
+        ${barRow('1位的中', p2.rank1Rate, 0.50, 0.35, '目標50%+')}
+        ${barRow('2位以内', p2.top2Rate,  0.70, 0.55, '目標70%+')}
+        ${barRow('3位以内', p2.top3Rate,  0.85, 0.70, '目標85%+')}
+        ${barRow('買い目外', p2.missRate, 0,    0.15, '低いほど良')}
+      </tbody></table>` : '<div style="font-size:10px;color:var(--text3);padding:4px 0">2着データ不足</div>';
+    const p3Section = p3 ? `
+      <div style="font-size:10px;font-weight:700;color:var(--text3);margin:8px 0 2px">3着予測精度（${p3.total}件）</div>
+      <table style="width:100%;border-collapse:collapse"><tbody>
+        ${barRow('1位的中', p3.rank1Rate, 0.40, 0.28, '目標40%+')}
+        ${barRow('2位以内', p3.top2Rate,  0.60, 0.45, '目標60%+')}
+        ${barRow('3位以内', p3.top3Rate,  0.75, 0.60, '目標75%+')}
+        ${barRow('買い目外', p3.missRate, 0,    0.25, '低いほど良')}
+      </tbody></table>` : '<div style="font-size:10px;color:var(--text3);padding:4px 0">3着データ不足</div>';
+    const p2ok  = p2 && p2.rank1Rate >= 0.50;
+    const p3ok  = p3 && p3.top3Rate  >= 0.75;
+    const judge = (!p2 && !p3)   ? null
+                : (p2ok && p3ok) ? { text: '2着・3着ともに良好',       color: 'var(--green)'      }
+                : (!p2ok&&!p3ok) ? { text: '2着・3着とも要改善',       color: 'var(--red, #e05)'  }
+                : p2ok           ? { text: '2着良好・3着は要確認',     color: 'var(--orange)'     }
+                :                  { text: '2着要改善・3着は許容範囲', color: 'var(--orange)'     };
+    return `
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">📊 2着・3着 予測精度</div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:6px">買い目内での的中順位分布</div>
+        ${judge ? `<div style="font-size:11px;font-weight:700;color:${judge.color};text-align:center;margin-bottom:6px;padding:3px 0;border-bottom:1px solid var(--border)">${judge.text}</div>` : ''}
+        <div style="overflow-x:auto">${p2Section}${p3Section}</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:5px">
+          予測順位=買い目中の枠番出現頻度で判定　買い目外=実際の着順枠が買い目に含まれていなかった割合
+        </div>
+      </div>`;
+  }
+
   // ── HTML生成 ──
   function buildCalibrationHTML(binStats, calError, violations, totalValid) {
     if (totalValid < 30) {
@@ -230,10 +321,13 @@
       const binStats   = calcCalibration(all);
       const calError   = calcCalibrationError(binStats);
       const violations = countMonotonicViolations(binStats);
+      const p2stats    = calcPlace2Calibration(all);
+      const p3stats    = calcPlace3Calibration(all);
       container.innerHTML = `
         <div class="ai-stats-card" style="margin-bottom:0.6rem">
-          <div style="display:grid;grid-template-columns:1fr;gap:10px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
             ${buildCalibrationHTML(binStats, calError, violations, totalValid)}
+            ${buildPlace2CalibHTML(p2stats, p3stats)}
           </div>
         </div>`;
     } catch (e) {
