@@ -1,0 +1,121 @@
+{
+  "venue": "大村",
+  "venue_slug": "omura",
+  "date": "20260527",
+  "race": 12,
+  "fetched_at": "2026-05-27 22:42:34",
+  "kimari": "まくり",
+  "henkan": [],
+  "racetime": "1'50\"1",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 3,
+      "name": "平川香織",
+      "reg_no": "5045",
+      "time": "1'50\"1"
+    },
+    {
+      "rank": "2",
+      "boat": 1,
+      "name": "高田ひかる",
+      "reg_no": "4804",
+      "time": "1'52\"8"
+    },
+    {
+      "rank": "3",
+      "boat": 5,
+      "name": "大澤真菜",
+      "reg_no": "4414",
+      "time": "1'53\"4"
+    },
+    {
+      "rank": "4",
+      "boat": 2,
+      "name": "山口真喜子",
+      "reg_no": "5129",
+      "time": "1'54\"2"
+    },
+    {
+      "rank": "5",
+      "boat": 4,
+      "name": "孫崎百世",
+      "reg_no": "4941",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "門田栞",
+      "reg_no": "5241",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.22,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.21,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.22,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.1,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 470,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 120,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-1",
+      "odds": 840,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-1-5",
+      "odds": 10810,
+      "ninki": 29
+    }
+  ],
+  "cancelled": false
+}
