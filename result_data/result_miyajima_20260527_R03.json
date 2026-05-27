@@ -1,0 +1,47 @@
+{
+  "venue": "宮島",
+  "venue_slug": "miyajima",
+  "date": "20260527",
+  "race": 3,
+  "fetched_at": "2026-05-27 11:57:03",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 2300,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 390,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-1",
+      "odds": 4110,
+      "ninki": 12
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-1-4",
+      "odds": 11690,
+      "ninki": 30
+    }
+  ],
+  "cancelled": false
+}
