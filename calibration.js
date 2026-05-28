@@ -318,9 +318,20 @@
         return;
       }
 
-      const binStats   = calcCalibration(all);
-      // キャリブレーション補正テーブルを自動更新（computeScenCombosWithEV.js と連携）
-      if (typeof updateCalibPoints === 'function') updateCalibPoints(binStats);
+      // ―― 生データで集計（補正前）→ 補正テーブル更新 ――
+      const binStatsRaw = calcCalibration(all);
+      if (typeof updateCalibPoints === 'function') updateCalibPoints(binStatsRaw);
+
+      // ―― 補正後の hitProbEst で再集計してパネルに表示 ――
+      let binStats = binStatsRaw;
+      if (typeof calibrateProb === 'function') {
+        const allCorrected = all.map(r => r.hitProbEst != null
+          ? Object.assign({}, r, { hitProbEst: calibrateProb(r.hitProbEst) })
+          : r
+        );
+        binStats = calcCalibration(allCorrected);
+      }
+
       const calError   = calcCalibrationError(binStats);
       const violations = countMonotonicViolations(binStats);
       const p2stats    = calcPlace2Calibration(all);
