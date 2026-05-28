@@ -12,7 +12,7 @@ on:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8  # 10分ごとのジョブなので8分でタイムアウト
+    timeout-minutes: 25  # 10分ごとのジョブなので25分でタイムアウト
 
     steps:
       # ─────────────────────────────────────
