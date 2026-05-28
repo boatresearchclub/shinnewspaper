@@ -319,6 +319,8 @@
       }
 
       const binStats   = calcCalibration(all);
+      // キャリブレーション補正テーブルを自動更新（computeScenCombosWithEV.js と連携）
+      if (typeof updateCalibPoints === 'function') updateCalibPoints(binStats);
       const calError   = calcCalibrationError(binStats);
       const violations = countMonotonicViolations(binStats);
       const p2stats    = calcPlace2Calibration(all);
