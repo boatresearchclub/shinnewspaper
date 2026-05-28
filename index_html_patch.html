@@ -1,0 +1,156 @@
+<!--
+index.html (sample.html) への追記パッチ
+=========================================
+以下の3か所を編集してください。
+
+■ 変更 1: <script> タグ内の変数宣言エリアに追加
+  FLYING_DATA や RESULT_DATA の近くに以下を追記:
+
+  let RACE_INDEX_DATA = {};
+
+■ 変更 2: CSSに追加（<style> タグ内、既存のグレードタグのスタイルの近く）
+  .grade-tag などのある場所に以下を追記:
+
+■ 変更 3: buildTopVenueChips() 関数を以下の新版に置き換え
+=========================================
+-->
+
+<!-- ===== 変更 1: 変数宣言（FLYING_DATA などの近くに追記） ===== -->
+<script>
+// この行を既存の let FLYING_DATA = ... などの近くに追加する
+let RACE_INDEX_DATA = {};
+</script>
+
+
+<!-- ===== 変更 2: CSS（<style> タグ内に追記） ===== -->
+<style>
+/* ── 会場チップのグレードバッジ ── */
+.top-venue-chip {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  /* 既存のスタイルに追記 */
+}
+.chip-grade {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.2;
+  display: block;
+}
+.chip-grade.cg-sg   { background: #7c3aed; color: #fff; }
+.chip-grade.cg-g1   { background: #dc2626; color: #fff; }
+.chip-grade.cg-g2   { background: #ea580c; color: #fff; }
+.chip-grade.cg-g3   { background: #0284c7; color: #fff; }
+.chip-grade.cg-ippan{ background: var(--bg4); color: var(--text2); }
+
+.chip-title {
+  font-size: 9px;
+  color: var(--text3);
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  text-align: center;
+}
+.chip-period {
+  font-size: 9px;
+  color: var(--text3);
+  display: block;
+  text-align: center;
+}
+
+/* TOP ページ: カード形式に変更 */
+#top-venue-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.top-venue-chip {
+  padding: 8px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 76px;
+  box-shadow: 0 2px 6px rgba(0,40,90,0.06);
+  transition: border-color .15s, box-shadow .15s;
+  text-align: center;
+}
+.top-venue-chip:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0,100,255,0.12);
+}
+.chip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+  margin-bottom: 2px;
+}
+</style>
+
+
+<!-- ===== 変更 3: buildTopVenueChips() 関数を置き換え ===== -->
+<script>
+// 既存の buildTopVenueChips() をこの新版に差し替えてください
+
+function buildTopVenueChips() {
+  const area = document.getElementById('top-venue-chips');
+  if (!area) return;
+  const venues = VENUE_LIST.filter(v => ALL_DATA && ALL_DATA[v] != null);
+  if (venues.length === 0) {
+    area.innerHTML = '<span style="color:var(--text3);font-size:12px">本日の開催情報なし</span>';
+    return;
+  }
+
+  const gradeClass = { SG: 'cg-sg', G1: 'cg-g1', G2: 'cg-g2', G3: 'cg-g3', '一般': 'cg-ippan' };
+
+  area.innerHTML = venues.map(v => {
+    const finished = isVenueFinished(ALL_DATA[v]);
+    const baseStyle = finished
+      ? 'opacity:0.4;filter:grayscale(0.6);cursor:default;pointer-events:none;'
+      : '';
+
+    // RACE_INDEX_DATA からグレード・タイトル・期間を取得
+    const info   = (RACE_INDEX_DATA && RACE_INDEX_DATA.venues)
+                   ? (RACE_INDEX_DATA.venues[v] || null)
+                   : null;
+    const grade  = info ? (info.grade  || '一般') : '';
+    const title  = info ? (info.title  || '')    : '';
+    const period = info ? (info.period || '')    : '';
+    const day    = info ? (info.day    || '')    : '';
+
+    const gcls   = gradeClass[grade] || 'cg-ippan';
+
+    // グレードバッジ（一般でも表示）
+    const gradeBadge = grade
+      ? `<span class="chip-grade ${gcls}">${grade}</span>`
+      : '';
+
+    // タイトル（長い場合は省略）
+    const titleBadge = title
+      ? `<span class="chip-title" title="${title}">${title}</span>`
+      : '';
+
+    // 開催期間＋日次
+    const periodBadge = (period || day)
+      ? `<span class="chip-period">${period}${day ? '&nbsp;' + day : ''}</span>`
+      : '';
+
+    return `
+      <span class="top-venue-chip" onclick="jumpToVenue('${v}')" style="${baseStyle}">
+        <span class="chip-name">${v}</span>
+        ${gradeBadge}
+        ${titleBadge}
+        ${periodBadge}
+      </span>`;
+  }).join('');
+}
+</script>

@@ -1,0 +1,79 @@
+競艇予想システム 改善点まとめ（軽量版）
+🔴 最優先（すぐ直すべき）
+1. VENUE_SLUG の重複定義
+fetch_tenji.py / auto_push.py / tenji_from_csv.py / fetch_result.py に同じ会場マップが分散している
+会場追加・修正時にズレが発生しやすい
+
+✅ 対策：constants.py に統一し全ファイルで import する
+
+2. calc_prob_from_master の二重実装
+auto_push.py と boat_server.py にほぼ同じ確率計算が存在
+boat_server.py 側だけ補正（荒れスコア圧縮など）があり、表示/APIで確率がズレる可能性
+
+✅ 対策：確率計算を1ファイルに集約して共通利用
+
+3. Git push の競合リスク（auto_push.py）
+バックグラウンドスレッドとメイン処理が同時に git commit/push する恐れあり
+push競合やコンフリクトで停止する可能性
+
+✅ 対策：git操作は Lock で直列化する
+
+🟡 中優先（安定性向上）
+4. fetch_result.py のHTML依存が脆弱
+tableクラス名で取得しているため boatrace.jp 側の変更で即死する
+
+✅ 対策：fetch_tenji.py 同様に NEXT_DATA から取得する方式に変更
+
+5. STタイム 0.0 のバグ（fetch_tenji.py）
+st = A or B の形式だと 0.0 が false扱いになり値が消える
+
+✅ 対策：None判定で処理する
+
+6. tenji_from_csv.py の並列処理が危険
+会場数分（最大24）スレッドを立てる
+Playwrightを大量起動してメモリ不足やBANリスク
+
+✅ 対策：ThreadPoolExecutor(max_workers=4程度)に制限
+
+7. _fmt の import 問題
+tenji_from_csv.py が fetch_tenji.py の _fmt を import しているが、存在しない可能性あり
+
+✅ 対策：共通関数を正式に定義するか削除
+
+8. auto_push.py のHTML書換が正規表現依存
+let/constを正規表現で置換しているため誤マッチの危険
+
+✅ 対策：HTMLに DATA_PLACEHOLDER マーカーを置き安全に差し替える
+
+🟢 精度向上（将来的に強化すると強い）
+9. 展示タイム補正が未反映
+lap1 / 回り足 / 直線 / 展示タイムを保持しているが確率に反映していない
+
+✅ 対策：展示データを係数化して確率に補正をかける
+
+10. 進入変更補正が未実装
+has_start_change / course 情報はあるが、進入変更時の確率補正がない
+
+✅ 対策：進入変更時はコース別マスタ確率を補正する
+
+⭐ 優先度まとめ
+
+🔴 高
+
+VENUE_SLUG共通化
+calc_prob統一
+Git push競合防止（Lock）
+
+🟡 中
+
+fetch_result取得方式改善
+ST 0.0 バグ修正
+並列数制限
+_fmt import修正
+正規表現置換を安全化
+
+🟢 低（精度向上）
+
+展示補正
+進入変更補正
+直近成績を滑らかに評価

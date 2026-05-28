@@ -1,0 +1,47 @@
+{
+  "venue": "唐津",
+  "venue_slug": "karatsu",
+  "date": "20260523",
+  "race": 7,
+  "fetched_at": "2026-05-23 11:24:58",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 370,
+      "ninki": null
+    },
+    {
+      "combo": "3",
+      "odds": 630,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-3",
+      "odds": 1840,
+      "ninki": 9
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-3-2",
+      "odds": 4190,
+      "ninki": 18
+    }
+  ],
+  "cancelled": false
+}

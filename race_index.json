@@ -1,0 +1,116 @@
+{
+  "date": "2026-05-19",
+  "fetched_at": "06:28",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "第９回赤城カントリー倶楽部杯",
+      "period": "5/19-5/24",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "01",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "戸田": {
+      "grade": "一般",
+      "title": "第４２回日本モーターボート選手会カップ",
+      "period": "5/14-5/19",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "02",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "一般",
+      "title": "日伯友好記念　ブラジル杯",
+      "period": "5/16-5/19",
+      "day": "最終日",
+      "total_days": 4,
+      "jcd": "06",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎとこなめ",
+      "period": "5/19-5/24",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "08",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "鳴門": {
+      "grade": "一般",
+      "title": "スマホのアプリ「Ｎｏｖｉｌ★ラボ！」杯競走",
+      "period": "5/16-5/21",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "14",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "丸亀": {
+      "grade": "一般",
+      "title": "ふじむら杯",
+      "period": "5/17-5/23",
+      "day": "３日目",
+      "total_days": 7,
+      "jcd": "15",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "児島": {
+      "grade": "一般",
+      "title": "ＢＯＡＴＢｏｙカップ",
+      "period": "5/19-5/23",
+      "day": "初日",
+      "total_days": 5,
+      "jcd": "16",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "宮島": {
+      "grade": "一般",
+      "title": "サントリー杯",
+      "period": "5/16-5/21",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "17",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "G3",
+      "title": "日刊スポーツ杯争奪徳山オールレディース",
+      "period": "5/18-5/23",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "18",
+      "is_joshi": true,
+      "race_kinds": {}
+    },
+    "若松": {
+      "grade": "一般",
+      "title": "ＭＮＢＲ若松１ｓｔマンスリーＢＯＡＴＲＡＣＥ杯",
+      "period": "5/15-5/20",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "20",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "芦屋": {
+      "grade": "G1",
+      "title": "読売新聞社杯全日本王座決定戦開設７４周年記念",
+      "period": "5/15-5/20",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "21",
+      "is_joshi": false,
+      "race_kinds": {}
+    }
+  }
+}

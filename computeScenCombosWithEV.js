@@ -281,6 +281,11 @@
     };
 
     try {
+      // ── 引数バリデーション ──
+      if (!venue || typeof venue !== 'string') return _empty;
+      if (!vdata || typeof vdata !== 'object') return _empty;
+      if (rno == null) return _empty;
+
       // ── 必要な関数の存在確認 ──
       if (typeof calcScenarioData         !== 'function') return _empty;
       if (typeof calcScenarioComboProb    !== 'function') return _empty;
@@ -303,28 +308,29 @@
         }
       } catch (_e) { /* tenjiCache が利用不可でも続行 */ }
 
-      // ── DATA を一時差し替え（calcTenkaiProbs / calcScenarioData が DATA.venue を参照するため）──
-      const _origDATA = window.DATA;
-      try {
-        window.DATA = Object.assign({}, vdata, { venue });
-      } catch(_e) { window.DATA = _origDATA; }
+      // ── DATA / currentVenue を一時差し替え ──
+      // calcTenkaiProbs / calcScenarioData が DATA.venue / currentVenue を参照するため
+      const _origDATA    = window.DATA;
+      const _origVenue   = window.currentVenue;
+      const _tempData    = Object.assign({}, vdata, { venue: venue });
+      if (!_tempData.venue) return _empty; // venue が空なら中断
 
       let ranked2, sd;
       try {
-        // calcTenkaiProbs で ranked2 を構築
-        ranked2 = calcTenkaiProbs(rawBoats, rd.arek || null);
-      } finally {
-        window.DATA = _origDATA; // 必ず元に戻す
-      }
-      if (!ranked2 || ranked2.length < 2) return _empty;
+        window.DATA         = _tempData;
+        window.currentVenue = venue;
 
-      // ── シナリオデータ算出（こちらも DATA.venue を参照する場合があるため差し替え）──
-      let _origDATA2 = window.DATA;
-      try {
-        window.DATA = Object.assign({}, vdata, { venue });
+        // calcTenkaiProbs で ranked2 を構築（arek は数値のみ渡す）
+        const _arek = (typeof rd.arek === 'number' && rd.arek > 0) ? rd.arek : 54.7;
+        ranked2 = calcTenkaiProbs(rawBoats, _arek);
+        if (!ranked2 || ranked2.length < 2) return _empty;
+
+        // シナリオデータ算出
         sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
       } finally {
-        window.DATA = _origDATA2;
+        // 必ず元に戻す
+        window.DATA         = _origDATA;
+        window.currentVenue = _origVenue;
       }
       if (!sd || !sd.valid) return _empty;
 
@@ -467,7 +473,7 @@
       };
 
     } catch (e) {
-      console.warn('[computeScenCombosWithEV] エラー:', e);
+      // console.warn('[computeScenCombosWithEV] エラー:', e);  // suppressed
       return {
         combos: [], hitProbEst: null, synthOdds: null, ev: null,
         pred2ndRank: null, pred3rdRank: null,

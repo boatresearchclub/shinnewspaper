@@ -1,0 +1,42 @@
+{
+  "venue": "児島",
+  "venue_slug": "kojima",
+  "date": "20260507",
+  "race": 7,
+  "fetched_at": "2026-05-08 04:03:06",
+  "kimari": "逃げ",
+  "henkan": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 200,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 240,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 880,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-2",
+      "odds": 3760,
+      "ninki": 13
+    }
+  ]
+}

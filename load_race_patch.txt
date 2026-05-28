@@ -1,0 +1,70 @@
+# -*- coding: utf-8 -*-
+"""
+load_race_patch.txt
+===================
+export_indices_csv.py を load_race.py に組み込むための差分パッチ（手順書）
+
+◆ 修正箇所は2か所だけです。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【修正①】インポート追加（load_race.py の先頭インポートブロックの末尾）
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--- 追加前 ---
+from lr_log import _flush_prediction_log, calc_roi_from_logs
+
+--- 追加後 ---
+from lr_log import _flush_prediction_log, calc_roi_from_logs
+
+try:
+    from export_indices_csv import append_all_races as _append_indices_csv
+    _INDICES_CSV_AVAILABLE = True
+except ImportError:
+    _INDICES_CSV_AVAILABLE = False
+    print('[!]  export_indices_csv.py が見つかりません。指数CSV出力はスキップされます。')
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【修正②】指数CSV出力の呼び出し追加
+     場所: 各会場ループ内の「数値シート書き込み」の直後
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--- 追加前 ---
+        # 数値シート書き込み
+        if all_race_data:
+            write_numeric_sheet(wb, all_race_data, course_master, venue_course_master)
+
+--- 追加後 ---
+        # 数値シート書き込み
+        if all_race_data:
+            write_numeric_sheet(wb, all_race_data, course_master, venue_course_master)
+
+        # ── 指数CSV蓄積 ────────────────────────────────────────────────
+        if all_race_data and _INDICES_CSV_AVAILABLE:
+            try:
+                _append_indices_csv(all_race_data)
+            except Exception as _csv_e:
+                print(f'  [!]  指数CSV出力エラー（続行します）: {_csv_e}')
+        # ────────────────────────────────────────────────────────────────
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【出力ファイル】
+  csv_output/indices_log.csv
+
+【CSVの列構成】
+  日付, 会場, レース番号,
+  枠番, 選手名, モーター番号,
+  オリジナル1着率, イン逃げ2着率, 3着指数,
+  攻め評価, 逃げ評価, 相性評価, 機力評価, 展開評価, S安定評価,
+  1着確率, イン逃げ率, 進入コース, 平均ST, 全国勝率, 全国2連対率,
+  モーター2連対率, 印,
+  レースタイプ, 展開ストーリー, 1号艇勝率, 会場1コース勝率,
+  両立て判定, ヒモ荒れ, 買い目ヒント
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+【キーのカスタマイズについて】
+  export_indices_csv.py の PLAYER_INDEX_KEYS / RACE_JUDGMENT_KEYS を
+  lr_calc.py の results dict の実際のキー名に合わせて追記・修正してください。
+
+  現在の results dict には存在しないキーは空文字列で出力されます（エラーなし）。
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""

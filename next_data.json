@@ -1,0 +1,507 @@
+{
+  "props": {
+    "pageProps": {
+      "serverSideTimestamp": "2026-04-25T11:06:10+09:00",
+      "initialApolloState": {
+        "CrawledRaceResult:202604250401": {
+          "__typename": "CrawledRaceResult",
+          "id": "202604250401",
+          "isSuspended": false
+        },
+        "CrawledRaceBeforeInfo:202604250401": {
+          "__typename": "CrawledRaceBeforeInfo",
+          "id": "202604250401",
+          "shukaiLength": 1800,
+          "isAnteiban": false,
+          "weatherDegree": 15,
+          "weather": "晴",
+          "windSpeed": 3,
+          "windDirection": 15,
+          "waterDegree": 18,
+          "waveHeight": 3,
+          "racers": [
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141507"
+            },
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141508"
+            },
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141509"
+            },
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141510"
+            },
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141511"
+            },
+            {
+              "__ref": "CrawledRaceBeforeRacer:4141512"
+            }
+          ]
+        },
+        "CrawledRace:699660": {
+          "__typename": "CrawledRace",
+          "id": "699660",
+          "round": 1,
+          "deadlineTime": "2026-04-25T10:55:00+09:00",
+          "raceGrade": "Ippan",
+          "title": "予選",
+          "raceId": "2026-04-250401",
+          "sinnyuMethod": "free",
+          "result": {
+            "__ref": "CrawledRaceResult:202604250401"
+          },
+          "beforeInfo": {
+            "__ref": "CrawledRaceBeforeInfo:202604250401"
+          },
+          "raceDay": {
+            "__ref": "CrawledRaceDay:58597"
+          },
+          "racers": [
+            {
+              "__ref": "CrawledRaceRacer:4191240"
+            },
+            {
+              "__ref": "CrawledRaceRacer:4191241"
+            },
+            {
+              "__ref": "CrawledRaceRacer:4191242"
+            },
+            {
+              "__ref": "CrawledRaceRacer:4191243"
+            },
+            {
+              "__ref": "CrawledRaceRacer:4191244"
+            },
+            {
+              "__ref": "CrawledRaceRacer:4191245"
+            }
+          ],
+          "originalTenjis": [
+            {
+              "__ref": "CrawledRaceOriginalTenji:730666"
+            },
+            {
+              "__ref": "CrawledRaceOriginalTenji:730667"
+            },
+            {
+              "__ref": "CrawledRaceOriginalTenji:730668"
+            },
+            {
+              "__ref": "CrawledRaceOriginalTenji:730669"
+            },
+            {
+              "__ref": "CrawledRaceOriginalTenji:730670"
+            },
+            {
+              "__ref": "CrawledRaceOriginalTenji:730671"
+            }
+          ]
+        },
+        "CrawledRace:699662": {
+          "__typename": "CrawledRace",
+          "id": "699662",
+          "round": 2,
+          "deadlineTime": "2026-04-25T11:24:00+09:00"
+        },
+        "CrawledRace:699661": {
+          "__typename": "CrawledRace",
+          "id": "699661",
+          "round": 3,
+          "deadlineTime": "2026-04-25T11:53:00+09:00"
+        },
+        "CrawledRace:699663": {
+          "__typename": "CrawledRace",
+          "id": "699663",
+          "round": 4,
+          "deadlineTime": "2026-04-25T12:22:00+09:00"
+        },
+        "CrawledRace:699664": {
+          "__typename": "CrawledRace",
+          "id": "699664",
+          "round": 5,
+          "deadlineTime": "2026-04-25T12:52:00+09:00"
+        },
+        "CrawledRace:699665": {
+          "__typename": "CrawledRace",
+          "id": "699665",
+          "round": 6,
+          "deadlineTime": "2026-04-25T13:22:00+09:00"
+        },
+        "CrawledRace:699666": {
+          "__typename": "CrawledRace",
+          "id": "699666",
+          "round": 7,
+          "deadlineTime": "2026-04-25T13:53:00+09:00"
+        },
+        "CrawledRace:699667": {
+          "__typename": "CrawledRace",
+          "id": "699667",
+          "round": 8,
+          "deadlineTime": "2026-04-25T14:24:00+09:00"
+        },
+        "CrawledRace:699668": {
+          "__typename": "CrawledRace",
+          "id": "699668",
+          "round": 9,
+          "deadlineTime": "2026-04-25T14:56:00+09:00"
+        },
+        "CrawledRace:699669": {
+          "__typename": "CrawledRace",
+          "id": "699669",
+          "round": 10,
+          "deadlineTime": "2026-04-25T15:29:00+09:00"
+        },
+        "CrawledRace:699670": {
+          "__typename": "CrawledRace",
+          "id": "699670",
+          "round": 11,
+          "deadlineTime": "2026-04-25T16:03:00+09:00"
+        },
+        "CrawledRace:699671": {
+          "__typename": "CrawledRace",
+          "id": "699671",
+          "round": 12,
+          "deadlineTime": "2026-04-25T16:35:00+09:00"
+        },
+        "CrawledRaceDay:58596": {
+          "__typename": "CrawledRaceDay",
+          "id": "58596",
+          "date": "2026-04-24",
+          "statusText": "最終Ｒ発売終了",
+          "dayNumber": 1,
+          "hasRaces": true
+        },
+        "CrawledRaceDay:58597": {
+          "__typename": "CrawledRaceDay",
+          "id": "58597",
+          "date": "2026-04-25",
+          "statusText": "2R以降発売中",
+          "dayNumber": 2,
+          "hasRaces": true,
+          "races": [
+            {
+              "__ref": "CrawledRace:699660"
+            },
+            {
+              "__ref": "CrawledRace:699662"
+            },
+            {
+              "__ref": "CrawledRace:699661"
+            },
+            {
+              "__ref": "CrawledRace:699663"
+            },
+            {
+              "__ref": "CrawledRace:699664"
+            },
+            {
+              "__ref": "CrawledRace:699665"
+            },
+            {
+              "__ref": "CrawledRace:699666"
+            },
+            {
+              "__ref": "CrawledRace:699667"
+            },
+            {
+              "__ref": "CrawledRace:699668"
+            },
+            {
+              "__ref": "CrawledRace:699669"
+            },
+            {
+              "__ref": "CrawledRace:699670"
+            },
+            {
+              "__ref": "CrawledRace:699671"
+            }
+          ],
+          "setsu": {
+            "__ref": "CrawledSetsu:10616"
+          }
+        },
+        "CrawledRaceDay:58598": {
+          "__typename": "CrawledRaceDay",
+          "id": "58598",
+          "date": "2026-04-26",
+          "statusText": "-",
+          "dayNumber": 3,
+          "hasRaces": false
+        },
+        "CrawledRaceDay:58599": {
+          "__typename": "CrawledRaceDay",
+          "id": "58599",
+          "date": "2026-04-27",
+          "statusText": "-",
+          "dayNumber": 4,
+          "hasRaces": false
+        },
+        "CrawledRaceDay:58600": {
+          "__typename": "CrawledRaceDay",
+          "id": "58600",
+          "date": "2026-04-28",
+          "statusText": "-",
+          "dayNumber": 5,
+          "hasRaces": false
+        },
+        "CrawledRaceDay:58601": {
+          "__typename": "CrawledRaceDay",
+          "id": "58601",
+          "date": "2026-04-29",
+          "statusText": "-",
+          "dayNumber": 6,
+          "hasRaces": false
+        },
+        "CrawledSetsu:10616": {
+          "__typename": "CrawledSetsu",
+          "id": "10616",
+          "title": "ＢＴＳ黒石１７周年記念ウェーブ２１杯第７２回報知杯",
+          "firstDate": "2026-04-24",
+          "lastDate": "2026-04-29",
+          "raceKind": null,
+          "raceDays": [
+            {
+              "__ref": "CrawledRaceDay:58596"
+            },
+            {
+              "__ref": "CrawledRaceDay:58597"
+            },
+            {
+              "__ref": "CrawledRaceDay:58598"
+            },
+            {
+              "__ref": "CrawledRaceDay:58599"
+            },
+            {
+              "__ref": "CrawledRaceDay:58600"
+            },
+            {
+              "__ref": "CrawledRaceDay:58601"
+            }
+          ]
+        },
+        "CrawledRaceRacer:4191240": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191240",
+          "name": "筒井 美琴",
+          "rank": "B2",
+          "boatNumber": 1,
+          "regN": 5200,
+          "isAbsent": false
+        },
+        "CrawledRaceRacer:4191241": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191241",
+          "name": "石岡 将太",
+          "rank": "B1",
+          "boatNumber": 2,
+          "regN": 4550,
+          "isAbsent": false
+        },
+        "CrawledRaceRacer:4191242": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191242",
+          "name": "和田 拓也",
+          "rank": "A1",
+          "boatNumber": 3,
+          "regN": 4794,
+          "isAbsent": false
+        },
+        "CrawledRaceRacer:4191243": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191243",
+          "name": "鈴木 唯央",
+          "rank": "B1",
+          "boatNumber": 4,
+          "regN": 5313,
+          "isAbsent": false
+        },
+        "CrawledRaceRacer:4191244": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191244",
+          "name": "豊田 訓靖",
+          "rank": "B2",
+          "boatNumber": 5,
+          "regN": 3544,
+          "isAbsent": false
+        },
+        "CrawledRaceRacer:4191245": {
+          "__typename": "CrawledRaceRacer",
+          "id": "4191245",
+          "name": "宮城 那菜",
+          "rank": "B2",
+          "boatNumber": 6,
+          "regN": 5413,
+          "isAbsent": false
+        },
+        "CrawledRaceBeforeRacer:4141507": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141507",
+          "startSinnyu": 1,
+          "startTenjiTime": 0.16,
+          "boatNumber": 1,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 5,
+          "tenjiRank": 1,
+          "tenjiTime": 6.68,
+          "tilt": -0.5,
+          "weight": 47.4,
+          "weightAdjust": 0
+        },
+        "CrawledRaceBeforeRacer:4141508": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141508",
+          "startSinnyu": 2,
+          "startTenjiTime": 0.13,
+          "boatNumber": 2,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 3,
+          "tenjiRank": 4,
+          "tenjiTime": 6.74,
+          "tilt": -0.5,
+          "weight": 54.9,
+          "weightAdjust": 0
+        },
+        "CrawledRaceBeforeRacer:4141509": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141509",
+          "startSinnyu": 3,
+          "startTenjiTime": 0.12,
+          "boatNumber": 3,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 1,
+          "tenjiRank": 6,
+          "tenjiTime": 6.77,
+          "tilt": -0.5,
+          "weight": 52.7,
+          "weightAdjust": 0
+        },
+        "CrawledRaceBeforeRacer:4141510": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141510",
+          "startSinnyu": 4,
+          "startTenjiTime": 0.17,
+          "boatNumber": 4,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 6,
+          "tenjiRank": 3,
+          "tenjiTime": 6.72,
+          "tilt": -0.5,
+          "weight": 52,
+          "weightAdjust": 0
+        },
+        "CrawledRaceBeforeRacer:4141511": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141511",
+          "startSinnyu": 5,
+          "startTenjiTime": 0.13,
+          "boatNumber": 5,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 3,
+          "tenjiRank": 5,
+          "tenjiTime": 6.75,
+          "tilt": 0,
+          "weight": 52.4,
+          "weightAdjust": 0
+        },
+        "CrawledRaceBeforeRacer:4141512": {
+          "__typename": "CrawledRaceBeforeRacer",
+          "id": "4141512",
+          "startSinnyu": 6,
+          "startTenjiTime": 0.12,
+          "boatNumber": 6,
+          "partsExchange": null,
+          "pera": null,
+          "startTenjiRank": 1,
+          "tenjiRank": 2,
+          "tenjiTime": 6.7,
+          "tilt": -0.5,
+          "weight": 48.6,
+          "weightAdjust": 0
+        },
+        "CrawledRaceOriginalTenji:730666": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730666",
+          "boatNumber": 1,
+          "chokusenTime": 7.19,
+          "hanshuTime": null,
+          "isshuTime": 36.63,
+          "mawariashiTime": 5.52
+        },
+        "CrawledRaceOriginalTenji:730667": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730667",
+          "boatNumber": 2,
+          "chokusenTime": 7.27,
+          "hanshuTime": null,
+          "isshuTime": 36.8,
+          "mawariashiTime": 5.43
+        },
+        "CrawledRaceOriginalTenji:730668": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730668",
+          "boatNumber": 3,
+          "chokusenTime": 7.23,
+          "hanshuTime": null,
+          "isshuTime": 36.96,
+          "mawariashiTime": 5.51
+        },
+        "CrawledRaceOriginalTenji:730669": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730669",
+          "boatNumber": 4,
+          "chokusenTime": 7.31,
+          "hanshuTime": null,
+          "isshuTime": 36.9,
+          "mawariashiTime": 5.5
+        },
+        "CrawledRaceOriginalTenji:730670": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730670",
+          "boatNumber": 5,
+          "chokusenTime": 7.37,
+          "hanshuTime": null,
+          "isshuTime": 37.1,
+          "mawariashiTime": 5.6
+        },
+        "CrawledRaceOriginalTenji:730671": {
+          "__typename": "CrawledRaceOriginalTenji",
+          "id": "730671",
+          "boatNumber": 6,
+          "chokusenTime": 7.37,
+          "hanshuTime": null,
+          "isshuTime": 37.36,
+          "mawariashiTime": 5.6
+        },
+        "ROOT_QUERY": {
+          "__typename": "Query",
+          "raceRoundDetail({\"cacheMinutes\":0,\"date\":\"2026-04-25\",\"locationId\":4,\"round\":1})": {
+            "__ref": "CrawledRace:699660"
+          }
+        }
+      },
+      "_sentryTraceData": "42395167e855405597cbc99a8bfadebd-9f64405fa2010360-0",
+      "_sentryBaggage": "sentry-environment=production,sentry-release=2026-04-19-3f11fb,sentry-public_key=0c0e99b056df4eb1b06994cbe9919cf2,sentry-trace_id=42395167e855405597cbc99a8bfadebd,sentry-sample_rate=0.001,sentry-transaction=%2Frace%2F%5BlocationSlug%5D%2F%5Bdate%5D%2F%5Bround%5D%2Flast-minute,sentry-sampled=false"
+    },
+    "__N_SSP": true
+  },
+  "page": "/race/[locationSlug]/[date]/[round]/last-minute",
+  "query": {
+    "last-minute-content": "original-tenji",
+    "locationSlug": "heiwajima",
+    "date": "2026-04-25",
+    "round": "1R"
+  },
+  "buildId": "Xijk_FMhYS_3b3ig4fv0a",
+  "isFallback": false,
+  "isExperimentalCompile": false,
+  "gssp": true,
+  "scriptLoader": []
+}

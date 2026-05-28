@@ -1,0 +1,47 @@
+{
+  "venue": "鳴門",
+  "venue_slug": "naruto",
+  "date": "20260518",
+  "race": 11,
+  "fetched_at": "2026-05-18 13:41:11",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "6",
+      "odds": 240,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "6",
+      "odds": 570,
+      "ninki": null
+    },
+    {
+      "combo": "3",
+      "odds": 430,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "6-3",
+      "odds": 6200,
+      "ninki": 27
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "6-3-2",
+      "odds": 45820,
+      "ninki": 117
+    }
+  ],
+  "cancelled": false
+}

@@ -1,0 +1,2446 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOAT STUDIO — 統合検証ツール v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Share+Tech+Mono&display=swap');
+:root{
+  --bg:#07090f;--bg2:#0b0f1a;--surface:#0f1623;--surface2:#141d2e;
+  --border:#1c2e48;--border2:#243650;
+  --cyan:#00d4ff;--cyan-dim:rgba(0,212,255,.15);
+  --orange:#ff7c35;--green:#00e87a;--red:#ff3d5a;--gold:#ffc542;
+  --text:#b8d0e8;--dim:#4a6480;
+  --mp-A:#e53030;--mp-B:#e07820;--mp-C:#c8a800;--mp-D:#3a5080;--mp-E:#2a3545;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans JP',sans-serif;font-size:13px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;z-index:0}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:12px;padding:9px 18px;
+  border-bottom:1px solid var(--border);background:rgba(11,15,26,.96);
+  backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+.logo{font-family:'Share Tech Mono',monospace;font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:2px;white-space:nowrap}
+.logo span{color:var(--text);opacity:.4;font-size:10px;margin-left:5px}
+.mode-tabs{display:flex;gap:2px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:3px;margin-left:16px}
+.mode-tab{font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:.8px;padding:5px 14px;
+  border-radius:3px;cursor:pointer;transition:.2s;color:var(--dim);user-select:none;white-space:nowrap}
+.mode-tab:hover{color:var(--text)}
+.mode-tab.on{background:rgba(0,212,255,.15);color:var(--cyan);border:1px solid rgba(0,212,255,.3)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:7px}
+.upload-zone{display:flex;align-items:center;gap:5px;border:1px dashed var(--border2);
+  border-radius:5px;padding:5px 11px;cursor:pointer;transition:.2s;background:rgba(0,212,255,.03)}
+.upload-zone:hover{border-color:var(--cyan);background:rgba(0,212,255,.07)}
+.upload-zone input{display:none}
+.upload-zone.drag{border-color:var(--cyan);background:rgba(0,212,255,.1)}
+.upload-status{font-size:11px;color:var(--dim)}
+.upload-status.loaded{color:var(--green)}
+
+/* history badge */
+.hist-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--gold);
+  background:rgba(255,197,66,.08);border:1px solid rgba(255,197,66,.2);border-radius:4px;padding:4px 10px;cursor:pointer;transition:.15s}
+.hist-badge:hover{background:rgba(255,197,66,.15)}
+
+/* ── LAYOUT ── */
+.app-body{position:relative;z-index:1;display:grid;grid-template-columns:296px 1fr;min-height:calc(100vh - 51px)}
+
+/* ── SIDEBAR ── */
+.sidebar{border-right:1px solid var(--border);background:var(--bg2);overflow-y:auto;padding-bottom:24px}
+.sb-section{padding:10px 13px;border-bottom:1px solid var(--border)}
+.sb-title{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+label.fl{display:block;font-size:10px;color:var(--dim);letter-spacing:.7px;margin-bottom:3px;text-transform:uppercase}
+select,input[type=number],input[type=date],input[type=text]{
+  width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);
+  font-family:'Noto Sans JP',sans-serif;font-size:12px;padding:6px 8px;border-radius:4px;outline:none;transition:.15s}
+select:focus,input:focus{border-color:var(--cyan)}
+input[type=date]{color-scheme:dark}
+.form-row{margin-bottom:8px}
+.date-range{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.pill-tabs{display:flex;gap:3px;flex-wrap:wrap;margin-bottom:3px}
+.pt{background:var(--bg);border:1px solid var(--border);color:var(--dim);
+  font-size:11px;padding:5px 10px;text-align:center;cursor:pointer;border-radius:4px;
+  transition:.15s;white-space:nowrap;user-select:none;flex-shrink:0}
+.pt:hover{border-color:var(--cyan);color:var(--cyan)}
+.pt.on{background:rgba(0,212,255,.12);border-color:var(--cyan);color:var(--cyan)}
+.pt.multi-on{background:rgba(0,212,255,.18);border-color:var(--cyan);color:var(--cyan);box-shadow:inset 0 0 0 1px var(--cyan)}
+.boat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-bottom:3px}
+.bb{background:var(--bg);border:1px solid var(--border);color:var(--dim);
+  font-family:'Share Tech Mono',monospace;font-size:13px;font-weight:700;
+  padding:7px 2px;text-align:center;cursor:pointer;border-radius:4px;transition:.15s;user-select:none}
+.bb:hover{border-color:var(--cyan);color:var(--cyan)}
+.bb.sel{background:var(--cyan);border-color:var(--cyan);color:#000;box-shadow:0 0 10px rgba(0,212,255,.35)}
+.bb.disabled{opacity:.25;pointer-events:none}
+.all-toggle{width:100%;background:transparent;border:1px solid var(--border);color:var(--dim);
+  font-size:10px;padding:4px;cursor:pointer;border-radius:4px;transition:.15s;letter-spacing:.7px}
+.all-toggle:hover{border-color:var(--cyan);color:var(--cyan)}
+.race-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.rb{background:var(--bg);border:1px solid var(--border);color:var(--dim);
+  font-size:10px;padding:5px 2px;text-align:center;cursor:pointer;border-radius:4px;transition:.15s;user-select:none;line-height:1.3}
+.rb:hover{border-color:var(--cyan)}
+.rb.sel{background:rgba(0,212,255,.12);border-color:var(--cyan);color:var(--cyan)}
+.auto-box{background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.15);
+  border-radius:4px;padding:7px 9px;font-size:11px;color:var(--dim);line-height:1.7;min-height:30px}
+.auto-box strong{color:var(--cyan)}
+.run-btn{width:100%;background:linear-gradient(135deg,var(--cyan),#0088cc);
+  border:none;color:#000;font-family:'Share Tech Mono',monospace;font-size:12px;font-weight:700;
+  padding:11px;cursor:pointer;border-radius:4px;letter-spacing:2px;text-transform:uppercase;transition:.2s;margin-top:4px}
+.run-btn:hover{box-shadow:0 0 18px rgba(0,212,255,.45);filter:brightness(1.1)}
+.run-btn:disabled{opacity:.4;cursor:not-allowed}
+.tag-group{display:flex;gap:3px;flex-wrap:wrap}
+.tg{background:var(--bg);border:1px solid var(--border);color:var(--dim);font-size:10px;
+  padding:3px 7px;border-radius:3px;cursor:pointer;transition:.15s;user-select:none}
+.tg:hover{border-color:var(--orange);color:var(--orange)}
+.tg.on{background:rgba(255,124,53,.12);border-color:var(--orange);color:var(--orange)}
+input[type=range]{width:100%;accent-color:var(--cyan);margin:2px 0}
+.range-val{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan)}
+
+/* ── CONTENT ── */
+.content{padding:14px;overflow:auto}
+.empty{padding:60px 20px;text-align:center;color:var(--dim)}
+.empty-icon{font-size:42px;opacity:.4;margin-bottom:10px}
+.empty-text{font-size:13px;line-height:1.95}
+
+/* stat row */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:11px}
+.stat{background:var(--bg2);border:1px solid var(--border);border-radius:5px;padding:11px;text-align:center;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cyan)}
+.stat.pos::before{background:var(--green)}.stat.neg::before{background:var(--red)}.stat.gold::before{background:var(--gold)}
+.stat-label{font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:.5px}
+.stat-value{font-family:'Share Tech Mono',monospace;font-size:19px;font-weight:700;color:var(--cyan)}
+.stat.pos .stat-value{color:var(--green)}.stat.neg .stat-value{color:var(--red)}.stat.gold .stat-value{color:var(--gold)}
+.stat-sub{font-size:10px;color:var(--dim);margin-top:3px}
+
+/* panel */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:11px}
+.ph{background:var(--surface2);padding:8px 13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:6px}
+.ph-title{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase}
+.pb{padding:12px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{background:var(--surface2);color:var(--dim);font-size:10px;letter-spacing:.7px;text-transform:uppercase;
+  padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:6px 9px;border-bottom:1px solid rgba(28,46,72,.4);vertical-align:middle;white-space:nowrap}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(0,212,255,.025)}
+.tbl td.num{text-align:right;font-family:'Share Tech Mono',monospace}
+.tbl td.pos{color:var(--green)}.tbl td.neg{color:var(--red)}.tbl td.gold{color:var(--gold)}
+
+/* tags */
+.tag-hit{display:inline-block;background:rgba(0,232,122,.12);color:var(--green);border:1px solid rgba(0,232,122,.25);font-size:10px;padding:1px 6px;border-radius:3px;font-family:'Share Tech Mono',monospace}
+.tag-miss{display:inline-block;background:rgba(255,61,90,.08);color:var(--red);border:1px solid rgba(255,61,90,.2);font-size:10px;padding:1px 6px;border-radius:3px;font-family:'Share Tech Mono',monospace}
+.ctag{display:inline-block;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18);color:var(--cyan);font-size:10px;padding:2px 8px;border-radius:10px;margin:2px}
+
+/* boat circles */
+.bc{display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  font-family:'Share Tech Mono',monospace;font-size:10px;font-weight:700;margin:0 1px}
+.b1{background:#fff;color:#111}.b2{background:#111;color:#fff;border:1px solid #555}
+.b3{background:#c00;color:#fff}.b4{background:#00b;color:#fff}
+.b5{background:#b0b;color:#fff}.b6{background:#080;color:#fff}
+.mp{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:10px;font-weight:700;padding:1px 4px;border-radius:2px}
+.mpA{background:var(--mp-A);color:#fff}.mpB{background:var(--mp-B);color:#fff}
+.mpC{background:var(--mp-C);color:#000}.mpD{background:var(--mp-D);color:rgba(184,208,232,.7);border:1px solid #3a5080}
+.mpE{background:var(--mp-E);color:var(--dim);border:1px solid #2a3545}
+.eval-sym{font-size:12px;font-weight:700}
+.eval-dbl{color:#00e87a}.eval-cir{color:#00e87a}.eval-tri{color:#c8a800}.eval-hyo{color:#c83030}
+.rate-mini{display:flex;align-items:center;gap:4px;flex:1}
+.bar-bg{height:5px;background:var(--border);border-radius:2px;flex:1;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--orange),var(--gold))}
+.rate-text{font-size:10px;color:var(--dim);min-width:34px;text-align:right;font-family:'Share Tech Mono',monospace}
+.idx3-hi{color:var(--green)}.idx3-md{color:var(--gold)}.idx3-lo{color:var(--dim)}
+.pts{font-family:'Share Tech Mono',monospace;font-weight:700}
+.rno{font-family:'Share Tech Mono',monospace;font-weight:700;color:var(--cyan)}
+
+/* preview cards */
+.data-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(244px,1fr));gap:9px;margin-bottom:13px}
+.preview-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.pc-head{background:var(--surface2);padding:7px 11px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border)}
+.pc-race{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--cyan);font-weight:700}
+.pc-time{font-size:10px;color:var(--dim)}
+.pc-body{padding:7px 11px}
+.boat-row{display:flex;align-items:center;gap:5px;padding:3px 0;border-bottom:1px solid rgba(28,46,72,.5)}
+.boat-row:last-child{border-bottom:none}
+
+/* chart */
+.chart-wrap{padding:13px 15px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:130px;margin-bottom:5px}
+.chart-bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.chart-bar{width:100%;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--orange),rgba(255,124,53,.25));transition:.4s;min-height:2px}
+.chart-label{font-size:9px;color:var(--dim);text-align:center;white-space:nowrap;font-family:'Share Tech Mono',monospace;transform:rotate(-30deg);transform-origin:top center;margin-top:4px;height:20px}
+.chart-val{font-size:9px;color:var(--orange);text-align:center;font-family:'Share Tech Mono',monospace;min-height:12px}
+.chart-axis{height:1px;background:var(--border);margin-bottom:2px}
+.chart-title{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:.8px;margin-bottom:9px}
+
+/* pager */
+.pager{display:flex;gap:4px;align-items:center;justify-content:flex-end;padding:8px 12px}
+.pg-btn{background:var(--bg);border:1px solid var(--border);color:var(--dim);font-size:10px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:.15s}
+.pg-btn:hover:not(:disabled){border-color:var(--cyan);color:var(--cyan)}
+.pg-btn:disabled{opacity:.3;cursor:default}
+.pg-info{font-size:10px;color:var(--dim);font-family:'Share Tech Mono',monospace}
+
+/* action btns */
+.act-btn{background:transparent;border:1px solid var(--border);color:var(--dim);font-size:10px;
+  padding:5px 11px;border-radius:4px;cursor:pointer;transition:.15s;font-family:'Noto Sans JP',sans-serif;white-space:nowrap}
+.act-btn:hover{border-color:var(--green);color:var(--green)}
+.act-btn.gold:hover{border-color:var(--gold);color:var(--gold)}
+
+/* history table */
+.hist-tbl .tbl td{font-size:11px;padding:5px 8px}
+
+/* sub note */
+.sub-note{font-size:10px;color:var(--dim);margin-top:3px;line-height:1.5}
+
+/* result area */
+.result-area{display:flex;flex-direction:column;gap:10px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--cyan)}
+
+/* full indicator table */
+.full-data-tbl{width:100%;border-collapse:collapse;font-size:11px}
+.full-data-tbl th{background:var(--bg2);color:var(--dim);font-size:9px;padding:4px 5px;text-align:center;border:1px solid var(--border)}
+.full-data-tbl td{padding:4px 5px;border:1px solid rgba(28,46,72,.4);text-align:center;vertical-align:middle}
+
+/* course-change badge */
+.tag-chg{display:inline-block;background:rgba(255,124,53,.12);color:var(--orange);border:1px solid rgba(255,124,53,.3);
+  font-size:9px;padding:1px 5px;border-radius:3px;font-family:'Share Tech Mono',monospace;white-space:nowrap}
+
+/* link-to-csv button */
+.link-csv-btn{background:linear-gradient(135deg,var(--orange),#cc5500);border:none;color:#fff;
+  font-family:'Share Tech Mono',monospace;font-size:11px;font-weight:700;padding:6px 14px;
+  cursor:pointer;border-radius:4px;letter-spacing:1px;transition:.2s;white-space:nowrap}
+.link-csv-btn:hover{box-shadow:0 0 14px rgba(255,124,53,.45);filter:brightness(1.1)}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">⚓ BOAT STUDIO <span>v5</span></div>
+  <div class="mode-tabs">
+    <div class="mode-tab on" id="tabXlsx"  onclick="switchMode('xlsx')">📊 指標検証 (CSV)</div>
+    <div class="mode-tab"    id="tabCombo" onclick="switchMode('combo')">🔗 合算検証</div>
+    <div class="mode-tab"    id="tabCsv"   onclick="switchMode('csv')">📈 実績検証 (CSV)</div>
+    <div class="mode-tab"    id="tabHist"  onclick="switchMode('hist')">📋 検証履歴</div>
+  </div>
+  <div class="topbar-right">
+    <label class="upload-zone" id="xlsxZone">
+      <input type="file" id="xlsxInput" accept=".csv" multiple onchange="loadVenueCSV(this)">
+      <span>📂</span><span class="upload-status" id="xlsxStatus">CSV読み込む（複数可）</span>
+    </label>
+    <label class="upload-zone" id="csvZone" style="display:none">
+      <input type="file" id="csvInput" accept=".csv" multiple onchange="loadCSV(this)">
+      <span>📂</span><span class="upload-status" id="csvStatus">CSV読み込む（複数可）</span>
+    </label>
+    <div class="hist-badge" id="histBadge" onclick="switchMode('hist')" title="履歴を見る">
+      📋 <span id="histCount">0</span>件
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP BODY ═══ -->
+<div class="app-body">
+
+  <!-- ─── SIDEBAR ─── -->
+  <div class="sidebar" id="sidebar">
+
+    <!-- ══ XLSX ══ -->
+    <div class="sb-section sb-xlsx">
+      <div class="sb-title">🏟 会場 / レース</div>
+      <div class="form-row">
+        <label class="fl">会場選択</label>
+        <select id="venueSelect" onchange="onVenueChange()">
+          <option value="">-- 会場CSVを読み込んでください --</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="fl">対象レース</label>
+        <div id="raceGrid" class="race-grid"></div>
+        <div class="sub-note" style="margin-top:3px">全選択でスタート。個別クリックで絞込</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-xlsx">
+      <div class="sb-title">🎟 券種</div>
+      <div class="pill-tabs" id="ticketTabs">
+        <div class="pt on" onclick="setTicket('3連単',this)">３連単</div>
+        <div class="pt" onclick="setTicket('3連複',this)">３連複</div>
+        <div class="pt" onclick="setTicket('2連単',this)">２連単</div>
+        <div class="pt" onclick="setTicket('単勝',this)">単勝</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-xlsx" id="sec1">
+      <div class="sb-title">🥇 1着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs" style="flex-wrap:wrap">
+        <div class="pt on" data-mode="manual" onclick="setMode('f1','manual',this)">手動</div>
+        <div class="pt"     onclick="setMode('f1','rate1',this)">1着率1位</div>
+        <div class="pt"     onclick="setMode('f1','rate2',this)">TOP2</div>
+        <div class="pt"     onclick="setMode('f1','rate2ex1',this)" title="1号艇を除いた上位2艇">1号艇外TOP2</div>
+        <div class="pt"     onclick="setMode('f1','eval1',this)">逃げ◎</div>
+        <div class="pt"     onclick="setMode('f1','rateThresh',this)" title="オリジナル1着率がX%以上の艇">1着率X%↑</div>
+        <div class="pt"     onclick="setMode('f1','atkMark',this)" title="攻め評価の印で絞込">攻め印</div>
+        <div class="pt"     onclick="setMode('f1','nigeTop',this)" title="逃げ%が最高の艇">逃げ%1位</div>
+        <div class="pt"     onclick="setMode('f1','aiMark',this)" title="相性の印で絞込">相性印</div>
+        <div class="pt"     onclick="setMode('f1','mpMark',this)" title="機力の印で絞込">機力印</div>
+        <div class="pt"     onclick="setMode('f1','tenMark',this)" title="展開の印で絞込">展開印</div>
+        <div class="pt"     onclick="setMode('f1','stMark',this)" title="S安定の印で絞込">S安定印</div>
+        <div class="pt"     onclick="setMode('f1','sashiTop',this)" title="差し%最高の艇（1着）">差し%1位</div>
+        <div class="pt"     onclick="setMode('f1','makuriTop',this)" title="まくり%最高の艇（1着）">まくり%1位</div>
+        <div class="pt"     onclick="setMode('f1','makurisashiTop',this)" title="まくり差し%最高の艇（1着）">まくり差し%1位</div>
+        <div class="pt"     onclick="setMode('f1','kimariBoat',this)" title="指定艇番の決まり手%がX%以上">艇番+決まり手%</div>
+      </div>
+      <!-- 指標検証: 艇番+決まり手% コントロール -->
+      <div id="f1_kimariBoatCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">対象艇番（複数可）</label>
+        <div class="boat-grid" id="f1_kimariBoatSel" style="margin-bottom:4px">
+          <div class="bb" data-boat="1" onclick="toggleKimariBoat('f1_kimariBoatSel',1,this)">1</div>
+          <div class="bb" data-boat="2" onclick="toggleKimariBoat('f1_kimariBoatSel',2,this)">2</div>
+          <div class="bb" data-boat="3" onclick="toggleKimariBoat('f1_kimariBoatSel',3,this)">3</div>
+          <div class="bb" data-boat="4" onclick="toggleKimariBoat('f1_kimariBoatSel',4,this)">4</div>
+          <div class="bb" data-boat="5" onclick="toggleKimariBoat('f1_kimariBoatSel',5,this)">5</div>
+          <div class="bb" data-boat="6" onclick="toggleKimariBoat('f1_kimariBoatSel',6,this)">6</div>
+        </div>
+        <label class="fl">決まり手</label>
+        <div class="tag-group" id="f1_kimariTypeSel" style="margin-bottom:4px">
+          <div class="tg on" data-k="逃げ"       onclick="selectKimariType('f1_kimariTypeSel','逃げ')">逃げ</div>
+          <div class="tg"    data-k="差し"       onclick="selectKimariType('f1_kimariTypeSel','差し')">差し</div>
+          <div class="tg"    data-k="まくり"     onclick="selectKimariType('f1_kimariTypeSel','まくり')">まくり</div>
+          <div class="tg"    data-k="まくり差し" onclick="selectKimariType('f1_kimariTypeSel','まくり差し')">まくり差し</div>
+          <div class="tg"    data-k="差され"     onclick="selectKimariType('f1_kimariTypeSel','差され')">差され（被）</div>
+          <div class="tg"    data-k="まくられ"   onclick="selectKimariType('f1_kimariTypeSel','まくられ')">まくられ（被）</div>
+        </div>
+        <label class="fl">最低%しきい値</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="range" id="f1KimariThresh" min="5" max="90" step="5" value="20" style="flex:1"
+            oninput="document.getElementById('f1KimariThreshVal').textContent=this.value+'%';refreshAutoInfo()">
+          <span class="range-val" id="f1KimariThreshVal">20%</span>
+        </div>
+        <div class="sub-note" style="margin-top:3px">CSV列「決まり手傾向」「差され%」「まくられ%」から参照</div>
+      </div>
+      <div id="f1_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <!-- 1着率しきい値入力 -->
+      <div id="f1_rateThreshCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">1着率しきい値（%以上）</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="range" id="f1RateThresh" min="10" max="80" step="5" value="40" style="flex:1"
+            oninput="document.getElementById('f1RateThreshVal').textContent=this.value+'%';refreshAutoInfo()">
+          <span class="range-val" id="f1RateThreshVal">40%</span>
+        </div>
+      </div>
+      <!-- 攻め印フィルタ -->
+      <div id="f1_atkMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">攻め 最低印</label>
+        <div class="tag-group" id="f1_atkMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('f1_atkMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('f1_atkMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('f1_atkMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- 相性印フィルタ -->
+      <div id="f1_aiMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">相性 最低印</label>
+        <div class="tag-group" id="f1_aiMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('f1_aiMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('f1_aiMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('f1_aiMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- 機力印フィルタ -->
+      <div id="f1_mpMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">機力 最低グレード</label>
+        <div class="tag-group" id="f1_mpMarkSel">
+          <div class="tg on" data-rank="5" onclick="selectMarkRank('f1_mpMarkSel',5)">A以上</div>
+          <div class="tg" data-rank="4" onclick="selectMarkRank('f1_mpMarkSel',4)">B以上</div>
+          <div class="tg" data-rank="3" onclick="selectMarkRank('f1_mpMarkSel',3)">C以上</div>
+        </div>
+      </div>
+      <!-- 展開印フィルタ -->
+      <div id="f1_tenMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">展開 最低印</label>
+        <div class="tag-group" id="f1_tenMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('f1_tenMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('f1_tenMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('f1_tenMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- S安定印フィルタ -->
+      <div id="f1_stMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">S安定 最低印</label>
+        <div class="tag-group" id="f1_stMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('f1_stMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('f1_stMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('f1_stMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <div id="f1_manual">
+        <div class="boat-grid" id="f1boats"></div>
+        <button class="all-toggle" onclick="allToggle('f1')">全選択 / 全解除</button>
+      </div>
+      <div id="f1_auto" style="display:none">
+        <div class="auto-box" id="f1_autoinfo">会場を選択すると算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-xlsx" id="sec2">
+      <div class="sb-title">🥈 2着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs">
+        <div class="pt on" data-mode="manual" onclick="setMode('f2','manual',this)">手動</div>
+        <div class="pt"    onclick="setMode('f2','all',this)">総流し</div>
+        <div class="pt"    onclick="setMode('f2','mpA',this)">機力A</div>
+        <div class="pt"    onclick="setMode('f2','mpAB',this)">A+B</div>
+        <div class="pt"    onclick="setMode('f2','adv2top2',this)">2着率↑</div>
+        <div class="pt"    onclick="setMode('f2','atk',this)">攻め◎</div>
+      </div>
+      <div id="f2_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <div id="f2_manual">
+        <div class="boat-grid" id="f2boats"></div>
+        <button class="all-toggle" onclick="allToggle('f2')">全選択（総流し） / 全解除</button>
+      </div>
+      <div id="f2_auto" style="display:none">
+        <div class="auto-box" id="f2_autoinfo">自動算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-xlsx" id="sec3">
+      <div class="sb-title">🥉 3着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs">
+        <div class="pt on" data-mode="manual" onclick="setMode('f3','manual',this)">手動</div>
+        <div class="pt"    onclick="setMode('f3','all',this)">総流し</div>
+        <div class="pt"    onclick="setMode('f3','idx3top2',this)">3着↑2</div>
+        <div class="pt"    onclick="setMode('f3','idx3top3',this)">3着↑3</div>
+        <div class="pt"    onclick="setMode('f3','mpA',this)">機力A</div>
+        <div class="pt"    onclick="setMode('f3','mpAB',this)">A+B</div>
+      </div>
+      <div id="f3_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <div id="f3_manual">
+        <div class="boat-grid" id="f3boats"></div>
+        <button class="all-toggle" onclick="allToggle('f3')">全選択（総流し） / 全解除</button>
+      </div>
+      <div id="f3_auto" style="display:none">
+        <div class="auto-box" id="f3_autoinfo">自動算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-xlsx" style="border-bottom:none">
+      <button class="run-btn" onclick="runVerification()">▶ 検証実行</button>
+    </div>
+
+    <!-- ══ COMBO ══ -->
+    <div class="sb-section sb-combo">
+      <div class="sb-title">🏟 会場 / レース</div>
+      <div class="sub-note" style="margin-bottom:6px;color:var(--orange);font-size:11px">会場CSVと実績CSVの両方が必要です</div>
+      <div class="form-row">
+        <label class="fl">会場選択（複数可）</label>
+        <div id="comboVenueFilter" class="tag-group" style="max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+        <div style="display:flex;gap:4px">
+          <button class="all-toggle" style="flex:1" onclick="comboVenueAll(true)">全選択</button>
+          <button class="all-toggle" style="flex:1" onclick="comboVenueAll(false)">全解除</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="fl">対象レース（1R〜12R）</label>
+        <div id="comboRaceGrid" class="race-grid"></div>
+        <button class="all-toggle" style="margin-top:3px" onclick="comboRaceAll()">全選択 / 全解除</button>
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo">
+      <div class="sb-title">📅 CSV期間フィルタ</div>
+      <div class="form-row">
+        <label class="fl">開始日</label>
+        <input type="date" id="comboDateFrom">
+      </div>
+      <div class="form-row">
+        <label class="fl">終了日</label>
+        <input type="date" id="comboDateTo">
+      </div>
+      <div class="sub-note">未入力=全期間対象</div>
+    </div>
+
+    <div class="sb-section sb-combo">
+      <div class="sb-title">🎟 券種</div>
+      <div class="pill-tabs" id="comboTicketTabs">
+        <div class="pt on" onclick="setComboTicket('3連単',this)">３連単</div>
+        <div class="pt"    onclick="setComboTicket('3連複',this)">３連複</div>
+        <div class="pt"    onclick="setComboTicket('2連単',this)">２連単</div>
+        <div class="pt"    onclick="setComboTicket('単勝',this)">単勝</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo" id="combo_sec1">
+      <div class="sb-title">🥇 1着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs" style="flex-wrap:wrap">
+        <div class="pt on" data-mode="manual" onclick="setComboMode('f1','manual',this)">手動</div>
+        <div class="pt"     onclick="setComboMode('f1','rate1',this)">1着率1位</div>
+        <div class="pt"     onclick="setComboMode('f1','rate2',this)">TOP2</div>
+        <div class="pt"     onclick="setComboMode('f1','rate2ex1',this)">1号艇外TOP2</div>
+        <div class="pt"     onclick="setComboMode('f1','eval1',this)">逃げ◎</div>
+        <div class="pt"     onclick="setComboMode('f1','rateThresh',this)">1着率X%↑</div>
+        <div class="pt"     onclick="setComboMode('f1','atkMark',this)">攻め印</div>
+        <div class="pt"     onclick="setComboMode('f1','nigeTop',this)">逃げ%1位</div>
+        <div class="pt"     onclick="setComboMode('f1','aiMark',this)">相性印</div>
+        <div class="pt"     onclick="setComboMode('f1','mpMark',this)">機力印</div>
+        <div class="pt"     onclick="setComboMode('f1','tenMark',this)">展開印</div>
+        <div class="pt"     onclick="setComboMode('f1','stMark',this)">S安定印</div>
+        <div class="pt"     onclick="setComboMode('f1','sashiTop',this)">差し%1位</div>
+        <div class="pt"     onclick="setComboMode('f1','makuriTop',this)">まくり%1位</div>
+        <div class="pt"     onclick="setComboMode('f1','makurisashiTop',this)">まくり差し%1位</div>
+        <div class="pt"     onclick="setComboMode('f1','kimariBoat',this)" title="指定艇番の決まり手%がX%以上">艇番+決まり手%</div>
+      </div>
+      <!-- コンボ: 艇番+決まり手% -->
+      <div id="combo_f1_kimariBoatCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">対象艇番（複数可）</label>
+        <div class="boat-grid" id="combo_f1_kimariBoatSel" style="margin-bottom:4px">
+          <div class="bb" data-boat="1" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',1,this)">1</div>
+          <div class="bb" data-boat="2" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',2,this)">2</div>
+          <div class="bb" data-boat="3" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',3,this)">3</div>
+          <div class="bb" data-boat="4" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',4,this)">4</div>
+          <div class="bb" data-boat="5" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',5,this)">5</div>
+          <div class="bb" data-boat="6" onclick="toggleKimariBoat('combo_f1_kimariBoatSel',6,this)">6</div>
+        </div>
+        <label class="fl">決まり手</label>
+        <div class="tag-group" id="combo_f1_kimariTypeSel" style="margin-bottom:4px">
+          <div class="tg on" data-k="逃げ"       onclick="selectKimariType('combo_f1_kimariTypeSel','逃げ')">逃げ</div>
+          <div class="tg"    data-k="差し"       onclick="selectKimariType('combo_f1_kimariTypeSel','差し')">差し</div>
+          <div class="tg"    data-k="まくり"     onclick="selectKimariType('combo_f1_kimariTypeSel','まくり')">まくり</div>
+          <div class="tg"    data-k="まくり差し" onclick="selectKimariType('combo_f1_kimariTypeSel','まくり差し')">まくり差し</div>
+          <div class="tg"    data-k="差され"     onclick="selectKimariType('combo_f1_kimariTypeSel','差され')">差され（被）</div>
+          <div class="tg"    data-k="まくられ"   onclick="selectKimariType('combo_f1_kimariTypeSel','まくられ')">まくられ（被）</div>
+        </div>
+        <label class="fl">最低%しきい値</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="range" id="combo_f1KimariThresh" min="10" max="90" step="5" value="30" style="flex:1"
+            oninput="document.getElementById('combo_f1KimariThreshVal').textContent=this.value+'%';refreshComboAutoInfo()">
+          <span class="range-val" id="combo_f1KimariThreshVal">30%</span>
+        </div>
+      </div>
+      <!-- コンボ: 1着率しきい値 -->
+      <div id="combo_f1_rateThreshCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">1着率しきい値（%以上）</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="range" id="combo_f1RateThresh" min="10" max="80" step="5" value="40" style="flex:1"
+            oninput="document.getElementById('combo_f1RateThreshVal').textContent=this.value+'%';refreshComboAutoInfo()">
+          <span class="range-val" id="combo_f1RateThreshVal">40%</span>
+        </div>
+      </div>
+      <!-- コンボ: 攻め印 -->
+      <div id="combo_f1_atkMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">攻め 最低印</label>
+        <div class="tag-group" id="combo_f1_atkMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('combo_f1_atkMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('combo_f1_atkMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('combo_f1_atkMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- コンボ: 相性印 -->
+      <div id="combo_f1_aiMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">相性 最低印</label>
+        <div class="tag-group" id="combo_f1_aiMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('combo_f1_aiMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('combo_f1_aiMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('combo_f1_aiMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- コンボ: 機力印 -->
+      <div id="combo_f1_mpMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">機力 最低グレード</label>
+        <div class="tag-group" id="combo_f1_mpMarkSel">
+          <div class="tg on" data-rank="5" onclick="selectMarkRank('combo_f1_mpMarkSel',5)">A以上</div>
+          <div class="tg" data-rank="4" onclick="selectMarkRank('combo_f1_mpMarkSel',4)">B以上</div>
+          <div class="tg" data-rank="3" onclick="selectMarkRank('combo_f1_mpMarkSel',3)">C以上</div>
+        </div>
+      </div>
+      <!-- コンボ: 展開印 -->
+      <div id="combo_f1_tenMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">展開 最低印</label>
+        <div class="tag-group" id="combo_f1_tenMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('combo_f1_tenMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('combo_f1_tenMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('combo_f1_tenMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <!-- コンボ: S安定印 -->
+      <div id="combo_f1_stMarkCtrl" style="display:none;margin-bottom:4px">
+        <label class="fl" style="margin-top:4px">S安定 最低印</label>
+        <div class="tag-group" id="combo_f1_stMarkSel">
+          <div class="tg" data-rank="4" onclick="selectMarkRank('combo_f1_stMarkSel',4)">◎以上</div>
+          <div class="tg on" data-rank="3" onclick="selectMarkRank('combo_f1_stMarkSel',3)">○以上</div>
+          <div class="tg" data-rank="2" onclick="selectMarkRank('combo_f1_stMarkSel',2)">▲以上</div>
+        </div>
+      </div>
+      <div id="combo_f1_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <div id="combo_f1_manual">
+        <div class="boat-grid" id="combo_f1boats"></div>
+        <button class="all-toggle" onclick="comboAllToggle('f1')">全選択 / 全解除</button>
+      </div>
+      <div id="combo_f1_auto" style="display:none">
+        <div class="auto-box" id="combo_f1_autoinfo">会場を選択すると算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo" id="combo_sec2">
+      <div class="sb-title">🥈 2着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs">
+        <div class="pt on" data-mode="manual" onclick="setComboMode('f2','manual',this)">手動</div>
+        <div class="pt"    onclick="setComboMode('f2','all',this)">総流し</div>
+        <div class="pt"    onclick="setComboMode('f2','mpA',this)">機力A</div>
+        <div class="pt"    onclick="setComboMode('f2','mpAB',this)">A+B</div>
+        <div class="pt"    onclick="setComboMode('f2','adv2top2',this)">2着率↑</div>
+        <div class="pt"    onclick="setComboMode('f2','atk',this)">攻め◎</div>
+      </div>
+      <div id="combo_f2_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <div id="combo_f2_manual">
+        <div class="boat-grid" id="combo_f2boats"></div>
+        <button class="all-toggle" onclick="comboAllToggle('f2')">全選択（総流し） / 全解除</button>
+      </div>
+      <div id="combo_f2_auto" style="display:none">
+        <div class="auto-box" id="combo_f2_autoinfo">自動算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo" id="combo_sec3">
+      <div class="sb-title">🥉 3着条件 <span style="font-size:9px;color:var(--green);font-weight:normal">複数選択でAND絞込</span></div>
+      <div class="pill-tabs">
+        <div class="pt on" data-mode="manual" onclick="setComboMode('f3','manual',this)">手動</div>
+        <div class="pt"    onclick="setComboMode('f3','all',this)">総流し</div>
+        <div class="pt"    onclick="setComboMode('f3','idx3top2',this)">3着↑2</div>
+        <div class="pt"    onclick="setComboMode('f3','idx3top3',this)">3着↑3</div>
+        <div class="pt"    onclick="setComboMode('f3','mpA',this)">機力A</div>
+        <div class="pt"    onclick="setComboMode('f3','mpAB',this)">A+B</div>
+      </div>
+      <div id="combo_f3_modebadge" style="display:none;font-size:10px;color:var(--cyan);background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);border-radius:4px;padding:4px 8px;margin-bottom:4px;line-height:1.5"></div>
+      <div id="combo_f3_manual">
+        <div class="boat-grid" id="combo_f3boats"></div>
+        <button class="all-toggle" onclick="comboAllToggle('f3')">全選択（総流し） / 全解除</button>
+      </div>
+      <div id="combo_f3_auto" style="display:none">
+        <div class="auto-box" id="combo_f3_autoinfo">自動算出</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo">
+      <div class="sb-title">💴 1点あたり</div>
+      <div class="form-row">
+        <label class="fl">金額<span class="range-val" id="comboUnitYenVal"> 100</span>円</label>
+        <input type="range" id="comboUnitYen" min="100" max="1000" step="100" value="100"
+          oninput="document.getElementById('comboUnitYenVal').textContent=' '+this.value">
+      </div>
+    </div>
+
+    <div class="sb-section sb-combo" style="border-bottom:none">
+      <button class="run-btn" onclick="runComboVerification()">▶ 合算検証実行</button>
+    </div>
+
+    <!-- ══ CSV ══ -->
+    <div class="sb-section sb-csv">
+      <div class="sb-title">📅 期間指定</div>
+      <div class="form-row">
+        <label class="fl">開始日</label>
+        <input type="date" id="csvDateFrom">
+      </div>
+      <div class="form-row">
+        <label class="fl">終了日</label>
+        <input type="date" id="csvDateTo">
+      </div>
+      <div class="sub-note">未入力=全期間対象</div>
+    </div>
+
+    <div class="sb-section sb-csv">
+      <div class="sb-title">🎟 券種</div>
+      <div class="pill-tabs" id="ticketTabsCsv">
+        <div class="pt on" data-ticket="３連単" onclick="setCsvTicket('３連単',this)">３連単</div>
+        <div class="pt"    data-ticket="３連複" onclick="setCsvTicket('３連複',this)">３連複</div>
+        <div class="pt"    data-ticket="２連単" onclick="setCsvTicket('２連単',this)">２連単</div>
+        <div class="pt"    data-ticket="単勝"   onclick="setCsvTicket('単勝',this)">単勝</div>
+      </div>
+    </div>
+
+    <div class="sb-section sb-csv">
+      <div class="sb-title">🥇 1着コース</div>
+      <div class="boat-grid" id="csv_f1boats"></div>
+      <button class="all-toggle" onclick="csvAllToggle('f1')">全選択 / 全解除</button>
+    </div>
+
+    <div class="sb-section sb-csv" id="csv_sec2">
+      <div class="sb-title">🥈 2着コース</div>
+      <div class="boat-grid" id="csv_f2boats"></div>
+      <button class="all-toggle" onclick="csvAllToggle('f2')">全選択（総流し） / 全解除</button>
+    </div>
+
+    <div class="sb-section sb-csv" id="csv_sec3">
+      <div class="sb-title">🥉 3着コース</div>
+      <div class="boat-grid" id="csv_f3boats"></div>
+      <button class="all-toggle" onclick="csvAllToggle('f3')">全選択（総流し） / 全解除</button>
+    </div>
+
+    <div class="sb-section sb-csv">
+      <div class="sb-title">🔍 フィルタ</div>
+      <div class="form-row">
+        <label class="fl">会場（複数選択）</label>
+        <div id="venueFilter" class="tag-group" style="max-height:88px;overflow-y:auto"></div>
+      </div>
+      <div class="form-row">
+        <label class="fl">決まり手</label>
+        <div class="tag-group" id="kimariFilter">
+          <div class="tg" data-k="逃げ"     onclick="toggleKimari(this)">逃げ</div>
+          <div class="tg" data-k="差し"     onclick="toggleKimari(this)">差し</div>
+          <div class="tg" data-k="まくり"   onclick="toggleKimari(this)">まくり</div>
+          <div class="tg" data-k="まくり差し" onclick="toggleKimari(this)">まくり差し</div>
+          <div class="tg" data-k="抜き"     onclick="toggleKimari(this)">抜き</div>
+          <div class="tg" data-k="恵まれ"   onclick="toggleKimari(this)">恵まれ</div>
+        </div>
+        <div class="sub-note">未選択=全て対象</div>
+      </div>
+      <div class="form-row">
+        <label class="fl">レース番号</label>
+        <div class="tag-group" id="raceNoFilter">
+          <div class="tg on2" data-rn="all"  onclick="toggleRaceNo(this)">全R</div>
+          <div class="tg"     data-rn="1-6"  onclick="toggleRaceNo(this)">前半(1-6)</div>
+          <div class="tg"     data-rn="7-12" onclick="toggleRaceNo(this)">後半(7-12)</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="fl">1点あたり（円）<span class="range-val" id="unitYenVal"> 100</span></label>
+        <input type="range" id="unitYen" min="100" max="1000" step="100" value="100"
+          oninput="document.getElementById('unitYenVal').textContent=' '+this.value">
+      </div>
+    </div>
+
+    <div class="sb-section sb-csv">
+      <div class="sb-title">📝 メモ（結果に付記）</div>
+      <input type="text" id="csvMemo" placeholder="例：梅雨明け後、逃げ偏重で検証" maxlength="60">
+    </div>
+
+    <div class="sb-section sb-csv" style="border-bottom:none">
+      <button class="run-btn" onclick="runCsvVerification()">▶ 実績検証実行</button>
+    </div>
+
+  </div><!-- /sidebar -->
+
+  <!-- ─── CONTENT ─── -->
+  <div class="content" id="mainContent">
+    <div class="empty">
+      <div class="empty-icon">⚓</div>
+      <div class="empty-text">
+        <strong style="color:var(--cyan)">指標検証</strong>：会場CSVをアップしてRUN<br>
+        <strong style="color:var(--orange)">実績検証</strong>：タブ切替 → CSV → RUN<br>
+        <strong style="color:var(--gold)">検証履歴</strong>：蓄積した結果をExcelで一括ダウンロード<br>
+        <span style="font-size:11px;color:var(--dim);margin-top:8px;display:block">
+          CSV: <code style="color:var(--cyan)">*_results.csv</code> + <code style="color:var(--cyan)">*_payouts.csv</code>（複数月まとめて可）
+        </span>
+      </div>
+    </div>
+  </div>
+</div><!-- /app-body -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════════════════
+let currentMode = 'xlsx';
+
+// --- XLSX ---
+let DB = {};
+let S = {
+  venue:'', races:[], ticket:'3連単',
+  f1mode:'manual', f2mode:'manual', f3mode:'manual',
+  f1modes:['manual'], f2modes:['manual'], f3modes:['manual'],
+  f1sel:[], f2sel:[], f3sel:[],
+};
+
+// --- COMBO ---
+let CS = {
+  venues:[], races:[], ticket:'3連単',
+  f1mode:'manual', f2mode:'manual', f3mode:'manual',
+  f1modes:['manual'], f2modes:['manual'], f3modes:['manual'],
+  f1sel:[], f2sel:[], f3sel:[],
+};
+
+// --- CSV ---
+let csvPivot = null;
+let csvState = {
+  ticket:'３連単',
+  f1sel:[1,2,3,4,5,6], f2sel:[1,2,3,4,5,6], f3sel:[1,2,3,4,5,6],
+  venues:[], kimari:[], raceNoMode:'all',
+};
+let csvHitRaces = [];
+let csvHitPage  = 0;
+const CSV_PAGE = 50;
+
+// --- HISTORY ---
+let historyLog = [];   // array of result objects
+
+// ═══════════════════════════════════════════════════════
+// MODE SWITCH
+// ═══════════════════════════════════════════════════════
+function switchMode(mode) {
+  currentMode = mode;
+  ['xlsx','combo','csv','hist'].forEach(m => {
+    const tab = document.getElementById('tab'+m.charAt(0).toUpperCase()+m.slice(1));
+    if(tab) tab.classList.toggle('on', m===mode);
+  });
+  document.getElementById('xlsxZone').style.display = (mode==='xlsx'||mode==='combo') ? '' : 'none';
+  document.getElementById('csvZone').style.display  = (mode==='csv'||mode==='combo')  ? '' : 'none';
+  document.querySelectorAll('.sb-xlsx').forEach(el  => el.style.display = mode==='xlsx'  ? '' : 'none');
+  document.querySelectorAll('.sb-combo').forEach(el => el.style.display = mode==='combo' ? '' : 'none');
+  document.querySelectorAll('.sb-csv').forEach(el   => el.style.display = mode==='csv'   ? '' : 'none');
+
+  if (mode === 'hist') {
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('mainContent').style.gridColumn = '1 / -1';
+    renderHistory();
+  } else {
+    document.getElementById('sidebar').style.display = '';
+    document.getElementById('mainContent').style.gridColumn = '';
+    const mc = document.getElementById('mainContent');
+    // comboは結果を保持、それ以外はモード切替時にリセット
+    const isComboResult = mode==='combo' && window._comboRendered && !mc.innerHTML.includes('class="empty"');
+    if(!isComboResult){
+      mc.innerHTML = emptyHtml(mode);
+    }
+  }
+}
+
+function emptyHtml(mode) {
+  if (mode === 'xlsx')  return `<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Excelを読み込んで条件設定後「検証実行」を押してください</div></div>`;
+  if (mode === 'combo') return `<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text"><strong style="color:var(--cyan)">合算検証</strong>：ExcelとCSVを両方読み込んで<br>指標条件のまま実績データと照合します<br><span style="font-size:11px;color:var(--dim);margin-top:8px;display:block">Excel（指標）→ 会場・レース・買い目条件を設定<br>CSV（実績）→ 実際の着順・払戻データ</span></div></div>`;
+  return `<div class="empty"><div class="empty-icon">📈</div><div class="empty-text">CSVをアップロードして「実績検証実行」を押してください<br><span style="font-size:11px;color:var(--dim)">results + payouts CSV（複数月まとめて選択可）</span></div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// EXCEL LOADER
+// ═══════════════════════════════════════════════════════
+// ── 会場CSV読み込み（Excel置き換え版）──────────────────────────────
+function loadVenueCSV(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  document.getElementById('xlsxStatus').textContent = '読み込み中…';
+  DB = {};
+  let loaded = 0;
+  let skipped = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const venueName = file.name.replace(/\.csv$/i, '');
+        // ArrayBufferからUTF-8(BOM付き含む)を正しくデコード
+        const rawText = typeof e.target.result === 'string'
+          ? e.target.result
+          : new TextDecoder('utf-8').decode(e.target.result);
+        // まず縦持ち形式を試み、失敗したら横持ち形式を試みる
+        let venueData = parseVenueCSV(rawText, venueName);
+        if (!venueData) venueData = parseHorizontalCSV(rawText, venueName);
+        if (venueData) {
+          DB[venueName] = venueData;
+        } else {
+          skipped++;
+          console.warn('会場CSVとして認識できませんでした（実績CSVを誤って読み込んでいませんか？）:', file.name);
+        }
+      } catch(err) {
+        console.warn('CSV parse error:', file.name, err);
+        skipped++;
+      }
+      loaded++;
+      if (loaded === files.length) {
+        const venues = Object.keys(DB).sort();
+        if (!venues.length) {
+          document.getElementById('xlsxStatus').textContent = skipped ? `⚠ 会場CSVが読み込めませんでした（${skipped}件スキップ）` : 'エラー: データなし';
+          return;
+        }
+        const sel = document.getElementById('venueSelect');
+        sel.innerHTML = '<option value="">-- 会場を選択 --</option>';
+        venues.forEach(v => {
+          const o = document.createElement('option');
+          o.value = v; o.textContent = v; sel.appendChild(o);
+        });
+        buildComboVenueFilter(venues);
+        const skipNote = skipped ? ` (${skipped}件スキップ)` : '';
+        document.getElementById('xlsxStatus').textContent = `✓ ${venues.length}会場${skipNote}`;
+        document.getElementById('xlsxStatus').className = 'upload-status loaded';
+      }
+    };
+    // UTF-8 BOM付きCSVも確実に対応するためArrayBufferで読む
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ── 新形式CSV（横持ち: 1行=1艇番）のパーサー ──────────────────────────
+// 列: 日付,会場,レース番号,枠番,選手名,オリジナル1着率,イン逃げ2着率,3着指数,...
+function parseHorizontalCSV(text, filenameStem) {
+  const clean = text.replace(/^\uFEFF/, '').replace(/^ï»¿/, '').replace(/\r/g, '');
+  const lines = clean.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return null;
+
+  // PapaParseがあれば使う（クォート対応）、なければ単純split
+  let rows;
+  if (typeof Papa !== 'undefined') {
+    const parsed = Papa.parse(clean, { header: true, skipEmptyLines: true, dynamicTyping: false });
+    rows = parsed.data;
+  } else {
+    const headers = lines[0].split(',').map(h => h.trim());
+    rows = lines.slice(1).map(l => {
+      const vals = l.split(',');
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim(); });
+      return obj;
+    });
+  }
+
+  if (!rows.length) return null;
+
+  // 必須列チェック
+  const firstRow = rows[0];
+  if (!('レース番号' in firstRow) || !('枠番' in firstRow)) return null;
+
+  const colMap = {
+    'オリジナル1着率(%)':   r => parseFloat(r['オリジナル1着率']) || 0,
+    '2着優位度(%)[相対・イン逃げ時]': r => parseFloat(r['イン逃げ2着率']) || 0,
+    '3着指数':              r => parseInt(r['3着指数']) || 0,
+    '①逃げ':               r => (r['イン逃げ評価'] || '').replace(/[⚠️🚨]/g, '').trim(),
+    '②相性':               r => (r['相性評価'] || '').replace(/[⚠️🚨]/g, '').trim(),
+    '③機力':               r => (r['機力評価'] || '').trim(),
+    '④展開':               r => (r['展開評価'] || '').replace(/[⚠️🚨]/g, '').trim(),
+    '⑤S安定':              r => (r['S安定評価'] || '').replace(/[⚠️🚨]/g, '').trim(),
+    '逃げ%':               r => parseFloat(r['オリジナル1着率']) || 0,
+    '差し%':               r => { const v = r['決まり手傾向'] || ''; return v.includes('差') ? 30 : 0; },
+    'まくり%':             r => { const v = r['決まり手傾向'] || ''; return v.includes('まくり') && !v.includes('差') ? 30 : 0; },
+    'まくり差し%':          r => { const v = r['決まり手傾向'] || ''; return v.includes('まくり差し') ? 30 : 0; },
+    '攻め記号':             r => (r['相性評価'] || r['展開評価'] || '').replace(/[⚠️🚨]/g, '').trim(),
+    '決まり手傾向':          r => (r['決まり手傾向'] || '').trim(),
+  };
+
+  // 日付ごとにグループ化（最新日付を優先）
+  const dates = [...new Set(rows.map(r => r['日付']).filter(Boolean))].sort();
+  const targetDate = dates[dates.length - 1] || '';
+  const dateRows = rows.filter(r => !r['日付'] || r['日付'] === targetDate);
+
+  // レース番号一覧
+  const raceNums = [...new Set(dateRows.map(r => parseInt(r['レース番号'])).filter(n => n >= 1 && n <= 12))].sort((a,b)=>a-b);
+  if (!raceNums.length) return null;
+
+  const raceLabels = raceNums.map(n => n + 'R');
+  const raceTimes = raceNums.map(() => '');
+
+  // metrics[指標名][艇番][レースindex] = 値
+  const metrics = {};
+  Object.keys(colMap).forEach(key => { metrics[key] = {1:[],2:[],3:[],4:[],5:[],6:[]}; });
+
+  raceNums.forEach((rno, ri) => {
+    const raceRows = dateRows.filter(r => parseInt(r['レース番号']) === rno);
+    for (let b = 1; b <= 6; b++) {
+      const boatRow = raceRows.find(r => parseInt(r['枠番']) === b || parseInt(r['進入コース']) === b);
+      Object.entries(colMap).forEach(([key, fn]) => {
+        if (!metrics[key][b]) metrics[key][b] = [];
+        metrics[key][b][ri] = boatRow ? String(fn(boatRow)) : null;
+      });
+    }
+  });
+
+  return { races: raceLabels, times: raceTimes, metrics, date: targetDate, isHorizontal: true, allDates: dates };
+}
+
+
+function parseVenueCSV(text, filenameStem) {
+  // BOM除去（UTF-8 BOM: \uFEFF、文字化けBOM: ï»¿、その他バリアント）
+  const clean = text
+    .replace(/^\uFEFF/, '')
+    .replace(/^\xEF\xBB\xBF/, '')
+    .replace(/^ï»¿/, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+  const lines = clean.split('\n').filter(l => l.trim());
+  if (lines.length < 2) return null;
+  const hdr = lines[0].split(',');
+
+  // 新形式: 日付,会場,分類,項目,艇番,1R...
+  // 旧形式: 分類,項目,艇番,1R...
+  const hasDateCol = hdr[0].trim() === '日付';
+  const offset = hasDateCol ? 2 : 0;
+
+  const raceLabels = [], raceTimes = [];
+  for (let c = 3 + offset; c < hdr.length; c++) {
+    const cell = hdr[c].trim().replace(/\r/g,'');
+    if (!cell) continue;
+    const parts = cell.split(' ');
+    const label = parts[0];
+    // NRパターン（1R〜12R）のみ採用、上限12
+    if (!/^\d{1,2}R$/.test(label)) continue;
+    if (raceLabels.length >= 12) break;
+    raceLabels.push(label);
+    raceTimes.push(parts[1] || '');
+  }
+
+  // レースラベルが1件もなければ会場CSVではないと判断
+  if (raceLabels.length === 0) return null;
+
+  const metrics = {};
+  let curItem = null;
+  let date = '';
+
+  for (let r = 1; r < lines.length; r++) {
+    const cols = lines[r].split(',');
+    if (hasDateCol && cols[0] && !date) date = cols[0].trim();
+    const item = cols[1 + offset] ? cols[1 + offset].trim() : null;
+    const boat = cols[2 + offset] ? cols[2 + offset].trim() : null;
+    const vals = cols.slice(3 + offset, 3 + offset + raceLabels.length).map(v => v === '' ? null : v.trim().replace(/\r/g,''));
+    if (item) curItem = item;
+    if (!curItem) continue;
+    if (!['1','2','3','4','5','6'].includes(boat)) continue;
+    if (!metrics[curItem]) metrics[curItem] = {1:[],2:[],3:[],4:[],5:[],6:[]};
+    metrics[curItem][parseInt(boat)] = vals;
+  }
+  return { races: raceLabels, times: raceTimes, metrics, date };
+}
+
+// 互換性のためのエイリアス
+function loadExcel(input) { loadVenueCSV(input); }
+function parseWorkbook() { return DB; }
+
+// ═══════════════════════════════════════════════════════
+// CSV LOADER
+// ═══════════════════════════════════════════════════════
+function loadCSV(input) {
+  const files = Array.from(input.files); if (!files.length) return;
+  document.getElementById('csvStatus').textContent = '読み込み中…';
+  let resultRows=[], payoutRows=[], pending=files.length;
+  files.forEach(f => {
+    Papa.parse(f, {
+      header:true, skipEmptyLines:true,
+      complete: res => {
+        const cols = res.meta.fields||[];
+        if (cols.includes('着順')) resultRows = resultRows.concat(res.data);
+        else if (cols.includes('券種')) {
+          res.data.forEach(r=>{ if(r['組み合わせ']) r['組み合わせ']=r['組み合わせ'].replace(/'/g,''); });
+          payoutRows = payoutRows.concat(res.data);
+        }
+        if (--pending===0) buildCsvPivot(resultRows, payoutRows);
+      }
+    });
+  });
+}
+
+function buildCsvPivot(results, payouts) {
+  const key = r => `${r['日付']}__${r['会場名']}__${r['レース番号']}`;
+  const raceMap = {};
+  results.forEach(r => {
+    const ord=parseInt(r['着順']); if(ord>3) return;
+    const k=key(r);
+    if (!raceMap[k]) raceMap[k]={日付:r['日付'],会場名:r['会場名'],レース番号:parseInt(r['レース番号']),決まり手:null,天候:null,風速:null,波高:null};
+    raceMap[k][`${ord}着コース`]=parseInt(r['進入コース']);
+    // 艇番を取得（'艇番'列がある場合）
+    const teiban = r['艇番']!=null ? parseInt(r['艇番']) : null;
+    raceMap[k][`${ord}着艇番`] = teiban;
+    if(ord===1){raceMap[k].決まり手=r['決まり手'];raceMap[k].天候=r['天候'];raceMap[k].風速=parseFloat(r['風速'])||null;raceMap[k].波高=parseFloat(r['波高'])||null;}
+  });
+  const ticketCols={'３連単':'3連単払戻','３連複':'3連複払戻','２連単':'2連単払戻','単勝':'単勝払戻'};
+  const payMap={};
+  payouts.forEach(r=>{
+    const k=key(r); if(!payMap[k]) payMap[k]={};
+    const col=ticketCols[r['券種']];
+    if(col){payMap[k][col]=parseInt(r['払戻金'])||0;payMap[k][col.replace('払戻','人気')]=parseInt(r['人気'])||null;}
+  });
+  csvPivot = Object.values(raceMap).map(r=>({...r,...(payMap[key(r)]||{})}));
+
+  // set date range defaults
+  const dates = csvPivot.map(r=>r['日付']).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('csvDateFrom').value = dates[0];
+    document.getElementById('csvDateTo').value   = dates[dates.length-1];
+    document.getElementById('comboDateFrom').value = dates[0];
+    document.getElementById('comboDateTo').value   = dates[dates.length-1];
+  }
+
+  // combo会場フィルタをExcel会場ベースで再構築（既にExcelが読まれていれば）
+  if(Object.keys(DB).length) buildComboVenueFilter(Object.keys(DB));
+
+  const venues = [...new Set(csvPivot.map(r=>r['会場名']))].sort();
+  csvState.venues=[];
+  const vf=document.getElementById('venueFilter'); vf.innerHTML='';
+  venues.forEach(v=>{
+    const d=document.createElement('div'); d.className='tg'; d.dataset.v=v; d.textContent=v;
+    d.onclick=()=>{d.classList.toggle('on');csvState.venues=[...document.querySelectorAll('#venueFilter .tg.on')].map(x=>x.dataset.v);};
+    vf.appendChild(d);
+  });
+  document.getElementById('csvStatus').textContent=`✓ ${csvPivot.length.toLocaleString()}レース`;
+  document.getElementById('csvStatus').className='upload-status loaded';
+}
+
+// ═══════════════════════════════════════════════════════
+// CSV SIDEBAR CONTROLS
+// ═══════════════════════════════════════════════════════
+function initCsvBoatBtns() {
+  ['f1','f2','f3'].forEach(k=>{
+    const el=document.getElementById(`csv_${k}boats`); el.innerHTML='';
+    for(let b=1;b<=6;b++){
+      const d=document.createElement('div'); d.className='bb sel'; d.dataset.boat=b; d.textContent=b;
+      d.onclick=()=>{const arr=csvState[k+'sel'];const pos=arr.indexOf(b);if(pos===-1){arr.push(b);d.classList.add('sel');}else{arr.splice(pos,1);d.classList.remove('sel');}};
+      el.appendChild(d);
+    }
+  });
+}
+function csvAllToggle(k){
+  const arr=csvState[k+'sel'];const btns=document.querySelectorAll(`#csv_${k}boats .bb`);
+  if(arr.length===6){csvState[k+'sel']=[];btns.forEach(b=>b.classList.remove('sel'));}
+  else{csvState[k+'sel']=[1,2,3,4,5,6];btns.forEach(b=>b.classList.add('sel'));}
+}
+function setCsvTicket(t,el){
+  csvState.ticket=t;
+  el.closest('.pill-tabs').querySelectorAll('.pt').forEach(e=>e.classList.remove('on')); el.classList.add('on');
+  document.getElementById('csv_sec2').style.display=['３連単','３連複','２連単'].includes(t)?'':'none';
+  document.getElementById('csv_sec3').style.display=t==='３連単'?'':'none';
+}
+function toggleKimari(el){el.classList.toggle('on');csvState.kimari=[...document.querySelectorAll('#kimariFilter .tg.on')].map(x=>x.dataset.k);}
+function toggleRaceNo(el){
+  document.querySelectorAll('#raceNoFilter .tg').forEach(e=>{e.classList.remove('on');e.style.cssText='';});
+  el.classList.add('on'); el.style.background='rgba(0,212,255,.12)'; el.style.borderColor='var(--cyan)'; el.style.color='var(--cyan)';
+  csvState.raceNoMode=el.dataset.rn;
+}
+
+// ═══════════════════════════════════════════════════════
+// CSV VERIFICATION ENGINE
+// ═══════════════════════════════════════════════════════
+function countFormationBets(f1,f2,f3,ticket){
+  if(ticket==='単勝') return f1.length;
+  if(ticket==='２連単'){let c=0;for(const a of f1)for(const b of f2)if(a!==b)c++;return c;}
+  if(ticket==='３連単'){let c=0;for(const a of f1)for(const b of f2)for(const cc of f3)if(a!==b&&b!==cc&&a!==cc)c++;return c;}
+  if(ticket==='３連複'){const s=new Set();for(const a of f1)for(const b of f2)for(const cc of f3)if(a!==b&&b!==cc&&a!==cc)s.add([a,b,cc].sort().join('-'));return s.size;}
+  return 0;
+}
+
+function runCsvVerification(){
+  if(!csvPivot||!csvPivot.length){alert('CSVを読み込んでください');return;}
+  const{ticket,f1sel,f2sel,f3sel,venues,kimari,raceNoMode}=csvState;
+  const unitYen=parseInt(document.getElementById('unitYen').value)||100;
+  const dateFrom=document.getElementById('csvDateFrom').value;
+  const dateTo  =document.getElementById('csvDateTo').value;
+  const memo    =document.getElementById('csvMemo').value.trim();
+
+  let df=[...csvPivot];
+  // ── date filter ──
+  if(dateFrom) df=df.filter(r=>r['日付']>=dateFrom);
+  if(dateTo)   df=df.filter(r=>r['日付']<=dateTo);
+  if(venues.length) df=df.filter(r=>venues.includes(r['会場名']));
+  if(kimari.length) df=df.filter(r=>kimari.includes(r['決まり手']));
+  if(raceNoMode==='1-6')  df=df.filter(r=>r['レース番号']<=6);
+  if(raceNoMode==='7-12') df=df.filter(r=>r['レース番号']>=7);
+
+  if(!df.length){alert('条件に合うレースがありません');return;}
+
+  const colMap={'３連単':'3連単払戻','３連複':'3連複払戻','２連単':'2連単払戻','単勝':'単勝払戻'};
+  const payCol=colMap[ticket];
+
+  // hit
+  const hits=df.filter(r=>{
+    const ok1=!f1sel.length||f1sel.includes(r['1着コース']);
+    const ok2=!f2sel.length||(['３連単','３連複','２連単'].includes(ticket)?f2sel.includes(r['2着コース']):true);
+    const ok3=!f3sel.length||(ticket==='３連単'?f3sel.includes(r['3着コース']):true);
+    if(ticket==='単勝') return ok1;
+    if(ticket==='２連単') return ok1&&ok2;
+    return ok1&&ok2&&ok3;
+  });
+
+  const totalRaces=df.length;
+  const hitCount=hits.length;
+  const betsPerRace=countFormationBets(
+    f1sel.length?f1sel:[1,2,3,4,5,6],
+    f2sel.length?f2sel:[1,2,3,4,5,6],
+    f3sel.length?f3sel:[1,2,3,4,5,6],
+    ticket
+  );
+  const totalCost=betsPerRace*totalRaces*unitYen;
+  const totalPayout=hits.reduce((s,r)=>{const p=r[payCol];return s+(p?parseInt(p)*(unitYen/100):0);},0);
+  const roi=totalCost>0?(totalPayout/totalCost*100).toFixed(1):0;
+  const profit=totalPayout-totalCost;
+
+  // dist
+  const bins=[0,1000,2000,3000,5000,10000,30000,Infinity];
+  const binLabels=['~1000','~2000','~3000','~5000','~1万','~3万','3万+'];
+  const distCounts=Array(7).fill(0);
+  hits.forEach(r=>{const p=parseInt(r[payCol])||0;for(let i=0;i<bins.length-1;i++){if(p>=bins[i]&&p<bins[i+1]){distCounts[i]++;break;}}});
+
+  csvHitRaces=hits; csvHitPage=0;
+
+  const res={
+    type:'csv', totalRaces, hitCount, betsPerRace, totalCost, totalPayout,
+    roi, profit, unitYen, payCol, ticket,
+    binLabels, distCounts,
+    dateFrom:dateFrom||'—', dateTo:dateTo||'—',
+    venues:venues.length?venues.join('・'):'全会場',
+    kimari:kimari.length?kimari.join('・'):'全決まり手',
+    raceNoMode, memo,
+    f1:f1sel.join(','), f2:f2sel.join(','), f3:f3sel.join(','),
+    ts: new Date().toLocaleString('ja-JP'),
+  };
+
+  // save to history
+  historyLog.push(res);
+  document.getElementById('histCount').textContent = historyLog.length;
+
+  renderCsvResults(res);
+}
+
+function renderCsvResults(r){
+  const hitRate=r.totalRaces>0?(r.hitCount/r.totalRaces*100).toFixed(1):0;
+  const avgPayout=r.hitCount>0?Math.round(r.totalPayout/r.hitCount):0;
+  const hitClass=parseFloat(hitRate)>=30?'pos':parseFloat(hitRate)>=15?'':'neg';
+  const roiClass=parseFloat(r.roi)>=100?'pos':parseFloat(r.roi)>=75?'':'neg';
+  const profitClass=r.profit>=0?'pos':'neg';
+  const maxDist=Math.max(...r.distCounts,1);
+  const distBars=r.binLabels.map((lbl,i)=>{
+    const pct=Math.round(r.distCounts[i]/maxDist*100);
+    return `<div class="chart-bar-col">
+      <div class="chart-val">${r.distCounts[i]||''}</div>
+      <div class="chart-bar" style="height:${pct}%"></div>
+      <div class="chart-label">${lbl}</div>
+    </div>`;
+  }).join('');
+
+  const totalPages=Math.ceil(csvHitRaces.length/CSV_PAGE);
+  const pageSlice=csvHitRaces.slice(0,CSV_PAGE);
+
+  document.getElementById('mainContent').innerHTML=`
+    <div class="result-area">
+      <div class="panel">
+        <div class="ph"><div class="ph-title">📋 検証条件</div></div>
+        <div class="pb" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <span class="ctag">🎟 ${r.ticket}</span>
+          <span class="ctag">📅 ${r.dateFrom} ～ ${r.dateTo}</span>
+          <span class="ctag">🏟 ${r.venues}</span>
+          <span class="ctag">🏁 ${r.kimari}</span>
+          <span class="ctag">R: ${r.raceNoMode==='all'?'全R':r.raceNoMode}</span>
+          <span class="ctag">💴 ${r.unitYen}円/点</span>
+          <span class="ctag">1着: ${r.f1||'全'}</span>
+          ${['３連単','３連複','２連単'].includes(r.ticket)?`<span class="ctag">2着: ${r.f2||'全'}</span>`:''}
+          ${r.ticket==='３連単'?`<span class="ctag">3着: ${r.f3||'全'}</span>`:''}
+          ${r.memo?`<span class="ctag" style="border-color:rgba(255,197,66,.3);color:var(--gold)">📝 ${r.memo}</span>`:''}
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat">
+          <div class="stat-label">対象レース</div>
+          <div class="stat-value">${r.totalRaces.toLocaleString()}</div>
+          <div class="stat-sub">R</div>
+        </div>
+        <div class="stat ${hitClass}">
+          <div class="stat-label">的中数 / 的中率</div>
+          <div class="stat-value">${r.hitCount.toLocaleString()}</div>
+          <div class="stat-sub">${hitRate}%（${r.betsPerRace}点/R）</div>
+        </div>
+        <div class="stat ${roiClass}">
+          <div class="stat-label">ROI</div>
+          <div class="stat-value">${r.roi}%</div>
+          <div class="stat-sub">平均払戻 ¥${avgPayout.toLocaleString()}</div>
+        </div>
+        <div class="stat ${profitClass}">
+          <div class="stat-label">損益</div>
+          <div class="stat-value" style="font-size:16px">${r.profit>=0?'+':''}¥${r.profit.toLocaleString()}</div>
+          <div class="stat-sub">投資¥${r.totalCost.toLocaleString()} 払戻¥${r.totalPayout.toLocaleString()}</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph"><div class="ph-title">📊 払戻分布</div></div>
+        <div class="chart-wrap">
+          <div class="chart-title">的中時 払戻金額分布（件数）</div>
+          <div class="chart-bars">${distBars}</div>
+          <div class="chart-axis"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="ph">
+          <div class="ph-title">🏁 的中レース一覧（${r.hitCount.toLocaleString()}件）</div>
+          <button class="act-btn" style="margin-left:auto" onclick="exportHitCsv()">📥 CSV出力</button>
+        </div>
+        <div style="padding:0">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th>日付</th><th>会場</th><th>R</th>
+                <th>1着</th><th>2着</th><th>3着</th>
+                <th>変更</th><th>決まり手</th><th>天候</th><th>風速</th>
+                <th style="text-align:right">払戻</th><th>人気</th>
+              </tr></thead>
+              <tbody id="hitTbody">${renderHitRows(pageSlice, r.payCol)}</tbody>
+            </table>
+          </div>
+          <div class="pager" id="csvPager">
+            <button class="pg-btn" id="pgPrev" onclick="csvPage(-1)" disabled>← 前</button>
+            <span class="pg-info" id="pgInfo">1 / ${totalPages||1}</span>
+            <button class="pg-btn" id="pgNext" onclick="csvPage(1)" ${totalPages<=1?'disabled':''}>次 →</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderHitRows(rows, payCol){
+  const popKey=payCol.replace('払戻','人気');
+  return rows.map(r=>{
+    const pay=parseInt(r[payCol])||0;
+    const pc=pay>=10000?'gold':pay>=3000?'pos':'';
+    const c1=r['1着コース'],c2=r['2着コース'],c3=r['3着コース'];
+    const t1=r['1着艇番'],t2=r['2着艇番'],t3=r['3着艇番'];
+    // コース≠艇番 の場合は進入変更あり
+    const chg1 = t1!=null && t1!==c1;
+    const chg2 = t2!=null && c2!=null && t2!==c2;
+    const chg3 = t3!=null && c3!=null && t3!==c3;
+    const hasChg = chg1||chg2||chg3;
+
+    // 着順カラム: 艇番(コース) 形式、変更があれば強調
+    function cell(teiban, course, changed){
+      if(course==null||course==='-') return '<td>-</td>';
+      const teiStr = teiban!=null ? `<span class="bc b${teiban}" title="艇番${teiban}">${teiban}</span>` : '';
+      const courseStr = teiban!=null && teiban!==course
+        ? `<span style="font-size:9px;color:var(--orange)">(C${course})</span>`
+        : `<span class="bc b${course}" title="コース${course}">${course}</span>`;
+      return `<td>${teiStr||courseStr}${teiban!=null&&teiban!==course?courseStr:''}</td>`;
+    }
+
+    return `<tr>
+      <td>${r['日付']||'-'}</td>
+      <td>${r['会場名']||'-'}</td>
+      <td class="num">${r['レース番号']}R</td>
+      ${cell(t1,c1,chg1)}
+      ${c2!=null?cell(t2,c2,chg2):'<td>-</td>'}
+      ${c3!=null?cell(t3,c3,chg3):'<td>-</td>'}
+      <td>${hasChg?'<span class="tag-chg">進入変更有</span>':''}</td>
+      <td>${r['決まり手']||'-'}</td>
+      <td>${r['天候']||'-'}</td>
+      <td class="num">${r['風速']!=null?r['風速']+'m':'-'}</td>
+      <td class="num ${pc}">¥${pay.toLocaleString()}</td>
+      <td class="num">${r[popKey]||'-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function csvPage(dir){
+  const total=Math.ceil(csvHitRaces.length/CSV_PAGE);
+  csvHitPage=Math.max(0,Math.min(total-1,csvHitPage+dir));
+  const payCol={'３連単':'3連単払戻','３連複':'3連複払戻','２連単':'2連単払戻','単勝':'単勝払戻'}[csvState.ticket];
+  const sl=csvHitRaces.slice(csvHitPage*CSV_PAGE,(csvHitPage+1)*CSV_PAGE);
+  document.getElementById('hitTbody').innerHTML=renderHitRows(sl,payCol);
+  document.getElementById('pgPrev').disabled=csvHitPage===0;
+  document.getElementById('pgNext').disabled=csvHitPage>=total-1;
+  document.getElementById('pgInfo').textContent=`${csvHitPage+1} / ${total}`;
+}
+
+function exportHitCsv(){
+  if(!csvHitRaces.length) return;
+  const cols=['日付','会場名','レース番号','1着コース','2着コース','3着コース','決まり手','天候','風速','波高','3連単払戻','3連単人気'];
+  const blob=new Blob(['\uFEFF'+[cols.join(','),...csvHitRaces.map(r=>cols.map(c=>r[c]??'').join(','))].join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hit_races.csv';a.click();
+}
+
+// ═══════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════
+function renderHistory(){
+  if(!historyLog.length){
+    document.getElementById('mainContent').innerHTML=`
+      <div class="empty"><div class="empty-icon">📋</div>
+      <div class="empty-text">まだ検証結果がありません<br>実績検証を実行すると自動的に蓄積されます</div></div>`;
+    return;
+  }
+
+  const rows=historyLog.map((r,i)=>{
+    const hitRate=r.totalRaces>0?(r.hitCount/r.totalRaces*100).toFixed(1):0;
+    const roiClass=parseFloat(r.roi)>=100?'pos':parseFloat(r.roi)>=75?'':'neg';
+    const profitClass=r.profit>=0?'pos':'neg';
+    return `<tr>
+      <td class="num">${i+1}</td>
+      <td>${r.ts}</td>
+      <td><span class="ctag" style="font-size:9px">${r.ticket}</span></td>
+      <td style="font-size:11px">${r.dateFrom} ～ ${r.dateTo}</td>
+      <td style="font-size:11px">${r.venues}</td>
+      <td style="font-size:11px">${r.kimari}</td>
+      <td class="num">${r.betsPerRace}点</td>
+      <td class="num">${r.totalRaces.toLocaleString()}</td>
+      <td class="num">${r.hitCount.toLocaleString()} (${hitRate}%)</td>
+      <td class="num ${roiClass}">${r.roi}%</td>
+      <td class="num ${profitClass}">${r.profit>=0?'+':''}¥${r.profit.toLocaleString()}</td>
+      <td style="font-size:10px;color:var(--dim);max-width:120px;overflow:hidden;text-overflow:ellipsis">${r.memo||''}</td>
+      <td><button class="act-btn" onclick="deleteHistory(${i})" style="padding:3px 7px;font-size:10px">削除</button></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('mainContent').innerHTML=`
+    <div style="padding:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan)">📋 検証履歴 — ${historyLog.length}件</span>
+        <button class="act-btn gold" onclick="exportHistoryXlsx()" style="margin-left:auto">📥 Excelに書き出す</button>
+        <button class="act-btn" onclick="clearHistory()">🗑 全削除</button>
+      </div>
+      <div class="panel hist-tbl">
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>#</th><th>実行日時</th><th>券種</th><th>期間</th><th>会場</th><th>決まり手</th>
+              <th>点数/R</th><th>対象R</th><th>的中</th><th>ROI</th><th>損益</th><th>メモ</th><th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function deleteHistory(i){
+  if(!confirm('この記録を削除しますか？')) return;
+  historyLog.splice(i,1);
+  document.getElementById('histCount').textContent=historyLog.length;
+  renderHistory();
+}
+
+function clearHistory(){
+  if(!confirm(`全${historyLog.length}件の履歴を削除しますか？`)) return;
+  historyLog=[];
+  document.getElementById('histCount').textContent=0;
+  renderHistory();
+}
+
+function exportHistoryXlsx(){
+  if(!historyLog.length){alert('履歴がありません');return;}
+
+  const wb=XLSX.utils.book_new();
+
+  // ── Sheet1: サマリー ──
+  const summaryData=[
+    ['検証ID','実行日時','券種','期間(開始)','期間(終了)','会場','決まり手','Rフィルタ','1着コース','2着コース','3着コース','1点金額(円)',
+     '対象R数','的中数','的中率(%)','点数/R','総投資(円)','総払戻(円)','ROI(%)','損益(円)','平均払戻(円)','メモ'],
+  ];
+  historyLog.forEach((r,i)=>{
+    const hitRate=r.totalRaces>0?(r.hitCount/r.totalRaces*100).toFixed(1):0;
+    const avgPay=r.hitCount>0?Math.round(r.totalPayout/r.hitCount):0;
+    summaryData.push([
+      i+1, r.ts, r.ticket, r.dateFrom, r.dateTo, r.venues, r.kimari, r.raceNoMode,
+      r.f1||'全', r.f2||'全', r.f3||'全', r.unitYen,
+      r.totalRaces, r.hitCount, parseFloat(hitRate), r.betsPerRace,
+      r.totalCost, r.totalPayout, parseFloat(r.roi), r.profit, avgPay, r.memo||''
+    ]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(summaryData);
+  // column widths
+  ws1['!cols']=[{wch:6},{wch:18},{wch:8},{wch:12},{wch:12},{wch:20},{wch:16},{wch:10},
+    {wch:10},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:10},{wch:8},
+    {wch:12},{wch:12},{wch:8},{wch:12},{wch:12},{wch:30}];
+  XLSX.utils.book_append_sheet(wb, ws1, '検証サマリー');
+
+  // ── Sheet per ticket-type: ROI推移 ──
+  // group by ticket
+  const byTicket={};
+  historyLog.forEach((r,i)=>{
+    if(!byTicket[r.ticket]) byTicket[r.ticket]=[];
+    byTicket[r.ticket].push({...r, idx:i+1});
+  });
+  Object.entries(byTicket).forEach(([ticket, recs])=>{
+    const data=[['#','日付範囲','ROI(%)','損益(円)','的中率(%)','点数/R','会場','決まり手','メモ']];
+    recs.forEach(r=>{
+      const hr=r.totalRaces>0?(r.hitCount/r.totalRaces*100).toFixed(1):0;
+      data.push([r.idx,`${r.dateFrom}~${r.dateTo}`,parseFloat(r.roi),r.profit,parseFloat(hr),r.betsPerRace,r.venues,r.kimari,r.memo||'']);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:5},{wch:24},{wch:8},{wch:12},{wch:10},{wch:8},{wch:20},{wch:16},{wch:30}];
+    const sheetName=(ticket+'_推移').slice(0,31);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  });
+
+  const fname=`boat_history_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
+}
+
+// ═══════════════════════════════════════════════════════
+// XLSX SIDEBAR CONTROLS
+// ═══════════════════════════════════════════════════════
+function init(){
+  ['f1','f2','f3'].forEach(k=>{
+    const el=document.getElementById(k+'boats'); el.innerHTML='';
+    for(let b=1;b<=6;b++){
+      const d=document.createElement('div'); d.className='bb'; d.dataset.boat=b; d.textContent=b;
+      d.onclick=()=>toggleBoat(k,b,d); el.appendChild(d);
+    }
+    // combo
+    const el2=document.getElementById('combo_'+k+'boats'); el2.innerHTML='';
+    for(let b=1;b<=6;b++){
+      const d=document.createElement('div'); d.className='bb'; d.dataset.boat=b; d.textContent=b;
+      d.onclick=()=>comboToggleBoat(k,b,d); el2.appendChild(d);
+    }
+  });
+  initCsvBoatBtns();
+  const firstRN=document.querySelector('#raceNoFilter .tg');
+  if(firstRN){firstRN.style.background='rgba(0,212,255,.12)';firstRN.style.borderColor='var(--cyan)';firstRN.style.color='var(--cyan)';}
+}
+
+function onVenueChange(){
+  S.venue=document.getElementById('venueSelect').value;
+  buildRaceGrid(); refreshAutoInfo();
+  if(S.venue) showDataPreview();
+}
+function buildRaceGrid(){
+  const grid=document.getElementById('raceGrid'); grid.innerHTML='';
+  if(!S.venue||!DB[S.venue]) return;
+  const vd=DB[S.venue]; S.races=vd.races.map((_,i)=>i);
+  vd.races.forEach((r,i)=>{
+    const d=document.createElement('div'); d.className='rb sel'; d.dataset.i=i;
+    d.innerHTML=`${r}<br><span style="font-size:9px">${vd.times[i]||''}</span>`;
+    d.onclick=()=>toggleRace(i,d); grid.appendChild(d);
+  });
+}
+function toggleRace(i,el){const pos=S.races.indexOf(i);if(pos===-1){S.races.push(i);el.classList.add('sel');}else{S.races.splice(pos,1);el.classList.remove('sel');}refreshAutoInfo();}
+function toggleBoat(key,b,el){const arr=S[key+'sel'];const pos=arr.indexOf(b);if(pos===-1){arr.push(b);el.classList.add('sel');}else{arr.splice(pos,1);el.classList.remove('sel');}}
+function allToggle(key){
+  const arr=S[key+'sel'];const btns=document.querySelectorAll('#'+key+'boats .bb');
+  if(arr.length===6){S[key+'sel']=[];btns.forEach(b=>b.classList.remove('sel'));}
+  else{S[key+'sel']=[1,2,3,4,5,6];btns.forEach(b=>b.classList.add('sel'));}
+}
+function setTicket(t,el){
+  S.ticket=t;
+  el.closest('.pill-tabs').querySelectorAll('.pt').forEach(e=>e.classList.remove('on')); el.classList.add('on');
+  document.getElementById('sec2').style.display=['3連単','3連複','2連単'].includes(t)?'':'none';
+  document.getElementById('sec3').style.display=t==='3連単'?'':'none';
+}
+// 印選択（単一選択ラジオ的挙動）
+function selectMarkRank(groupId, rank){
+  document.querySelectorAll('#'+groupId+' .tg').forEach(el=>{
+    el.classList.toggle('on', parseInt(el.dataset.rank)===rank);
+  });
+  refreshAutoInfo(); refreshComboAutoInfo();
+}
+function getSelectedMarkRank(groupId, defaultRank){
+  const el=document.querySelector('#'+groupId+' .tg.on');
+  return el ? parseInt(el.dataset.rank) : defaultRank;
+}
+// 印文字列から純粋な評価記号（◎○▲△×）を抽出
+function cleanMark(v){
+  if(!v) return '';
+  const s=String(v).trim();
+  // 先頭の評価記号だけ拾う（絵文字・警告符号を無視）
+  const m=s.match(/^([◎○▲△×])/);
+  return m?m[1]:s.charAt(0);
+}
+
+// 新モード用サブコントロールの表示IDリスト
+const F1_SUB_CTRLS = ['rateThreshCtrl','atkMarkCtrl','aiMarkCtrl','mpMarkCtrl','tenMarkCtrl','stMarkCtrl','kimariBoatCtrl'];
+
+function setMode(key,mode,el){
+  const modes = S[key+'modes'];
+  if(mode === 'manual'){
+    // manual選択時は他を全解除
+    S[key+'modes'] = ['manual'];
+    el.closest('.pill-tabs').querySelectorAll('.pt').forEach(e=>{
+      e.classList.remove('on'); e.classList.remove('multi-on');
+    });
+    el.classList.add('on');
+  } else {
+    // 非manual: manualを外してトグル
+    const manualBtn = el.closest('.pill-tabs').querySelector('[data-mode="manual"]');
+    if(manualBtn){ manualBtn.classList.remove('on'); manualBtn.classList.remove('multi-on'); }
+    S[key+'modes'] = modes.filter(m=>m!=='manual');
+    const idx = S[key+'modes'].indexOf(mode);
+    if(idx === -1){
+      S[key+'modes'].push(mode);
+      el.classList.add('multi-on');
+    } else {
+      S[key+'modes'].splice(idx,1);
+      el.classList.remove('multi-on');
+    }
+    if(!S[key+'modes'].length){
+      // 全解除→manualに戻す
+      S[key+'modes'] = ['manual'];
+      if(manualBtn){ manualBtn.classList.add('on'); }
+    }
+  }
+  S[key+'mode'] = S[key+'modes'][0]; // 後方互換
+  const isManual = S[key+'modes'].includes('manual');
+  document.getElementById(key+'_manual').style.display=isManual?'':'none';
+  document.getElementById(key+'_auto').style.display=isManual?'none':'';
+  // サブコントロール（f1のみ）: アクティブなモードに応じて表示
+  if(key==='f1'){
+    F1_SUB_CTRLS.forEach(ctrl=>{
+      const el2=document.getElementById('f1_'+ctrl);
+      if(el2) el2.style.display=S.f1modes.includes(ctrl.replace('Ctrl',''))?'':'none';
+    });
+  }
+  // 選択中条件バッジを更新
+  updateModeBadge(key);
+  refreshAutoInfo();
+}
+
+function getMetric(vd,key){return vd.metrics[key]||null;}
+function parseF(v){if(v==null||v==='-') return 0;return parseFloat(String(v).replace('%',''))||0;}
+
+function getBoatsAuto(key,ri){
+  const modes = S[key+'modes'] && S[key+'modes'].length ? S[key+'modes'] : [S[key+'mode'] || 'manual'];
+  if(modes.includes('manual') || modes.length===0) return S[key+'sel'];
+  // 複数モードの場合: 各モードの結果のAND（積集合）
+  let result = null;
+  for(const mode of modes){
+    const boats = _getBoatsByMode(key, mode, ri);
+    if(result === null) result = boats;
+    else result = result.filter(b => boats.includes(b));
+  }
+  return result || [];
+}
+function _getBoatsByMode(key,mode,ri){
+  const mode0=mode;
+  if(mode0==='manual') return S[key+'sel'];
+  if(!S.venue||!DB[S.venue]) return [];
+  const vd=DB[S.venue]; const boats=[1,2,3,4,5,6];
+  if(mode0==='all') return boats;
+  if(mode0==='rate1'){const m=getMetric(vd,'オリジナル1着率(%)');if(!m)return[];return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v)[0].b];}
+  if(mode0==='rate2'){const m=getMetric(vd,'オリジナル1着率(%)');if(!m)return[];return boats.map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  // ★ NEW: 1号艇除外 上位2艇
+  if(mode0==='rate2ex1'){const m=getMetric(vd,'オリジナル1着率(%)');if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='eval1'){const m=getMetric(vd,'①逃げ');if(!m)return[];return boats.filter(b=>cleanMark(m[b]?.[ri])==='◎');}
+  if(mode0==='mpA'){const m=getMetric(vd,'③機力');if(!m)return[];return boats.filter(b=>m[b]?.[ri]==='A');}
+  if(mode0==='mpAB'){const m=getMetric(vd,'③機力');if(!m)return[];return boats.filter(b=>['A','B'].includes(m[b]?.[ri]));}
+  if(mode0==='adv2top2'){const m=getMetric(vd,'2着優位度(%)[相対・イン逃げ時]');if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='atk'){const m=getMetric(vd,'攻め記号');if(!m)return[];const rank=v=>v==='◎'?4:v==='○'?3:v==='▲'?2:v==='△'?1:0;return boats.filter(b=>b!==1).map(b=>({b,v:rank(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).filter(x=>x.v>=3).map(x=>x.b);}
+  if(mode0==='idx3top2'){const m=getMetric(vd,'3着指数');if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseInt(m[b]?.[ri])||0})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='idx3top3'){const m=getMetric(vd,'3着指数');if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseInt(m[b]?.[ri])||0})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.b);}
+  // ── 新追加モード ──
+  if(mode0==='rateThresh'){
+    const thresh=parseFloat(document.getElementById('f1RateThresh')?.value||40);
+    const m=getMetric(vd,'オリジナル1着率(%)');if(!m)return[];
+    return boats.filter(b=>parseF(m[b]?.[ri])>=thresh);
+  }
+  if(mode0==='atkMark'){
+    const minRank=getSelectedMarkRank('f1_atkMarkSel',3);
+    const m=getMetric(vd,'攻め記号');if(!m)return[];
+    const rank=v=>v==='◎'?4:v==='○'?3:v==='▲'?2:v==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='nigeTop'){
+    const m=getMetric(vd,'逃げ%');if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='aiMark'){
+    const minRank=getSelectedMarkRank('f1_aiMarkSel',3);
+    const m=getMetric(vd,'②相性');if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='mpMark'){
+    const minGrade=getSelectedMarkRank('f1_mpMarkSel',5);
+    const m=getMetric(vd,'③機力');if(!m)return[];
+    const grade=v=>v==='A'?5:v==='B'?4:v==='C'?3:v==='D'?2:v==='E'?1:0;
+    return boats.filter(b=>grade(m[b]?.[ri])>=minGrade);
+  }
+  if(mode0==='tenMark'){
+    const minRank=getSelectedMarkRank('f1_tenMarkSel',3);
+    const m=getMetric(vd,'④展開');if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='stMark'){
+    const minRank=getSelectedMarkRank('f1_stMarkSel',3);
+    const m=getMetric(vd,'⑤S安定');if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='sashiTop'){
+    const m=getMetric(vd,'差し%');if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='makuriTop'){
+    const m=getMetric(vd,'まくり%');if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='makurisashiTop'){
+    const m=getMetric(vd,'まくり差し%');if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='kimariBoat'){
+    const selBoats = getKimariBoatSel('f1_kimariBoatSel');
+    const kimariType = getKimariTypeSel('f1_kimariTypeSel');
+    const thresh = parseFloat(document.getElementById('f1KimariThresh')?.value||20);
+    if(!selBoats.length) return boats; // 艇番未選択なら全艇
+    if(!kimariType) return []; // 決まり手タイプ未選択なら0艇（条件未設定扱い）
+    // 被攻撃系（差され%・まくられ%）は専用列、攻撃系は決まり手傾向文字列から抽出
+    const ATTACKED_MAP = {'差され':'差され%','まくられ':'まくられ%','まくり差され':'まくり差され%'};
+    const attackedKey = ATTACKED_MAP[kimariType];
+    if(attackedKey){
+      // 専用%列から取得
+      const m = getMetric(vd, attackedKey);
+      if(!m) return selBoats; // 列がなければ艇番指定のみ適用
+      return selBoats.filter(b => parseF(m[b]?.[ri]) >= thresh);
+    } else {
+      // 攻撃決まり手: 決まり手傾向文字列から抽出
+      const m = getMetric(vd,'決まり手傾向') || {};
+      return selBoats.filter(b => {
+        const raw = String(m[b]?.[ri] || '');
+        const pct = extractKimariPct(raw, kimariType);
+        return pct >= thresh;
+      });
+    }
+  }
+  return[];
+}
+
+function updateModeBadge(key){
+  const badge = document.getElementById(key+'_modebadge');
+  if(!badge) return;
+  const modes = S[key+'modes'] || [];
+  if(modes.includes('manual') || !modes.length){
+    badge.style.display='none'; badge.textContent='';
+  } else {
+    const modeLabel={rate1:'1着率1位',rate2:'TOP2',rate2ex1:'1号艇外TOP2',eval1:'逃げ◎',all:'総流し',mpA:'機力A',mpAB:'A+B',adv2top2:'2着率↑2',atk:'攻め◎',idx3top2:'3着↑2',idx3top3:'3着↑3',rateThresh:'1着率X%↑',atkMark:'攻め印',nigeTop:'逃げ%1位',aiMark:'相性印',mpMark:'機力印',tenMark:'展開印',stMark:'S安定印',sashiTop:'差し%1位',makuriTop:'まくり%1位',makurisashiTop:'まくり差し%1位',kimariBoat:'艇番+決まり手%'};
+    badge.textContent = '✓ AND: ' + modes.map(m=>modeLabel[m]||m).join(' & ');
+    badge.style.display='block';
+  }
+}
+function refreshAutoInfo(){
+  ['f1','f2','f3'].forEach(key=>{
+    const box=document.getElementById(key+'_autoinfo'); if(!box) return;
+    if((S[key+'modes']||[S[key+'mode']]).includes('manual')) return;
+    if(!S.venue||!S.races.length){box.innerHTML='会場・レースを選択してください';return;}
+    const lines=S.races.slice(0,4).map(ri=>{
+      const boats=getBoatsAuto(key,ri);const rname=DB[S.venue].races[ri];
+      const bhtml=boats.length?boats.map(b=>`<span class="bc b${b}">${b}</span>`).join(''):'<span style="color:var(--red)">該当なし</span>';
+      return `<strong>${rname}</strong>: ${bhtml}`;
+    });
+    if(S.races.length>4) lines.push(`<span style="color:var(--dim)">...他${S.races.length-4}R</span>`);
+    box.innerHTML=lines.join('<br>');
+  });
+}
+
+function showDataPreview(){
+  if(!S.venue||!DB[S.venue]) return;
+  const vd=DB[S.venue];
+  const m1=vd.metrics['オリジナル1着率(%)']||{};
+  const m3=vd.metrics['3着指数']||{};
+  const mmp=vd.metrics['③機力']||{};
+  const me1=vd.metrics['①逃げ']||{};
+  const ma2=vd.metrics['2着優位度(%)[相対・イン逃げ時]']||{};
+  const races=S.races.length?S.races:vd.races.map((_,i)=>i);
+  let cardsHtml='';
+  races.slice(0,12).forEach(ri=>{
+    const rname=vd.races[ri]; const time=vd.times[ri]||'';
+    let rows='';
+    for(let b=1;b<=6;b++){
+      const rate=parseF(m1[b]?.[ri]);const idx3=parseInt(m3[b]?.[ri])||0;
+      const mp=mmp[b]?.[ri]||'-';const ev1=me1[b]?.[ri]||null;const adv=parseF(ma2[b]?.[ri]);
+      const mpCls=['A','B','C','D','E'].includes(mp)?`mp mp${mp}`:'';
+      const idxCls=idx3>=80?'idx3-hi':idx3>=50?'idx3-md':'idx3-lo';
+      const evalHtml=ev1?evalSym(cleanMark(ev1)):'';
+      rows+=`<div class="boat-row"><span class="bc b${b}" style="width:22px;height:22px">${b}</span>
+        <div class="rate-mini"><div class="bar-bg"><div class="bar-fill" style="width:${Math.min(rate,100)}%"></div></div>
+        <span class="rate-text">${rate?rate.toFixed(1)+'%':'-'}</span></div>
+        ${mpCls?`<span class="${mpCls}">${mp}</span>`:'<span style="color:var(--dim);font-size:10px">-</span>'}
+        <span class="${idxCls}" style="font-family:Share Tech Mono,monospace;font-size:11px;min-width:22px;text-align:right">${idx3||'-'}</span>
+        ${evalHtml?`<span style="font-size:12px">${evalHtml}</span>`:''}
+        <span style="font-size:10px;color:var(--dim);min-width:27px;text-align:right">${adv?adv.toFixed(0)+'%':''}</span>
+      </div>`;
+    }
+    cardsHtml+=`<div class="preview-card"><div class="pc-head"><span class="pc-race">${rname}</span><span class="pc-time">${time}</span></div><div class="pc-body">${rows}</div></div>`;
+  });
+  document.getElementById('mainContent').innerHTML=`
+    <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span class="ctag">📊 ${S.venue} データプレビュー</span>
+      ${vd.isHorizontal ? `<span class="ctag" style="border-color:rgba(255,197,66,.3);color:var(--gold)">📅 ${vd.date}${vd.allDates&&vd.allDates.length>1?' (複数日付あり: '+vd.allDates.join(' / ')+')':''}</span>` : ''}
+      <span style="font-size:10px;color:var(--dim)">条件設定後、検証実行してください</span>
+    </div>
+    <div class="data-preview">${cardsHtml}</div>`;
+}
+
+function evalSym(v){
+  if(v==='◎') return '<span class="eval-sym eval-dbl">◎</span>';
+  if(v==='○') return '<span class="eval-sym eval-cir">○</span>';
+  if(v==='△') return '<span class="eval-sym eval-tri">△</span>';
+  if(v==='×') return '<span class="eval-sym eval-hyo">×</span>';
+  return '';
+}
+
+// ─── Link xlsx conditions → CSV tab ───
+function linkToCsv(results, ticket){
+  // 手動モードか自動モードかを判定
+  const isManualF1 = S.f1mode === 'manual';
+  const isManualF2 = S.f2mode === 'manual';
+  const isManualF3 = S.f3mode === 'manual';
+  const isAllManual = isManualF1 && isManualF2 && isManualF3;
+
+  // 手動モードの場合はS.f1sel等をそのまま使う
+  // 自動モードの場合はレースごとに艇番が変わるので「全レースの和集合」を引き継ぐ
+  const f1 = isManualF1 ? S.f1sel : [...new Set(results.flatMap(r=>r.f1))].sort((a,b)=>a-b);
+  const f2 = isManualF2 ? S.f2sel : (S.f2mode==='all' ? [1,2,3,4,5,6] : [...new Set(results.flatMap(r=>r.f2))].sort((a,b)=>a-b));
+  const f3 = isManualF3 ? S.f3sel : (S.f3mode==='all' ? [1,2,3,4,5,6] : [...new Set(results.flatMap(r=>r.f3))].sort((a,b)=>a-b));
+
+  // 警告メッセージを組み立て
+  const autoKeys = [];
+  if(!isManualF1) autoKeys.push(`1着(${S.f1mode})`);
+  if(!isManualF2 && ['3連単','3連複','2連単'].includes(ticket)) autoKeys.push(`2着(${S.f2mode})`);
+  if(!isManualF3 && ticket==='3連単') autoKeys.push(`3着(${S.f3mode})`);
+
+  // ticketマップ（xlsx→csv表記）
+  const tm={'3連単':'３連単','3連複':'３連複','2連単':'２連単','単勝':'単勝'};
+  const csvTicket = tm[ticket]||'３連単';
+
+  // csvStateに反映
+  csvState.ticket = csvTicket;
+  csvState.f1sel = f1.length ? f1 : [1,2,3,4,5,6];
+  csvState.f2sel = f2.length ? f2 : [1,2,3,4,5,6];
+  csvState.f3sel = f3.length ? f3 : [1,2,3,4,5,6];
+
+  // UI切替
+  switchMode('csv');
+
+  // 券種ボタン更新
+  document.querySelectorAll('#ticketTabsCsv .pt').forEach(el=>{
+    el.classList.toggle('on', el.dataset.ticket===csvTicket);
+  });
+  // セクション表示制御
+  document.getElementById('csv_sec2').style.display=['３連単','３連複','２連単'].includes(csvTicket)?'':'none';
+  document.getElementById('csv_sec3').style.display=csvTicket==='３連単'?'':'none';
+
+  // ボタンUIを更新
+  ['f1','f2','f3'].forEach(k=>{
+    const sel = csvState[k+'sel'];
+    document.querySelectorAll(`#csv_${k}boats .bb`).forEach(btn=>{
+      const b=parseInt(btn.dataset.boat);
+      btn.classList.toggle('sel', sel.includes(b));
+    });
+  });
+
+  // メモ
+  const memoEl=document.getElementById('csvMemo');
+  if(memoEl){
+    if(autoKeys.length){
+      memoEl.value=`※自動モード引き継ぎ(和集合): ${autoKeys.join(' ')}`;
+    } else {
+      memoEl.value='指標検証(手動)条件より引き継ぎ';
+    }
+  }
+
+  // 通知バナー
+  const isWarn = autoKeys.length > 0;
+  const notice=document.createElement('div');
+  notice.style.cssText=`position:fixed;top:60px;right:20px;z-index:999;
+    background:${isWarn?'rgba(200,80,0,.95)':'rgba(0,100,60,.95)'};
+    color:#fff;padding:12px 18px;border-radius:6px;font-size:12px;
+    font-family:'Noto Sans JP',sans-serif;line-height:1.7;
+    box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:320px;transition:opacity .5s`;
+  if(isWarn){
+    notice.innerHTML=`<div style="font-family:'Share Tech Mono',monospace;font-weight:700;margin-bottom:4px">⚠ 自動モードは完全引き継ぎ不可</div>
+      <div style="font-size:11px">${autoKeys.join('・')} はレースごとに艇番が変わるため、<br>全レースの<b>出現艇番の和集合</b>をセットしました。<br>実際の条件と異なる場合は手動で修正してください。</div>`;
+  } else {
+    notice.innerHTML=`<div style="font-family:'Share Tech Mono',monospace;font-weight:700">✓ 手動条件を引き継ぎました</div>
+      <div style="font-size:11px">指定コース: 1着[${f1.join(',')}]${['３連単','３連複','２連単'].includes(csvTicket)?' 2着['+f2.join(',')+']':''} ${csvTicket==='３連単'?'3着['+f3.join(',')+']':''}</div>`;
+  }
+  document.body.appendChild(notice);
+  setTimeout(()=>{notice.style.opacity='0';setTimeout(()=>notice.remove(),500);},isWarn?5000:3000);
+}
+
+// ─── XLSX verification ───
+function countBets(f1,f2,f3,ticket){
+  if(ticket==='単勝') return f1.length;
+  if(ticket==='2連単'){let c=0;for(const a of f1)for(const b of f2)if(a!==b)c++;return c;}
+  if(ticket==='3連単'){let c=0;for(const a of f1)for(const b of f2)for(const cc of f3)if(a!==b&&b!==cc&&a!==cc)c++;return c;}
+  if(ticket==='3連複'){const s=new Set();for(const a of f1)for(const b of f2)for(const cc of f3)if(a!==b&&b!==cc&&a!==cc)s.add([a,b,cc].sort().join('-'));return s.size;}
+  return 0;
+}
+function predictResult(vd,ri){
+  const m1=vd.metrics['オリジナル1着率(%)']||{};
+  const ma2=vd.metrics['2着優位度(%)[相対・イン逃げ時]']||{};
+  const m3=vd.metrics['3着指数']||{};
+  const p1=[1,2,3,4,5,6].map(b=>({b,v:parseF(m1[b]?.[ri])})).sort((a,b)=>b.v-a.v)[0].b;
+  const p2=[1,2,3,4,5,6].filter(b=>b!==p1).map(b=>({b,v:parseF(ma2[b]?.[ri])})).sort((a,b)=>b.v-a.v)[0]?.b||2;
+  const p3=[1,2,3,4,5,6].filter(b=>b!==p1&&b!==p2).map(b=>({b,v:parseInt(m3[b]?.[ri])||0})).sort((a,b)=>b.v-a.v)[0]?.b||3;
+  return{p1,p2,p3};
+}
+function checkHit(f1,f2,f3,ticket,pred){
+  const{p1,p2,p3}=pred;
+  if(ticket==='単勝') return f1.includes(p1);
+  if(ticket==='2連単') return f1.includes(p1)&&f2.includes(p2);
+  if(ticket==='3連単') return f1.includes(p1)&&f2.includes(p2)&&f3.includes(p3);
+  if(ticket==='3連複'){const r=[p1,p2,p3].sort().join('-');const s=new Set();for(const a of f1)for(const b of f2)for(const cc of f3)if(a!==b&&b!==cc&&a!==cc)s.add([a,b,cc].sort().join('-'));return s.has(r);}
+  return false;
+}
+function runVerification(){
+  if(!S.venue||!DB[S.venue]){alert('Excelを読み込み、会場を選択してください');return;}
+  if(!S.races.length){alert('レースを選択してください');return;}
+  const vd=DB[S.venue];const results=[];
+  S.races.forEach(ri=>{
+    const f1=getBoatsAuto('f1',ri).filter(b=>b>=1&&b<=6);
+    const f2=getBoatsAuto('f2',ri).filter(b=>b>=1&&b<=6);
+    const f3=getBoatsAuto('f3',ri).filter(b=>b>=1&&b<=6);
+    const bets=countBets(f1,f2,f3,S.ticket);
+    const pred=predictResult(vd,ri);
+    const hit=f1.length&&checkHit(f1,f2,f3,S.ticket,pred);
+    results.push({ri,rname:vd.races[ri],time:vd.times[ri]||'',f1,f2,f3,bets,pred,hit});
+  });
+  renderXlsxResults(vd,results);
+}
+function renderXlsxResults(vd,results){
+  const totalBets=results.reduce((s,r)=>s+r.bets,0);
+  const hitCount=results.filter(r=>r.hit).length;
+  const hitRate=(hitCount/results.length*100).toFixed(1);
+  const avgBets=results.length?(totalBets/results.length).toFixed(1):0;
+  const hitClass=parseFloat(hitRate)>=30?'pos':parseFloat(hitRate)>=15?'':'neg';
+  const modeLabel={manual:'手動',rate1:'1着率1位',rate2:'TOP2',rate2ex1:'1号艇外TOP2',eval1:'逃げ◎',all:'総流し',mpA:'機力A',mpAB:'A+B',adv2top2:'2着率↑2',atk:'攻め◎',idx3top2:'3着↑2',idx3top3:'3着↑3',rateThresh:'1着率X%↑',atkMark:'攻め印',nigeTop:'逃げ%1位',aiMark:'相性印',mpMark:'機力印',tenMark:'展開印',stMark:'S安定印',sashiTop:'差し%1位',makuriTop:'まくり%1位',makurisashiTop:'まくり差し%1位',kimariBoat:'艇番+決まり手%'};
+  const bc=b=>`<span class="bc b${b}">${b}</span>`;
+
+  // 全レースで使われた艇番を集約（リンク用）—linkToCsv内で再計算するが、resultsをグローバルに保持
+  window._lastXlsxResults = results;
+  window._lastXlsxTicket  = S.ticket;
+
+  const tblRows=results.map(r=>{
+    const f1h=r.f1.map(bc).join('');
+    const f2h=r.f2.length?r.f2.map(bc).join(''):'<span style="color:var(--dim)">-</span>';
+    const f3h=S.f3mode==='all'?'<span style="color:var(--dim);font-size:10px">総流し</span>':(r.f3.length?r.f3.map(bc).join(''):'<span style="color:var(--dim)">-</span>');
+    const pred3h=`${bc(r.pred.p1)}-${bc(r.pred.p2)}-${bc(r.pred.p3)}`;
+    const hitTag=r.hit?'<span class="tag-hit">◎ 的中</span>':'<span class="tag-miss">✗ 外</span>';
+    const mmp=vd.metrics['③機力']||{};
+    const indSum=[1,2,3,4,5,6].map(b=>{const mp=mmp[b]?.[r.ri]||'-';const mpCls=['A','B','C','D','E'].includes(mp)?`mp mp${mp}`:'';return mpCls?`<span class="${mpCls}" style="font-size:9px">${b}:${mp}</span>`:''}).filter(Boolean).join(' ');
+    return `<tr>
+      <td><span class="rno">${r.rname}</span><br><span style="font-size:9px;color:var(--dim)">${r.time}</span></td>
+      <td>${pred3h}</td><td>${f1h}</td>
+      ${['3連単','3連複','2連単'].includes(S.ticket)?`<td>${f2h}</td>`:''}
+      ${S.ticket==='3連単'?`<td>${f3h}</td>`:''}
+      <td><span class="pts">${r.bets}</span>点</td>
+      <td>${hitTag}</td><td style="font-size:10px">${indSum}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('mainContent').innerHTML=`
+    <div class="result-area">
+      <div class="panel"><div class="ph"><div class="ph-title">📋 検証条件</div>
+        <button class="link-csv-btn" style="margin-left:auto" onclick="linkToCsv(window._lastXlsxResults, window._lastXlsxTicket)">📈 実績検証へ引き継ぐ →</button>
+      </div>
+        <div class="pb" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <span class="ctag">🏟 ${S.venue}</span><span class="ctag">🎟 ${S.ticket}</span><span class="ctag">📅 ${results.length}R</span>
+          <span class="ctag">1着: ${modeLabel[S.f1mode]||'?'}</span>
+          ${['3連単','3連複','2連単'].includes(S.ticket)?`<span class="ctag">2着: ${modeLabel[S.f2mode]||'?'}</span>`:''}
+          ${S.ticket==='3連単'?`<span class="ctag">3着: ${modeLabel[S.f3mode]||'?'}</span>`:''}
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="stat-label">対象レース</div><div class="stat-value">${results.length}</div><div class="stat-sub">R</div></div>
+        <div class="stat ${hitClass}"><div class="stat-label">予測的中</div><div class="stat-value">${hitCount}</div><div class="stat-sub">${hitRate}%</div></div>
+        <div class="stat"><div class="stat-label">平均点数/R</div><div class="stat-value">${avgBets}</div><div class="stat-sub">点</div></div>
+        <div class="stat gold"><div class="stat-label">総点数</div><div class="stat-value">${totalBets}</div><div class="stat-sub">全R合計</div></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><div class="ph-title">🏁 レース別結果</div><span style="margin-left:auto;font-size:9px;color:var(--dim)">予測 = 各指標の確率最大艇</span></div>
+        <div style="padding:0"><div class="tbl-wrap">
+          <table class="tbl" style="min-width:680px">
+            <thead><tr>
+              <th>R</th><th>予測着順</th><th>1着条件</th>
+              ${['3連単','3連複','2連単'].includes(S.ticket)?'<th>2着条件</th>':''}
+              ${S.ticket==='3連単'?'<th>3着条件</th>':''}
+              <th>点数</th><th>判定</th><th>機力</th>
+            </tr></thead>
+            <tbody>${tblRows}</tbody>
+          </table>
+        </div></div>
+      </div>
+    </div>`;
+}
+
+// ─── COMBO CONTROLS ───
+function buildComboVenueFilter(venues){
+  CS.venues = [...venues]; // デフォルト全選択
+  const vf = document.getElementById('comboVenueFilter'); vf.innerHTML='';
+  venues.forEach(v=>{
+    const d=document.createElement('div'); d.className='tg on'; d.dataset.v=v; d.textContent=v;
+    d.onclick=()=>{
+      d.classList.toggle('on');
+      CS.venues=[...document.querySelectorAll('#comboVenueFilter .tg.on')].map(x=>x.dataset.v);
+      buildComboRaceGrid();
+      refreshComboAutoInfo();
+    };
+    vf.appendChild(d);
+  });
+  buildComboRaceGrid();
+}
+function comboVenueAll(sel){
+  CS.venues=sel?[...document.querySelectorAll('#comboVenueFilter .tg')].map(x=>x.dataset.v):[];
+  document.querySelectorAll('#comboVenueFilter .tg').forEach(d=>d.classList.toggle('on',sel));
+  buildComboRaceGrid(); refreshComboAutoInfo();
+}
+function buildComboRaceGrid(){
+  const grid=document.getElementById('comboRaceGrid'); grid.innerHTML='';
+  // 選択会場のCSVデータから実際のレース数を取得（最大12に制限）
+  const maxR = CS.venues.reduce((mx,v)=>{
+    const vd=DB[v]; return vd?Math.max(mx,vd.races.length):mx;
+  },0);
+  // DBが空(未読込)なら12、CSVデータがあればその実際のレース数（上限12）を使う
+  const total = maxR > 0 ? Math.min(maxR, 12) : 12;
+  CS.races=[...Array(total).keys()]; // 全選択
+  for(let i=0;i<total;i++){
+    const d=document.createElement('div'); d.className='rb sel'; d.dataset.i=i;
+    d.innerHTML=`${i+1}R`;
+    d.onclick=()=>{
+      const pos=CS.races.indexOf(i);
+      if(pos===-1){CS.races.push(i);d.classList.add('sel');}
+      else{CS.races.splice(pos,1);d.classList.remove('sel');}
+      refreshComboAutoInfo();
+    };
+    grid.appendChild(d);
+  }
+}
+function comboRaceAll(){
+  const btns=document.querySelectorAll('#comboRaceGrid .rb');
+  const total=btns.length;
+  if(CS.races.length===total){
+    CS.races=[]; btns.forEach(b=>b.classList.remove('sel'));
+  } else {
+    CS.races=[...Array(total).keys()]; btns.forEach(b=>b.classList.add('sel'));
+  }
+}
+function setComboTicket(t,el){
+  CS.ticket=t;
+  el.closest('.pill-tabs').querySelectorAll('.pt').forEach(e=>e.classList.remove('on')); el.classList.add('on');
+  document.getElementById('combo_sec2').style.display=['3連単','3連複','2連単'].includes(t)?'':'none';
+  document.getElementById('combo_sec3').style.display=t==='3連単'?'':'none';
+}
+function setComboMode(key,mode,el){
+  const modes = CS[key+'modes'];
+  if(mode === 'manual'){
+    CS[key+'modes'] = ['manual'];
+    el.closest('.pill-tabs').querySelectorAll('.pt').forEach(e=>{
+      e.classList.remove('on'); e.classList.remove('multi-on');
+    });
+    el.classList.add('on');
+  } else {
+    const manualBtn = el.closest('.pill-tabs').querySelector('[data-mode="manual"]');
+    if(manualBtn){ manualBtn.classList.remove('on'); manualBtn.classList.remove('multi-on'); }
+    CS[key+'modes'] = modes.filter(m=>m!=='manual');
+    const idx = CS[key+'modes'].indexOf(mode);
+    if(idx === -1){
+      CS[key+'modes'].push(mode);
+      el.classList.add('multi-on');
+    } else {
+      CS[key+'modes'].splice(idx,1);
+      el.classList.remove('multi-on');
+    }
+    if(!CS[key+'modes'].length){
+      CS[key+'modes'] = ['manual'];
+      if(manualBtn){ manualBtn.classList.add('on'); }
+    }
+  }
+  CS[key+'mode'] = CS[key+'modes'][0];
+  const isManual = CS[key+'modes'].includes('manual');
+  document.getElementById('combo_'+key+'_manual').style.display=isManual?'':'none';
+  document.getElementById('combo_'+key+'_auto').style.display=isManual?'none':'';
+  if(key==='f1'){
+    F1_SUB_CTRLS.forEach(ctrl=>{
+      const el2=document.getElementById('combo_f1_'+ctrl);
+      if(el2) el2.style.display=CS.f1modes.includes(ctrl.replace('Ctrl',''))?'':'none';
+    });
+  }
+  updateComboModeBadge(key);
+  refreshComboAutoInfo();
+}
+
+function comboToggleBoat(key,b,el){
+  const arr=CS[key+'sel'];const pos=arr.indexOf(b);
+  if(pos===-1){arr.push(b);el.classList.add('sel');}else{arr.splice(pos,1);el.classList.remove('sel');}
+}
+function comboAllToggle(key){
+  const arr=CS[key+'sel'];const btns=document.querySelectorAll('#combo_'+key+'boats .bb');
+  if(arr.length===6){CS[key+'sel']=[];btns.forEach(b=>b.classList.remove('sel'));}
+  else{CS[key+'sel']=[1,2,3,4,5,6];btns.forEach(b=>b.classList.add('sel'));}
+}
+function getComboBoatsAuto(key,ri,vd){
+  const modes = CS[key+'modes'] && CS[key+'modes'].length ? CS[key+'modes'] : [CS[key+'mode'] || 'manual'];
+  if(modes.includes('manual') || modes.length===0) return CS[key+'sel'];
+  let result = null;
+  for(const mode of modes){
+    const boats = _getComboBoatsByMode(key, mode, ri, vd);
+    if(result === null) result = boats;
+    else result = result.filter(b => boats.includes(b));
+  }
+  return result || [];
+}
+function _getComboBoatsByMode(key,mode0,ri,vd){
+  if(mode0==='manual') return CS[key+'sel'];
+  if(!vd) return [];
+  const boats=[1,2,3,4,5,6];
+  if(mode0==='all') return boats;
+  if(mode0==='rate1'){const m=vd.metrics['オリジナル1着率(%)'];if(!m||!m[1]?.[ri])return[];return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v)[0].b];}
+  if(mode0==='rate2'){const m=vd.metrics['オリジナル1着率(%)'];if(!m||!m[1]?.[ri])return[];return boats.map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='rate2ex1'){const m=vd.metrics['オリジナル1着率(%)'];if(!m||!m[1]?.[ri])return[];return[2,3,4,5,6].map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='eval1'){const m=vd.metrics['①逃げ'];if(!m)return[];return boats.filter(b=>cleanMark(m[b]?.[ri])==='◎');}
+  if(mode0==='mpA'){const m=vd.metrics['③機力'];if(!m)return[];return boats.filter(b=>m[b]?.[ri]==='A');}
+  if(mode0==='mpAB'){const m=vd.metrics['③機力'];if(!m)return[];return boats.filter(b=>['A','B'].includes(m[b]?.[ri]));}
+  if(mode0==='adv2top2'){const m=vd.metrics['2着優位度(%)[相対・イン逃げ時]'];if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseF(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='atk'){const m=vd.metrics['攻め記号'];if(!m)return[];const rank=v=>v==='◎'?4:v==='○'?3:v==='▲'?2:v==='△'?1:0;return boats.filter(b=>b!==1).map(b=>({b,v:rank(m[b]?.[ri])})).sort((a,b)=>b.v-a.v).filter(x=>x.v>=3).map(x=>x.b);}
+  if(mode0==='idx3top2'){const m=vd.metrics['3着指数'];if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseInt(m[b]?.[ri])||0})).sort((a,b)=>b.v-a.v).slice(0,2).map(x=>x.b);}
+  if(mode0==='idx3top3'){const m=vd.metrics['3着指数'];if(!m)return[];return[2,3,4,5,6].map(b=>({b,v:parseInt(m[b]?.[ri])||0})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>x.b);}
+  // ── 新追加モード（コンボ版） ──
+  if(mode0==='rateThresh'){
+    const thresh=parseFloat(document.getElementById('combo_f1RateThresh')?.value||40);
+    const m=vd.metrics['オリジナル1着率(%)'];if(!m)return[];
+    return boats.filter(b=>parseF(m[b]?.[ri])>=thresh);
+  }
+  if(mode0==='atkMark'){
+    const minRank=getSelectedMarkRank('combo_f1_atkMarkSel',3);
+    const m=vd.metrics['攻め記号'];if(!m)return[];
+    const rank=v=>v==='◎'?4:v==='○'?3:v==='▲'?2:v==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='nigeTop'){
+    const m=vd.metrics['逃げ%'];if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='aiMark'){
+    const minRank=getSelectedMarkRank('combo_f1_aiMarkSel',3);
+    const m=vd.metrics['②相性'];if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='mpMark'){
+    const minGrade=getSelectedMarkRank('combo_f1_mpMarkSel',5);
+    const m=vd.metrics['③機力'];if(!m)return[];
+    const grade=v=>v==='A'?5:v==='B'?4:v==='C'?3:v==='D'?2:v==='E'?1:0;
+    return boats.filter(b=>grade(m[b]?.[ri])>=minGrade);
+  }
+  if(mode0==='tenMark'){
+    const minRank=getSelectedMarkRank('combo_f1_tenMarkSel',3);
+    const m=vd.metrics['④展開'];if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='stMark'){
+    const minRank=getSelectedMarkRank('combo_f1_stMarkSel',3);
+    const m=vd.metrics['⑤S安定'];if(!m)return[];
+    const rank=v=>cleanMark(v)==='◎'?4:cleanMark(v)==='○'?3:cleanMark(v)==='▲'?2:cleanMark(v)==='△'?1:0;
+    return boats.filter(b=>rank(m[b]?.[ri])>=minRank);
+  }
+  if(mode0==='sashiTop'){
+    const m=vd.metrics['差し%'];if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='makuriTop'){
+    const m=vd.metrics['まくり%'];if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='makurisashiTop'){
+    const m=vd.metrics['まくり差し%'];if(!m)return[];
+    return[boats.map(b=>({b,v:parseF(m[b]?.[ri])})).filter(x=>x.v>0).sort((a,b)=>b.v-a.v)[0]?.b].filter(Boolean);
+  }
+  if(mode0==='kimariBoat'){
+    const selBoats = getKimariBoatSel('combo_f1_kimariBoatSel');
+    const kimariType = getKimariTypeSel('combo_f1_kimariTypeSel');
+    const thresh = parseFloat(document.getElementById('combo_f1KimariThresh')?.value||30);
+    if(!selBoats.length) return boats; // 艇番未選択なら全艇
+    if(!kimariType) return []; // 決まり手タイプ未選択なら0艇（条件未設定扱い）
+    const ATTACKED_MAP = {'差され':'差され%','まくられ':'まくられ%','まくり差され':'まくり差され%'};
+    const attackedKey = ATTACKED_MAP[kimariType];
+    if(attackedKey){
+      const m = vd.metrics[attackedKey];
+      if(!m) return selBoats;
+      return selBoats.filter(b => parseF(m[b]?.[ri]) >= thresh);
+    } else {
+      const m = vd.metrics['決まり手傾向'] || {};
+      return selBoats.filter(b => {
+        const raw = String(m[b]?.[ri] || '');
+        const pct = extractKimariPct(raw, kimariType);
+        return pct >= thresh;
+      });
+    }
+  }
+  return[];
+}
+
+// ── 艇番+決まり手% ヘルパー ──────────────────────────────────────────
+function toggleKimariBoat(groupId, boat, el){
+  el.classList.toggle('sel');
+  refreshAutoInfo();
+  refreshComboAutoInfo();
+}
+function getKimariBoatSel(groupId){
+  return [...document.querySelectorAll('#'+groupId+' .bb.sel')].map(el=>parseInt(el.dataset.boat));
+}
+function selectKimariType(groupId, type){
+  document.querySelectorAll('#'+groupId+' .tg').forEach(el=>{
+    el.classList.toggle('on', el.dataset.k===type);
+  });
+  refreshAutoInfo();
+  refreshComboAutoInfo();
+}
+function getKimariTypeSel(groupId){
+  const el=document.querySelector('#'+groupId+' .tg.on');
+  return el ? el.dataset.k : null;
+}
+// 決まり手傾向文字列（例: "逃げ65% 差し20%"）から指定決まり手の%を抽出
+function extractKimariPct(raw, type){
+  if(!raw) return 0;
+  // 「まくり差し」が「まくり」よりも先にマッチするよう、長い文字列を優先
+  const escaped = type.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const m = raw.match(new RegExp(escaped+'\\s*(\\d+(?:\\.\\d+)?)\\s*%'));
+  return m ? parseFloat(m[1]) : 0;
+}
+// ── ここまでヘルパー ──────────────────────────────────────────────────
+
+function updateComboModeBadge(key){
+  const badge = document.getElementById('combo_'+key+'_modebadge');
+  if(!badge) return;
+  const modes = CS[key+'modes'] || [];
+  if(modes.includes('manual') || !modes.length){
+    badge.style.display='none'; badge.textContent='';
+  } else {
+    const modeLabel={rate1:'1着率1位',rate2:'TOP2',rate2ex1:'1号艇外TOP2',eval1:'逃げ◎',all:'総流し',mpA:'機力A',mpAB:'A+B',adv2top2:'2着率↑2',atk:'攻め◎',idx3top2:'3着↑2',idx3top3:'3着↑3',rateThresh:'1着率X%↑',atkMark:'攻め印',nigeTop:'逃げ%1位',aiMark:'相性印',mpMark:'機力印',tenMark:'展開印',stMark:'S安定印',sashiTop:'差し%1位',makuriTop:'まくり%1位',makurisashiTop:'まくり差し%1位',kimariBoat:'艇番+決まり手%'};
+    badge.textContent = '✓ AND: ' + modes.map(m=>modeLabel[m]||m).join(' & ');
+    badge.style.display='block';
+  }
+}
+function refreshComboAutoInfo(){
+  // 自動モードのプレビューは先頭会場のデータで代表表示
+  const repVenue = CS.venues[0];
+  const vd = repVenue ? DB[repVenue] : null;
+  ['f1','f2','f3'].forEach(key=>{
+    const box=document.getElementById('combo_'+key+'_autoinfo'); if(!box) return;
+    if((CS[key+'modes']||[CS[key+'mode']]).includes('manual')) return;
+    if(!vd||!CS.races.length){box.innerHTML='会場・レースを選択してください';return;}
+    const lines=CS.races.slice(0,4).map(ri=>{
+      if(ri>=vd.races.length) return `<strong>${ri+1}R</strong>: <span style="color:var(--dim)">データなし</span>`;
+      const boats=getComboBoatsAuto(key,ri,vd);
+      const bhtml=boats.length?boats.map(b=>`<span class="bc b${b}">${b}</span>`).join(''):'<span style="color:var(--red)">該当なし</span>';
+      return `<strong>${vd.races[ri]}</strong>: ${bhtml}`;
+    });
+    if(CS.races.length>4) lines.push(`<span style="color:var(--dim)">...他${CS.races.length-4}R</span>`);
+    box.innerHTML=lines.join('<br>')+(CS.venues.length>1?`<div style="color:var(--dim);font-size:9px;margin-top:2px">※ ${repVenue} のプレビュー</div>`:'');
+  });
+}
+
+// ─── COMBO VERIFICATION ENGINE ───
+function runComboVerification(){
+  if(!CS.venues.length||!Object.keys(DB).length){alert('Excelを読み込み、会場を選択してください');return;}
+  if(!CS.races.length){alert('レースを選択してください');return;}
+  if(!csvPivot||!csvPivot.length){alert('CSVを読み込んでください');return;}
+
+  const ticket=CS.ticket;
+  const unitYen=parseInt(document.getElementById('comboUnitYen').value)||100;
+  const dateFrom=document.getElementById('comboDateFrom').value;
+  const dateTo  =document.getElementById('comboDateTo').value;
+  const colMap={'3連単':'3連単払戻','3連複':'3連複払戻','2連単':'2連単払戻','単勝':'単勝払戻'};
+  const payCol=colMap[ticket];
+  const modeLabel={manual:'手動',rate1:'1着率1位',rate2:'TOP2',rate2ex1:'1号艇外TOP2',eval1:'逃げ◎',all:'総流し',mpA:'機力A',mpAB:'A+B',adv2top2:'2着率↑2',atk:'攻め◎',idx3top2:'3着↑2',idx3top3:'3着↑3',rateThresh:'1着率X%↑',atkMark:'攻め印',nigeTop:'逃げ%1位',aiMark:'相性印',mpMark:'機力印',tenMark:'展開印',stMark:'S安定印',sashiTop:'差し%1位',makuriTop:'まくり%1位',makurisashiTop:'まくり差し%1位',kimariBoat:'艇番+決まり手%'};
+  const bc=b=>`<span class="bc b${b}">${b}</span>`;
+  const csvVenueList=[...new Set(csvPivot.map(r=>r['会場名']))];
+
+  const rows=[];
+  const unmatchedVenues=[];
+
+  CS.venues.forEach(venue=>{
+    const vd=DB[venue]; if(!vd) return;
+
+    // CSV側の会場名マッチング（完全一致 → 部分一致）
+    let csvVenue=venue;
+    if(!csvVenueList.includes(csvVenue)){
+      const partial=csvVenueList.find(v=>v.includes(venue)||venue.includes(v));
+      if(partial) csvVenue=partial;
+      else{ unmatchedVenues.push(venue); return; }
+    }
+
+    CS.races.forEach(ri=>{
+      // このriがvdのレース数を超える場合はスキップ
+      if(ri>=vd.races.length) return;
+      const rname=vd.races[ri];
+      const rnoMatch=rname.match(/(\d+)/);
+      if(!rnoMatch) return;
+      const rno=parseInt(rnoMatch[1]);
+
+      // 買い目算出（会場ごとのExcel指標を使う）
+      const f1=getComboBoatsAuto('f1',ri,vd).filter(b=>b>=1&&b<=6);
+      const f2=getComboBoatsAuto('f2',ri,vd).filter(b=>b>=1&&b<=6);
+      const f3=getComboBoatsAuto('f3',ri,vd).filter(b=>b>=1&&b<=6);
+      const bets=countBets(f1,f2,f3,ticket);
+      if(!f1.length) return;
+
+      // CSVから日付×レース番号で絞り込み
+      let csvRaces=csvPivot.filter(r=>r['会場名']===csvVenue&&r['レース番号']===rno);
+      if(dateFrom) csvRaces=csvRaces.filter(r=>r['日付']>=dateFrom);
+      if(dateTo)   csvRaces=csvRaces.filter(r=>r['日付']<=dateTo);
+
+      csvRaces.forEach(cr=>{
+        const c1=cr['1着コース'],c2=cr['2着コース'],c3=cr['3着コース'];
+        const ok1=f1.includes(c1);
+        const ok2=['3連単','3連複','2連単'].includes(ticket)?(f2.length===0||f2.includes(c2)):true;
+        const ok3=ticket==='3連単'?(f3.length===0||f3.includes(c3)):true;
+        let hit=false;
+        if(ticket==='単勝') hit=ok1;
+        else if(ticket==='2連単') hit=ok1&&ok2;
+        else hit=ok1&&ok2&&ok3;
+
+        const pay=hit?(parseInt(cr[payCol])||0):0;
+        const cost=bets*unitYen;
+        const t1=cr['1着艇番'],t2=cr['2着艇番'],t3=cr['3着艇番'];
+        const hasChg=(t1!=null&&t1!==c1)||(t2!=null&&c2!=null&&t2!==c2)||(t3!=null&&c3!=null&&t3!==c3);
+        rows.push({
+          日付:cr['日付'],venue,rname,rno,f1,f2,f3,bets,hit,
+          c1,c2,c3,t1,t2,t3,hasChg,
+          pay:pay*(unitYen/100),cost,
+          pop:cr[payCol.replace('払戻','人気')]||null,
+          決まり手:cr['決まり手'],
+        });
+      });
+    });
+  });
+
+  if(!rows.length){
+    const msg = unmatchedVenues.length
+      ? `CSVデータが見つかりません。\n未マッチ会場: ${unmatchedVenues.join('、')}\nCSV会場一覧: ${csvVenueList.join('、')}`
+      : `条件に合うレースがありません（日付範囲・会場を確認してください）`;
+    alert(msg); return;
+  }
+
+  // 集計
+  const totalSessions=rows.length;
+  const hitRows=rows.filter(r=>r.hit);
+  const hitCount=hitRows.length;
+  const hitRate=(hitCount/totalSessions*100).toFixed(1);
+  const totalCost=rows.reduce((s,r)=>s+r.cost,0);
+  const totalPayout=hitRows.reduce((s,r)=>s+r.pay,0);
+  const profit=totalPayout-totalCost;
+  const roi=totalCost>0?(totalPayout/totalCost*100).toFixed(1):0;
+  const avgPayout=hitCount>0?Math.round(totalPayout/hitCount):0;
+  const hitClass=parseFloat(hitRate)>=30?'pos':parseFloat(hitRate)>=15?'':'neg';
+  const roiClass=parseFloat(roi)>=100?'pos':parseFloat(roi)>=75?'':'neg';
+  const profitClass=profit>=0?'pos':'neg';
+
+  // 会場別集計
+  const byVenue={};
+  rows.forEach(r=>{
+    if(!byVenue[r.venue]) byVenue[r.venue]={total:0,hit:0,cost:0,payout:0};
+    byVenue[r.venue].total++;
+    byVenue[r.venue].cost+=r.cost;
+    if(r.hit){byVenue[r.venue].hit++;byVenue[r.venue].payout+=r.pay;}
+  });
+  const venueRows=Object.entries(byVenue).map(([v,d])=>{
+    const hr=(d.hit/d.total*100).toFixed(1);
+    const roi=d.cost>0?(d.payout/d.cost*100).toFixed(1):0;
+    const pf=d.payout-d.cost;
+    const rc=parseFloat(roi)>=100?'pos':parseFloat(roi)>=75?'':'neg';
+    const pc=pf>=0?'pos':'neg';
+    return `<tr>
+      <td>${v}</td><td class="num">${d.total}</td>
+      <td class="num">${d.hit}（${hr}%）</td>
+      <td class="num ${rc}">${roi}%</td>
+      <td class="num ${pc}">${pf>=0?'+':''}¥${pf.toLocaleString()}</td>
+    </tr>`;
+  }).join('');
+
+  // テーブル行
+  const tblRows=rows.map(r=>{
+    const f1h=r.f1.map(bc).join('');
+    const f2h=r.f2.length&&['3連単','3連複','2連単'].includes(ticket)?r.f2.map(bc).join(''):'';
+    const f3h=r.f3.length&&ticket==='3連単'?r.f3.map(bc).join(''):'';
+    function resultCell(teiban,course){
+      if(course==null) return '<td>-</td>';
+      const ti=teiban!=null&&teiban!==course;
+      const tspan=teiban!=null?`<span class="bc b${teiban}">${teiban}</span>`:`<span class="bc b${course}">${course}</span>`;
+      const cspan=ti?`<span style="font-size:9px;color:var(--orange)">(C${course})</span>`:'';
+      return `<td>${tspan}${cspan}</td>`;
+    }
+    const hitTag=r.hit?'<span class="tag-hit">◎ 的中</span>':'<span class="tag-miss">✗ 外</span>';
+    const chgTag=r.hasChg?'<span class="tag-chg">進入変更</span>':'';
+    const pc=r.pay>=10000?'gold':r.pay>=3000?'pos':'';
+    const payTd=r.hit?`<td class="num ${pc}">¥${r.pay.toLocaleString()}</td>`:'<td class="num" style="color:var(--dim)">—</td>';
+    return `<tr>
+      <td>${r.日付}</td><td>${r.venue}</td>
+      <td><span class="rno">${r.rname}</span></td>
+      <td>${f1h}${f2h?'<span style="color:var(--dim);margin:0 2px">/</span>'+f2h:''}${f3h?'<span style="color:var(--dim);margin:0 2px">/</span>'+f3h:''}</td>
+      <td><span class="pts">${r.bets}</span>点</td>
+      ${resultCell(r.t1,r.c1)}
+      ${['3連単','3連複','2連単'].includes(ticket)?resultCell(r.t2,r.c2):''}
+      ${ticket==='3連単'?resultCell(r.t3,r.c3):''}
+      <td>${chgTag}</td><td>${r.決まり手||'-'}</td>
+      <td>${hitTag}</td>${payTd}
+      <td class="num">${r.pop||'-'}</td>
+    </tr>`;
+  }).join('');
+
+  const venueLabel=CS.venues.length===Object.keys(DB).length?'全会場':CS.venues.join('・');
+  window._comboRendered=true;
+  document.getElementById('mainContent').innerHTML=`
+    <div class="result-area">
+      <div class="panel"><div class="ph"><div class="ph-title">🔗 合算検証条件</div></div>
+        <div class="pb" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+          <span class="ctag">🏟 ${venueLabel}</span>
+          <span class="ctag">🎟 ${ticket}</span>
+          <span class="ctag">📅 ${dateFrom||'全期間'} ～ ${dateTo||''}</span>
+          <span class="ctag">💴 ${unitYen}円/点</span>
+          <span class="ctag">1着: ${modeLabel[CS.f1mode]}</span>
+          ${['3連単','3連複','2連単'].includes(ticket)?`<span class="ctag">2着: ${modeLabel[CS.f2mode]}</span>`:''}
+          ${ticket==='3連単'?`<span class="ctag">3着: ${modeLabel[CS.f3mode]}</span>`:''}
+          ${unmatchedVenues.length?`<span class="ctag" style="border-color:rgba(255,61,90,.3);color:var(--red)">⚠ CSV未マッチ: ${unmatchedVenues.join('・')}</span>`:''}
+        </div>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat"><div class="stat-label">照合レース数</div><div class="stat-value">${totalSessions.toLocaleString()}</div><div class="stat-sub">件</div></div>
+        <div class="stat ${hitClass}"><div class="stat-label">的中数 / 的中率</div><div class="stat-value">${hitCount.toLocaleString()}</div><div class="stat-sub">${hitRate}%</div></div>
+        <div class="stat ${roiClass}"><div class="stat-label">ROI</div><div class="stat-value">${roi}%</div><div class="stat-sub">平均払戻 ¥${avgPayout.toLocaleString()}</div></div>
+        <div class="stat ${profitClass}"><div class="stat-label">損益</div>
+          <div class="stat-value" style="font-size:16px">${profit>=0?'+':''}¥${profit.toLocaleString()}</div>
+          <div class="stat-sub">投資¥${totalCost.toLocaleString()} 払戻¥${totalPayout.toLocaleString()}</div>
+        </div>
+      </div>
+
+      ${CS.venues.length>1?`
+      <div class="panel">
+        <div class="ph"><div class="ph-title">🏟 会場別集計</div></div>
+        <div style="padding:0"><div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>会場</th><th>照合数</th><th>的中</th><th>ROI</th><th>損益</th></tr></thead>
+            <tbody>${venueRows}</tbody>
+          </table>
+        </div></div>
+      </div>`:''}
+
+      <div class="panel">
+        <div class="ph"><div class="ph-title">🏁 レース別照合結果（${totalSessions}件）</div>
+          <span style="font-size:9px;color:var(--dim);margin-left:auto">艇番（コース変更時は括弧内にコース番号）</span>
+        </div>
+        <div style="padding:0"><div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr>
+              <th>日付</th><th>会場</th><th>R</th><th>買い目</th><th>点数</th>
+              <th>1着</th>
+              ${['3連単','3連複','2連単'].includes(ticket)?'<th>2着</th>':''}
+              ${ticket==='3連単'?'<th>3着</th>':''}
+              <th>変更</th><th>決まり手</th><th>判定</th><th>払戻</th><th>人気</th>
+            </tr></thead>
+            <tbody>${tblRows}</tbody>
+          </table>
+        </div></div>
+      </div>
+    </div>`;
+}
+
+// ─── drag-drop ───
+['xlsxZone','csvZone'].forEach(id=>{
+  const zone=document.getElementById(id);if(!zone) return;
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.classList.remove('drag');
+    const inp=zone.querySelector('input');if(!e.dataTransfer.files.length) return;
+    const dt=new DataTransfer();[...e.dataTransfer.files].forEach(f=>dt.items.add(f));
+    inp.files=dt.files;
+    if(id==='xlsxZone') loadVenueCSV(inp); else loadCSV(inp);
+  });
+});
+
+// BOOT
+init();
+window._comboRendered = false;
+switchMode('xlsx');
+</script>
+</body>
+</html>

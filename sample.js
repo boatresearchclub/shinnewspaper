@@ -1952,24 +1952,46 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
   })();
   const winnerCO = MASTER_EXT?.winner_course_order || {};
   const wc = String(winnerBoat);
-  return ranked2
+
+  // 3着候補艇の final_prob 合計（フォールバック用の按分分母）
+  const candidateTotal = ranked2
+    .filter(b => b.boat !== winnerBoat && b.boat !== secondBoat)
+    .reduce((s, b) => s + (b.final_prob ?? b.tenkai_prob ?? 0), 0) || 1;
+
+  const remForThis = tenkaiRem?.[kimari]?.[wc] || null;
+
+  const result = ranked2
     .filter(b => b.boat !== winnerBoat && b.boat !== secondBoat)
     .map(b => {
       const sc = String(b.boat);
-      const entry   = tenkaiRem?.[kimari]?.[wc]?.[sc];
-      const baseR3  = entry?.rate3 ?? null;
+      const remEntry    = remForThis?.[sc];
+      const baseR3      = remEntry?.rate3  ?? null;
+      const trTrust     = remEntry?.trust  ?? 0;
       const personEntry = winnerCO[b.name]?.[sc]?.[wc];
-      const personR3    = personEntry?.rate3 ?? null;
+      const personR3    = personEntry?.rate3  ?? null;
       const personTrust = personEntry?.trust  ?? 0;
+
+      // ── 2着と同じ3パターン優先順位 ──
       let r3;
       if(baseR3 != null && personR3 != null && personTrust > 0.3){
-        r3 = personR3 * personTrust + baseR3 * (1 - personTrust);
+        // ①ベース＋個人両方あり → trust で重み付けブレンド（2着の非逃げと同一ロジック）
+        const wPerson = personTrust;
+        const wNat    = trTrust * (1 - personTrust);
+        const wTot    = wPerson + wNat;
+        r3 = wTot > 0 ? (personR3 * wPerson + baseR3 * wNat) / wTot : baseR3;
+      } else if(baseR3 != null){
+        // ②ベースのみ
+        r3 = baseR3;
       } else if(personR3 != null && personTrust > 0.3){
+        // ③個人のみ（ベースなし）
         r3 = personR3;
       } else {
-        r3 = baseR3;
+        // ④フォールバック: final_prob 相対比（2着のフォールバックと同一）
+        r3 = null;
       }
-      const tenjiCoef = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0) : 1.0;
+
+      const baseScore = r3 ?? ((b.final_prob ?? b.tenkai_prob ?? 0) / candidateTotal);
+
       const CLIP3_BY_COURSE = {
         1: [0.85, 1.20],
         2: [0.80, 1.25],
@@ -1978,18 +2000,18 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
         5: [0.70, 1.40],
         6: [0.75, 1.35],
       };
+      const tenjiCoef = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0) : 1.0;
       const [c3lo, c3hi] = CLIP3_BY_COURSE[b.boat] ?? [0.75, 1.35];
       const clipped = Math.min(c3hi, Math.max(c3lo, tenjiCoef));
-      let score = r3 != null ? r3 * clipped : (b.final_prob ?? b.tenkai_prob ?? 0);
-
-      // [2026-05-20 削除] 2着艇強さ補正（secondOccupyAdj）を廃止
-      // 理由: 2着艇のfinal_probで3着スコアを一律に下げる根拠が薄く過学習の原因となっていた。
-      //       3着争いは2着艇の強さより位置的な条件（前後コース）に依存するため、
-      //       tenkai_remaining の rate3 と展示係数クリップで十分に表現できる。
+      const score = baseScore * clipped;
 
       return { boat: b.boat, name: b.name, r3, score };
-    })
-    .sort((a, b) => b.score - a.score);
+    });
+
+  const scoreSum = result.reduce((s, x) => s + x.score, 0) || 1;
+  result.forEach(x => { x.score = x.score / scoreSum; });
+  result.sort((a, b) => b.score - a.score);
+  return result;
 }
 
 //
@@ -3385,13 +3407,25 @@ function renderBuy(rno){
         <span>🔒 回収重視</span>
         <span style="font-size:9px;font-weight:400;color:var(--text3);">管理者限定</span>
       </button>
+      <button id="buy-tab-ev" onclick="switchBuyMode('ev')"
+        style="flex:1;padding:8px 2px 6px;font-size:11px;font-weight:500;border:none;background:none;cursor:pointer;
+               border-bottom:2px solid transparent;color:var(--green);font-family:'Noto Sans JP',sans-serif;
+               display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;">
+        <span>✨ EV買い</span>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);">EV1.1以上</span>
+      </button>
     </div>`;
 
   // ── innerHTML 書き込み（scen/intep/inneg を先頭、hit/rec は最後） ──
   // hit/rec パネルは display:none で生成されるが、CSS .admin-only の display:revert に
   // 干渉しないよう admin-only クラスは付けず、JS のみで表示制御する。
+  const evFilterPanelHtml = buildEvFilterPanel(
+    buy3Hit_raw, buy2Hit_raw, resultSan3, resultNiren,
+    raceOdds3tEv, raceOdds2tEv, comboToBadges, normalizeCombo
+  );
+
   document.getElementById('detail2-panel').innerHTML =
-    modeTabs + scenPanelHtml + inTepPanelHtml + inNegPanelHtml + hitPanelHtml + recPanelHtml;
+    modeTabs + scenPanelHtml + inTepPanelHtml + inNegPanelHtml + hitPanelHtml + recPanelHtml + evFilterPanelHtml;
 
   // ── 初期表示: シナリオタブをアクティブに ──
   // switchBuyMode を使うと admin チェックが走るため直接操作する
@@ -3434,6 +3468,85 @@ function renderBuy(rno){
 } // renderBuy 終了
 
 // ── 買い目モード切り替え ──
+// ── EVフィルタータブ: AI確率×オッズ が EV1.1以上の買い目のみ表示 ──
+function buildEvFilterPanel(buy3list, buy2list, resultSan3, resultNiren,
+                             raceOdds3tEv, raceOdds2tEv, comboToBadges, normalizeCombo) {
+  const EV_THRESHOLD = 1.1;
+
+  function filterByEV(list, oddsMap) {
+    return list
+      .map(r => {
+        const nc = normalizeCombo(r.c);
+        const ov = oddsMap[nc] ?? null;
+        const ev = (r.prob != null && ov != null) ? r.prob * ov : null;
+        return { ...r, _odds: ov, _ev: ev };
+      })
+      .filter(r => r._ev != null && r._ev >= EV_THRESHOLD)
+      .sort((a, b) => b._ev - a._ev);
+  }
+
+  const ev3list = filterByEV(buy3list, raceOdds3tEv);
+  const ev2list = filterByEV(buy2list, raceOdds2tEv);
+
+  function buildEvRows(list, resultSet) {
+    if (list.length === 0) {
+      return `<div style="padding:12px 8px;color:var(--text3);font-size:12px;text-align:center">EV${EV_THRESHOLD.toFixed(1)}以上の買い目なし</div>`;
+    }
+    let html = '';
+    list.forEach((r, idx) => {
+      const nc      = normalizeCombo(r.c);
+      const isHit   = resultSet && resultSet.has(nc);
+      const probPct = r.prob != null ? (r.prob * 100).toFixed(2) + '%' : '—';
+      const oddsStr = r._odds != null ? r._odds.toFixed(1) : '—';
+      const ev      = r._ev;
+      const evColor = ev >= 1.5 ? '#00c853' : 'var(--green)';
+      const evHtml  = `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${evColor};flex-shrink:0;min-width:4em;text-align:right">EV${ev.toFixed(2)}</span>`;
+      const rankColor = idx === 0 ? 'var(--gold)' : idx === 1 ? '#aaa' : 'var(--text3)';
+      html += `<div class="buy-row${isHit ? ' hit' : ''}" style="padding:6px 0">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:nowrap">
+          <span style="font-size:9px;color:${rankColor};font-weight:700;min-width:14px;flex-shrink:0">${idx+1}</span>
+          <span class="buy-combo" style="display:inline-flex;align-items:center;gap:0;letter-spacing:0;flex:1;min-width:0">${comboToBadges(r.c)}</span>
+          <span style="font-size:10px;font-family:var(--mono);color:var(--text3);flex-shrink:0;min-width:3.5em;text-align:right">${probPct}</span>
+          <span style="font-size:12px;font-family:var(--mono);font-weight:600;color:var(--text);flex-shrink:0;min-width:3.8em;text-align:right">${oddsStr}倍</span>
+          ${evHtml}
+          ${isHit ? '<span style="font-size:10px;background:var(--green);color:#fff;padding:1px 5px;border-radius:3px;font-weight:700">HIT</span>' : ''}
+        </div>
+      </div>`;
+    });
+    return html;
+  }
+
+  function calcSynth(list) {
+    let denom = 0, cnt = 0;
+    list.forEach(r => { if (r._odds != null && r._odds > 0) { denom += 1 / r._odds; cnt++; } });
+    return (cnt > 0 && denom > 0) ? 1 / denom : null;
+  }
+  const so3val = calcSynth(ev3list);
+  const so3str = so3val != null
+    ? `<span style="margin-left:auto;font-size:11px;font-family:var(--mono);font-weight:700;color:${so3val >= 3.0 ? 'var(--green)' : so3val >= 1.5 ? 'var(--text2)' : 'var(--red)'}">合成${so3val.toFixed(2)}倍</span>`
+    : '';
+
+  return `<div id="buy-mode-ev" style="display:none">
+    <div style="padding:6px 8px 4px;font-size:10px;color:var(--text3);line-height:1.5;background:rgba(0,200,83,0.06);border-bottom:1px solid var(--border)">
+      ✨ AI確率 × オッズ が <strong style="color:var(--green)">EV${EV_THRESHOLD.toFixed(1)}以上</strong> の買い目のみ（EV降順）
+    </div>
+    <div class="buy-grid">
+      <div class="buy-card">
+        <div class="buy-card-title" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          <span>3連単</span>
+          <span style="font-weight:400;color:var(--text3);font-size:10px">${ev3list.length}点</span>
+          ${so3str}
+        </div>
+        ${buildEvRows(ev3list, resultSan3)}
+      </div>
+      <div class="buy-card">
+        <div class="buy-card-title">2連単 <span style="font-weight:400;color:var(--text3);font-size:10px;margin-left:6px">${ev2list.length}点</span></div>
+        ${buildEvRows(ev2list, resultNiren)}
+      </div>
+    </div>
+  </div>`;
+}
+
 function switchBuyMode(mode){
   // ── 管理者限定モード（hit / rec）: 非管理者はアクセス不可 ──
   const _adminOnlyModes = ['hit', 'rec'];
@@ -3446,11 +3559,13 @@ function switchBuyMode(mode){
   const scenPanel   = document.getElementById('buy-mode-scen');
   const inTepPanel  = document.getElementById('buy-mode-intep');
   const inNegPanel  = document.getElementById('buy-mode-inneg');
+  const evPanel     = document.getElementById('buy-mode-ev');
   const hitTab      = document.getElementById('buy-tab-hit');
   const recTab      = document.getElementById('buy-tab-rec');
   const scenTab     = document.getElementById('buy-tab-scen');
   const inTepTab    = document.getElementById('buy-tab-intep');
   const inNegTab    = document.getElementById('buy-tab-inneg');
+  const evTab       = document.getElementById('buy-tab-ev');
   // ロックパネル（非管理者向けロック表示）
   const hitLockPanel = document.getElementById('user-lock-buy-mode-hit');
   const recLockPanel = document.getElementById('user-lock-buy-mode-rec');
@@ -3458,9 +3573,9 @@ function switchBuyMode(mode){
   if(!hitPanel || !recPanel) return;
 
   // 全パネルを非表示・ロック表示も閉じる・タブをリセット
-  [hitPanel, recPanel, scenPanel, inTepPanel, inNegPanel, hitLockPanel, recLockPanel]
+  [hitPanel, recPanel, scenPanel, inTepPanel, inNegPanel, evPanel, hitLockPanel, recLockPanel]
     .filter(Boolean).forEach(p => { p.style.display = 'none'; });
-  [hitTab, recTab, scenTab, inTepTab, inNegTab].filter(Boolean).forEach(t => {
+  [hitTab, recTab, scenTab, inTepTab, inNegTab, evTab].filter(Boolean).forEach(t => {
     t.style.borderBottomColor = 'transparent';
     t.style.color             = 'var(--text3)';
     t.style.fontWeight        = '500';

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Boat Research Club</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sample.css?v=20260515101558">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="nav-inner">
+    <div class="logo" onclick="goTopAndRefresh()" title="トップページへ（更新）">
+      <div class="logo-icon">⛵</div>
+      <span>Boat Research Club</span>
+    </div>
+    <div class="header-right">
+      <div class="header-meta-area">
+        <div class="header-meta" id="header-meta"></div>
+        <div class="date-nav" id="date-nav" style="display:none">
+          <button class="date-nav-btn" id="date-prev" onclick="shiftDate(-1)" title="前日">‹</button>
+          <span class="date-nav-label" id="date-nav-label"></span>
+          <button class="date-nav-btn" id="date-next" onclick="shiftDate(+1)" title="翌日">›</button>
+        </div>
+      </div>
+      <button id="refresh-btn" onclick="doRefresh()" title="更新">↻</button>
+    </div>
+  </div>
+</header>
+
+<!-- sticky nav: 締め切りアラート + 会場タブ + レース選択バー -->
+<div class="sticky-nav">
+  <div id="alert-strip">
+    <div class="nav-inner">
+      <div class="alert-strip-title">⏱ まもなく締め切り</div>
+      <div class="alert-strip-cards" id="alert-cards"></div>
+    </div>
+  </div>
+  <div class="sticky-nav-venue">
+    <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;display:flex">
+      <div id="venue-tabs"></div>
+    </div>
+  </div>
+  <div class="sticky-nav-race">
+    <div class="nav-inner" style="padding-top:0;padding-bottom:0;overflow-x:auto">
+      <div class="sticky-nav-race-inner" id="race-bar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TOP PAGE ══ -->
+<div id="top-page">
+  <div class="top-hero">
+    <div class="top-hero-icon">⛵</div>
+    <div class="top-hero-title">Boat Research Club</div>
+    <div class="top-hero-sub">競艇レース分析・予想システム</div>
+  </div>
+
+  <!-- 締め切りアラート -->
+  <div id="top-alert-strip">
+    <div class="top-alert-title"><span class="alert-dot" id="top-alert-dot"></span>⏱ まもなく締め切り</div>
+    <div class="top-alert-cards" id="top-alert-cards"></div>
+  </div>
+
+  <!-- ピックアップレース -->
+  <div id="top-pickup-section" style="display:none">
+    <div class="top-section-label">🎯 ピックアップレース</div>
+    <div id="top-pickup-cards" style="
+      display:flex;flex-direction:row;gap:8px;
+      overflow-x:auto;
+      padding-bottom:6px;
+      margin-bottom:1rem;
+      scrollbar-width:none;
+      -webkit-overflow-scrolling:touch;
+    "></div>
+  </div>
+
+  <!-- 会場クイックジャンプ -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;gap:8px">
+    <div class="top-section-label" id="top-venue-date-label" style="margin-bottom:0">🏟 本日の開催場</div>
+    <div class="date-nav" id="top-date-nav" style="display:none">
+      <button class="date-nav-btn" id="top-date-prev" onclick="topShiftDate(-1)" title="前日">‹</button>
+      <span class="date-nav-label" id="top-date-nav-label"></span>
+      <button class="date-nav-btn" id="top-date-next" onclick="topShiftDate(+1)" title="翌日">›</button>
+    </div>
+  </div>
+  <div class="top-venues-row" id="top-venue-chips">
+    <span style="color:var(--text3);font-size:12px">データを読み込み中...</span>
+  </div>
+
+  <!-- 本日のAI予想成績 -->
+  <div class="top-section-label">🤖 本日のAI予想成績</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ 江戸川は除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ データ不足・進入変更のレースは除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ 合成オッズが参加基準未満のレースは除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.6rem;padding:0 0.1rem">※ 回収率は1点100円で購入した場合で算出</div>
+  <div id="top-ai-stats-today">
+    <span style="color:var(--text3);font-size:12px">集計中...</span>
+  </div>
+
+  <!-- 過去のAI予想成績 -->
+  <div class="top-section-label" style="margin-top:1.2rem;display:flex;align-items:center;gap:8px">
+    <span>📊 過去のAI予想成績（直近30日）</span>
+    <span id="top-ai-stats-history-updated" style="font-size:11px;font-weight:400;color:var(--text3)"></span>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ 江戸川は除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ データ不足・進入変更のレースは除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.2rem;padding:0 0.1rem">※ 合成オッズが参加基準未満のレースは除外</div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:0.4rem;padding:0 0.1rem">※ 回収率は1点100円で購入した場合で算出</div>
+  <div id="top-ai-stats-history-summary">
+    <span style="color:var(--text3);font-size:12px">集計中...</span>
+  </div>
+  <div style="margin-bottom:0.7rem;padding:0 0.1rem;display:flex;flex-wrap:wrap;gap:6px">
+    <button onclick="exportBacktestCSV('hit')" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 🎯 的中重視 CSV
+    </button>
+    <button onclick="exportBacktestCSV('rec')" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 💰 回収重視 CSV
+    </button>
+    <button onclick="exportBacktestCSV_scen()" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 🎲 シナリオ CSV
+    </button>
+    <button onclick="exportBacktestCSV()" style="font-size:11px;padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+      ⬇ 全部ダウンロード
+    </button>
+  </div>
+
+  <!-- 各日詳細 -->
+  <div class="top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
+  <div id="top-ai-stats">
+    <span style="color:var(--text3);font-size:12px">集計中...</span>
+  </div>
+
+  <div class="top-info-box">
+    💡 <strong>使い方：</strong>上の「本日の開催場」から会場を選ぶか、メニューカードをタップすると各機能へ進みます。<br>
+    左上の <strong>⛵ Boat Research Club</strong> をタップすると、いつでもこのページに戻れます。
+  </div>
+</div>
+
+<div class="container">
+  <!-- 常時表示バナー（タブ切替に関係なく表示） -->
+  <div id="persistent-banners"></div>
+
+  <!-- タブ -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" data-tab="detail" onclick="switchTab('detail')">出走表</button>
+    <button class="tab-btn" data-tab="buy" onclick="switchTab('buy')">展開分析</button>
+    <button class="tab-btn" data-tab="odds" onclick="switchTab('odds')">オッズ</button>
+    <button class="tab-btn" data-tab="detail2" onclick="switchTab('detail2')">AI予想</button>
+    <button class="tab-btn" data-tab="comment" onclick="switchTab('comment')">選手情報</button>
+    <button class="tab-btn" data-tab="result" onclick="switchTab('result')">結果</button>
+  </div>
+
+  <!-- 出走表タブ -->
+  <div id="tab-detail">
+    <div id="inline-detail"></div>
+  </div>
+
+  <!-- AI予想タブ -->
+  <div id="tab-detail2" style="display:none">
+    <div id="detail2-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
+    </div>
+  </div>
+
+  <!-- 展開分析タブ -->
+  <div id="tab-buy" style="display:none">
+    <div id="buy-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
+    </div>
+  </div>
+
+  <!-- 選手情報タブ -->
+  <div id="tab-comment" style="display:none">
+    <div id="comment-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると選手情報が表示されます</div>
+    </div>
+  </div>
+
+  <!-- 結果タブ -->
+  <div id="tab-result" style="display:none">
+    <div id="result-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">（未実装）</div>
+    </div>
+  </div>
+
+  <div id="tab-odds" style="display:none">
+    <div id="odds-panel">
+      <div style="padding:2rem;text-align:center;color:var(--text3)">オッズ未取得</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="data.js?v=20260515101558"></script>
+<script src="sample_obf.js?v=20260515101558"></script>
+
+<!-- ── 展開シミュ モーダル ── -->
+<div id="sim-modal-overlay" onclick="if(event.target===this)closeSimModal()">
+  <div id="sim-modal">
+    <div id="sim-modal-header">
+      <h3>⚡ 展開シミュ</h3>
+      <button id="sim-modal-close" onclick="closeSimModal()">✕</button>
+    </div>
+    <div class="sim-canvas-wrap">
+      <div class="sim-inner-label" style="display:flex;align-items:center;gap:6px">
+        <span>📊 スタート → 1マーク 最確展開</span>
+        <span id="sim-data-badge"></span>
+      </div>
+      <canvas id="sim-canvas"></canvas>
+      <div id="sim-legend" class="sim-legend"></div>
+    </div>
+    <div class="sim-patterns">
+      <h4>🏁 展開パターン TOP5</h4>
+      <div id="sim-patterns-list"></div>
+    </div>
+    <button class="sim-resim-btn" id="sim-resim-btn">🔄 再シミュレート</button>
+  </div>
+</div>
+
+</body>
+</html>

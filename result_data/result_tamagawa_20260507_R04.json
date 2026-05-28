@@ -1,0 +1,42 @@
+{
+  "venue": "多摩川",
+  "venue_slug": "tamagawa",
+  "date": "20260507",
+  "race": 4,
+  "fetched_at": "2026-05-08 03:47:33",
+  "kimari": "差し",
+  "henkan": [],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 1700,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 220,
+      "ninki": null
+    },
+    {
+      "combo": "6",
+      "odds": 560,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-6",
+      "odds": 16850,
+      "ninki": 28
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-6-3",
+      "odds": 132320,
+      "ninki": 118
+    }
+  ]
+}

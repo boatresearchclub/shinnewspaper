@@ -1,0 +1,89 @@
+name: ボートリサーチ 自動データ収集
+
+on:
+  schedule:
+    # ── 毎朝8時(JST) = UTC 23時 に開催情報取得 ──
+    - cron: '0 23 * * *'
+    # ── レース時間帯(JST 9:00〜21:00) を10分ごとに実行 ──
+    # UTC 0:00〜12:00 = JST 9:00〜21:00
+    - cron: '*/10 0-12 * * *'
+
+  workflow_dispatch:  # 手動実行ボタン
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8  # 10分ごとのジョブなので8分でタイムアウト
+
+    steps:
+      # ─────────────────────────────────────
+      # 1. リポジトリをチェックアウト
+      # ─────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ─────────────────────────────────────
+      # 2. Python セットアップ
+      # ─────────────────────────────────────
+      - name: Python セットアップ
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ─────────────────────────────────────
+      # 3. 依存パッケージインストール
+      # ─────────────────────────────────────
+      - name: 依存パッケージインストール
+        run: |
+          pip install requests beautifulsoup4 pandas playwright
+
+      # ─────────────────────────────────────
+      # 4. Playwright Chromium インストール
+      #    （fetch_tenji.py で使用）
+      # ─────────────────────────────────────
+      - name: Playwright Chromium インストール
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      # ─────────────────────────────────────
+      # 5. 開催情報取得（毎朝1回 + 手動実行時）
+      # ─────────────────────────────────────
+      - name: 開催情報取得 (fetch_race_index)
+        run: python fetch_race_index.py
+
+      # ─────────────────────────────────────
+      # 6. 展示情報取得（レース時間帯のみ）
+      #    race_index.json から会場を読み取り全会場実行
+      # ─────────────────────────────────────
+      - name: 展示情報取得 (fetch_tenji)
+        run: python ci_runner.py --task tenji
+        continue-on-error: true  # 1会場失敗しても他を続ける
+
+      # ─────────────────────────────────────
+      # 7. オッズ取得
+      # ─────────────────────────────────────
+      - name: オッズ取得 (fetch_odds)
+        run: python ci_runner.py --task odds
+        continue-on-error: true
+
+      # ─────────────────────────────────────
+      # 8. コメント取得
+      # ─────────────────────────────────────
+      - name: コメント取得 (scrape_comments)
+        run: python ci_runner.py --task comments
+        continue-on-error: true
+
+      # ─────────────────────────────────────
+      # 9. 結果をコミット & プッシュ
+      # ─────────────────────────────────────
+      - name: Git コミット & プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "データ更新: $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M JST')"
+          git push

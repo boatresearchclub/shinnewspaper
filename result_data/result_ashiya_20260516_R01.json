@@ -1,0 +1,127 @@
+{
+  "venue": "芦屋",
+  "venue_slug": "ashiya",
+  "date": "20260516",
+  "race": 1,
+  "fetched_at": "2026-05-16 11:25:42",
+  "kimari": "恵まれ",
+  "henkan": [
+    1,
+    3
+  ],
+  "racetime": "1'47\"7",
+  "fly": [
+    1,
+    3
+  ],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "平本真之",
+      "reg_no": "4337",
+      "time": "1'47\"7"
+    },
+    {
+      "rank": "2",
+      "boat": 5,
+      "name": "尾上雅也",
+      "reg_no": "4953",
+      "time": "1'48\"5"
+    },
+    {
+      "rank": "3",
+      "boat": 6,
+      "name": "吉川元浩",
+      "reg_no": "3854",
+      "time": "1'48\"9"
+    },
+    {
+      "rank": "4",
+      "boat": 4,
+      "name": "前田将太",
+      "reg_no": "4504",
+      "time": "1'50\"2"
+    },
+    {
+      "rank": "F",
+      "boat": 1,
+      "name": "塩田北斗",
+      "reg_no": "4566",
+      "time": null
+    },
+    {
+      "rank": "F",
+      "boat": 3,
+      "name": "河合佑樹",
+      "reg_no": "4494",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.01,
+      "fly": true
+    },
+    {
+      "boat": 2,
+      "st": 0.01,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.02,
+      "fly": true
+    },
+    {
+      "boat": 4,
+      "st": 0.04,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.04,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.03,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 180,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 130,
+      "ninki": null
+    },
+    {
+      "combo": "5",
+      "odds": 190,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-5",
+      "odds": 620,
+      "ninki": 4
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-5-6",
+      "odds": 1780,
+      "ninki": 11
+    }
+  ],
+  "cancelled": false
+}
