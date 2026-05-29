@@ -387,9 +387,9 @@ function render() {
 render();
 
 // ===== タブ2: 出走表入力 =====
-/* ENTRY_VENUE_START */let raceVenue = (venues.includes("鳴門") ? "鳴門" : venues[0]);/* ENTRY_VENUE_END */
+/* ENTRY_VENUE_START */let raceVenue = (venues.includes("びわこ") ? "びわこ" : venues[0]);/* ENTRY_VENUE_END */
 // 選手名マップ: 枠番 → 選手名（auto_push.pyが注入）
-/* ENTRY_NAMES_START */let _entryNames = {1:"柴田直哉", 2:"吉村正明", 3:"都築正治", 4:"片岡雅裕", 5:"藤本遼磨", 6:"金田幸子"};/* ENTRY_NAMES_END */
+/* ENTRY_NAMES_START */let _entryNames = {1:"中島昂章", 2:"高山智至", 3:"山崎聖司", 4:"永田義紘", 5:"表　健太", 6:"鳥本智史"};/* ENTRY_NAMES_END */
 // entryMap: 枠番 → 進入コース (default = 枠番)
 let entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6};
 let raceWinnerCourse = null; // 選択された勝者の進入コース
@@ -399,7 +399,7 @@ let raceChart2 = null, raceChart3 = null;
 // 会場セレクト初期化
 const rvs = document.getElementById('raceVenueSelect');
 venues.forEach(v => { const o = document.createElement('option'); o.value=v; o.textContent=v; rvs.appendChild(o); });
-rvs.addEventListener('change', () => { raceVenue = rvs.value; updateWinnerButtons(); renderRaceResult(); });
+rvs.addEventListener('change', () => { raceVenue = rvs.value; _entryNames = {1:'',2:'',3:'',4:'',5:'',6:''}; buildEntryRows(); updateWinnerButtons(); renderRaceResult(); });
 
 // 出走表行を生成
 function buildEntryRows() {
