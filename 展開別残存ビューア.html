@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>展開別残存率ビューア</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// data.js（MASTER_EXT）を動的に読み込む
+// 同一リポジトリからの相対パスで取得。失敗しても他機能には影響なし。
+(function() {
+  var s = document.createElement('script');
+  s.src = 'data.js?v=' + Date.now();
+  s.onerror = function() { console.warn('data.js の読み込みに失敗しました（選手個人データなし）'); };
+  document.head.appendChild(s);
+})();
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Helvetica Neue', sans-serif; background: #fff; color: #1a1a1a; min-height: 100vh; }
@@ -377,7 +387,9 @@ function render() {
 render();
 
 // ===== タブ2: 出走表入力 =====
-/* ENTRY_VENUE_START */let raceVenue = (venues.includes("戸田") ? "戸田" : venues[0]);/* ENTRY_VENUE_END */
+/* ENTRY_VENUE_START */let raceVenue = (venues.includes("びわこ") ? "びわこ" : venues[0]);/* ENTRY_VENUE_END */
+// 選手名マップ: 枠番 → 選手名（auto_push.pyが注入）
+/* ENTRY_NAMES_START */let _entryNames = {1:"中島昂章", 2:"高山智至", 3:"山崎聖司", 4:"永田義紘", 5:"表　健太", 6:"鳥本智史"};/* ENTRY_NAMES_END */
 // entryMap: 枠番 → 進入コース (default = 枠番)
 let entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6};
 let raceWinnerCourse = null; // 選択された勝者の進入コース
@@ -408,7 +420,6 @@ function buildEntryRows() {
     // 選手名（表示のみ）
     const name = document.createElement('div');
     name.className = 'entry-name';
-    /* ENTRY_NAMES_START */const _entryNames = {1:"宇野博之", 2:"森　弘行", 3:"尾形栄治", 4:"新開　航", 5:"鈴木結平", 6:"島田一生"};/* ENTRY_NAMES_END */
     name.textContent = _entryNames[waku] || `${waku}号艇`;
     row.appendChild(name);
     
@@ -511,6 +522,66 @@ function buildWinnerKimeGrid() {
   });
 }
 
+// 勝者コース別 選手個人データセクションを生成
+function buildPlayerStatsSection(otherCourses, winnerCourse, kimete) {
+  const wco = (typeof MASTER_EXT !== 'undefined') ? (MASTER_EXT.winner_course_order || {}) : {};
+  if(!Object.keys(wco).length) return '';
+
+  // 有効なデータがある選手を収集
+  const playerRows = otherCourses.map(({waku, course}) => {
+    const playerName = _entryNames[waku] || null;
+    if(!playerName) return null;
+    const courseStr = String(course);
+    const winStr    = String(winnerCourse);
+    const d = (wco[playerName] || {})[courseStr]?.[winStr];
+    if(!d) return null;
+    return { waku, course, name: playerName, rate2: d.rate2 ?? 0, rate3: d.rate3 ?? 0, trust: d.trust ?? 0 };
+  }).filter(Boolean);
+
+  if(!playerRows.length) return '';
+
+  const rows = playerRows.sort((a, b) => a.course - b.course);
+  const max2 = Math.max(...rows.map(r => r.rate2), 0.001);
+  const max3 = Math.max(...rows.map(r => r.rate3), 0.001);
+
+  return `
+    <div class="bar-section" style="margin-top:10px;">
+      <div class="bar-title">選手個人データ（勝者${winnerCourse}コース時）</div>
+      ${rows.map(r => {
+        const bc  = BOAT_COLORS[r.course];
+        const wbc = BOAT_COLORS[r.waku];
+        const p2  = (r.rate2 * 100).toFixed(1);
+        const p3  = (r.rate3 * 100).toFixed(1);
+        const w2  = Math.min(r.rate2 / max2 * 100, 100).toFixed(1);
+        const w3  = Math.min(r.rate3 / max3 * 100, 100).toFixed(1);
+        const trust = Math.round(r.trust * 100);
+        return \`
+          <div class="bar-row">
+            <div style="display:flex;gap:3px;align-items:center;flex-shrink:0;width:100px;">
+              <div class="boat-badge" style="background:\${wbc.bg};color:\${wbc.text};border-color:\${wbc.border};width:22px;">\${r.waku}</div>
+              <div class="boat-badge" style="background:\${bc.bg};color:\${bc.text};border-color:\${bc.border};width:22px;font-size:10px;">\${r.course}</div>
+              <div style="font-size:10px;color:#4a5070;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px;" title="\${r.name}">\${r.name}</div>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;gap:4px;margin-bottom:3px;">
+                <div class="bar-track"><div class="bar-fill-2" style="width:\${w2}%;background:\${bc.bar2};"></div></div>
+                <span class="bar-pct">\${p2}%</span>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <div class="bar-track"><div class="bar-fill-3" style="width:\${w3}%;background:\${bc.bar3};"></div></div>
+                <span class="bar-pct">\${p3}%</span>
+              </div>
+            </div>
+          </div>\`;
+      }).join('')}
+      <div style="margin-top:6px;font-size:10px;color:#a0a8c0;">左: 枠番 ｜ 中: 進入コース ｜ データなしの選手は非表示</div>
+      <div class="legend-row">
+        <span><i style="background:#aaa;"></i>2着率</span>
+        <span><i style="background:#888;"></i>3着率</span>
+      </div>
+    </div>`;
+}
+
 // 出走表タブの結果を描画
 function renderRaceResult() {
   const area = document.getElementById('raceResult');
@@ -607,6 +678,7 @@ function renderRaceResult() {
         <span><i style="background:#888;"></i>3着率</span>
       </div>
     </div>
+    ${buildPlayerStatsSection(otherCourses, raceWinnerCourse, raceWinnerKime)}
   `;
 
   // チャート描画
