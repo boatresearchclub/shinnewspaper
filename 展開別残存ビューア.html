@@ -387,9 +387,9 @@ function render() {
 render();
 
 // ===== タブ2: 出走表入力 =====
-/* ENTRY_VENUE_START */let raceVenue = (venues.includes("唐津") ? "唐津" : venues[0]);/* ENTRY_VENUE_END */
+/* ENTRY_VENUE_START */let raceVenue = (venues.includes("びわこ") ? "びわこ" : venues[0]);/* ENTRY_VENUE_END */
 // 選手名マップ: 枠番 → 選手名（auto_push.pyが注入）
-/* ENTRY_NAMES_START */let _entryNames = {1:"川合理司", 2:"小澤　学", 3:"太田和美", 4:"土屋太朗", 5:"久田　武", 6:"前田健太"};/* ENTRY_NAMES_END */
+/* ENTRY_NAMES_START */let _entryNames = {1:"中島昂章", 2:"高山智至", 3:"山崎聖司", 4:"永田義紘", 5:"表　健太", 6:"鳥本智史"};/* ENTRY_NAMES_END */
 // entryMap: 枠番 → 進入コース (default = 枠番)
 let entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6};
 let raceWinnerCourse = null; // 選択された勝者の進入コース
@@ -555,24 +555,24 @@ function buildPlayerStatsSection(otherCourses, winnerCourse, kimete) {
         const w2  = Math.min(r.rate2 / max2 * 100, 100).toFixed(1);
         const w3  = Math.min(r.rate3 / max3 * 100, 100).toFixed(1);
         const trust = Math.round(r.trust * 100);
-        return \`
+        return `
           <div class="bar-row">
             <div style="display:flex;gap:3px;align-items:center;flex-shrink:0;width:100px;">
-              <div class="boat-badge" style="background:\${wbc.bg};color:\${wbc.text};border-color:\${wbc.border};width:22px;">\${r.waku}</div>
-              <div class="boat-badge" style="background:\${bc.bg};color:\${bc.text};border-color:\${bc.border};width:22px;font-size:10px;">\${r.course}</div>
-              <div style="font-size:10px;color:#4a5070;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px;" title="\${r.name}">\${r.name}</div>
+              <div class="boat-badge" style="background:${wbc.bg};color:${wbc.text};border-color:${wbc.border};width:22px;">${r.waku}</div>
+              <div class="boat-badge" style="background:${bc.bg};color:${bc.text};border-color:${bc.border};width:22px;font-size:10px;">${r.course}</div>
+              <div style="font-size:10px;color:#4a5070;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:54px;" title="${r.name}">${r.name}</div>
             </div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;gap:4px;margin-bottom:3px;">
-                <div class="bar-track"><div class="bar-fill-2" style="width:\${w2}%;background:\${bc.bar2};"></div></div>
-                <span class="bar-pct">\${p2}%</span>
+                <div class="bar-track"><div class="bar-fill-2" style="width:${w2}%;background:${bc.bar2};"></div></div>
+                <span class="bar-pct">${p2}%</span>
               </div>
               <div style="display:flex;gap:4px;">
-                <div class="bar-track"><div class="bar-fill-3" style="width:\${w3}%;background:\${bc.bar3};"></div></div>
-                <span class="bar-pct">\${p3}%</span>
+                <div class="bar-track"><div class="bar-fill-3" style="width:${w3}%;background:${bc.bar3};"></div></div>
+                <span class="bar-pct">${p3}%</span>
               </div>
             </div>
-          </div>\`;
+          </div>`;
       }).join('')}
       <div style="margin-top:6px;font-size:10px;color:#a0a8c0;">左: 枠番 ｜ 中: 進入コース ｜ データなしの選手は非表示</div>
       <div class="legend-row">
