@@ -387,9 +387,9 @@ function render() {
 render();
 
 // ===== タブ2: 出走表入力 =====
-/* ENTRY_VENUE_START */let raceVenue = (venues.includes("鳴門") ? "鳴門" : venues[0]);/* ENTRY_VENUE_END */
+/* ENTRY_VENUE_START */let raceVenue = (venues.includes("浜名湖") ? "浜名湖" : venues[0]);/* ENTRY_VENUE_END */
 // 選手名マップ: 枠番 → 選手名（auto_push.pyが注入）
-/* ENTRY_NAMES_START */let _entryNames = {1:"三浦洋次", 2:"藤本佳史", 3:"岩崎芳美", 4:"佐々木大", 5:"加藤政彦", 6:"武富智亮"};/* ENTRY_NAMES_END */
+/* ENTRY_NAMES_START */let _entryNames = {1:"深谷知博", 2:"西橋奈未", 3:"山崎　郡", 4:"守屋美穂", 5:"佐藤隆太", 6:"白井英治"};/* ENTRY_NAMES_END */
 // entryMap: 枠番 → 進入コース (default = 枠番)
 let entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6};
 let raceWinnerCourse = null; // 選択された勝者の進入コース
