@@ -303,7 +303,8 @@
       try {
         if (typeof _ensureTenjiCache === 'function') _ensureTenjiCache();
         if (typeof tenjiKey === 'function' && typeof _tenjiCache !== 'undefined') {
-          const tk = tenjiKey(venue, vdata.date, rno);
+          const slug = (typeof SLUG_MAP !== 'undefined' && SLUG_MAP[venue]) ? SLUG_MAP[venue] : venue;
+          const tk = tenjiKey(slug, vdata.date, rno);
           tenjiScoreMap = _tenjiCache[tk] || {};
         }
       } catch (_e) { /* tenjiCache が利用不可でも続行 */ }
