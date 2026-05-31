@@ -43,12 +43,21 @@
   // ─────────────────────────────────────────────────────────────────────────
 
   // 2着候補フィルター
-  const P2_GAP_THRESHOLD   = 0.20;  // 1位との差がこれ以上 → 断絶とみなし打ち切り
-  const P2_MIN_RATE        = 0.13;  // この確率未満の艇は問答無用で除外
-  const P2_DOMINANT        = 0.50;  // 2着1位がこれ以上 → 2着は1艇のみに絞る（1本釣り）
+  const P2_GAP_THRESHOLD       = 0.20;  // 1位との差がこれ以上 → 断絶とみなし打ち切り
+  const P2_MIN_RATE            = 0.13;  // この確率未満の艇は問答無用で除外
+  const P2_DOMINANT            = 0.50;  // 2着1位がこれ以上 → 2着は1艇のみに絞る（1本釣り）
 
   // 3着候補フィルター
-  const P3_MIN_RATE        = 0.15;  // この確率未満の3着候補は除外
+  const P3_MIN_RATE            = 0.15;  // この確率未満の3着候補は除外
+
+  // 1着・2軸目の最終確率フィルター
+  // 【変更点】
+  //   旧: fp差≤15%ptのとき2軸目を出す（差ベース）
+  //   新: fp2ndの絶対値≥20%のとき2軸目を出す（絶対値ベース）
+  //   理由: 52.6% vs 26.8% のように差は大きくても2位が有力なケースで
+  //         旧ロジックは2軸目を出さなかった。絶対値で判断するのが実態に合う。
+  const FP2ND_MIN_FOR_2AXIS    = 0.20;  // 2軸目(fp2nd)の最終確率がこれ以上なら2軸展開
+  const FP1ST_MIN_FOR_BUY      = 0.25;  // 1着軸の最終確率がこれ未満なら買い目を出さない
 
   // ─────────────────────────────────────────────────────────────────────────
   // § 2  共通フィルター関数
@@ -255,7 +264,29 @@
     window.buildScenarioBuyPanel = function (ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo, rno) {
       // フィルター適用済み sd を構築して渡す
       const filteredSd = _buildFilteredSd(sd, ranked2);
-      return _orig.call(this, ranked2, filteredSd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo, rno);
+
+      // 【変更】sample.js 内の SCEN_AXIS2_FP_GAP(15%pt差ベース) を上書きするため
+      // ranked2 の fp2nd 絶対値が FP2ND_MIN_FOR_2AXIS 未満なら fp2nd を null に差し替え
+      // → buildScenarioBuyPanel 内の _allow2ndAxis が false になる
+      // また fp1st が FP1ST_MIN_FOR_BUY 未満なら ranked2 を空配列にして買い目なしにする
+      const fp1stProb = ranked2[0]?.final_prob ?? 0;
+      const fp2ndProb = ranked2[1]?.final_prob ?? 0;
+
+      if (fp1stProb < FP1ST_MIN_FOR_BUY) {
+        // 買い目なし: 空の ranked2 を渡して早期リターンさせる
+        return _orig.call(this, [], filteredSd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo, rno);
+      }
+
+      // fp2nd が閾値未満の場合: ranked2 から fp2nd エントリを除去して1軸に強制
+      let filteredRanked2 = ranked2;
+      if (fp2ndProb < FP2ND_MIN_FOR_2AXIS) {
+        // fp2nd を末尾に移動（final_prob を 0 にして確信度判定に影響させない）
+        filteredRanked2 = ranked2.map((b, i) =>
+          i === 1 ? Object.assign({}, b, { final_prob: 0 }) : b
+        );
+      }
+
+      return _orig.call(this, filteredRanked2, filteredSd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo, rno);
     };
 
     window.buildScenarioBuyPanel._qualityPatched = true;
@@ -401,11 +432,17 @@
         const _fpDiff    = (_fp1stProb - _fp2ndProb) * 100;
         const _hhi       = calcHHIF(fp1st);
 
+        // 1着軸の最終確率が低すぎる場合は買い目なし
+        if (_fp1stProb < FP1ST_MIN_FOR_BUY) return result;
+
         let _confRank;
         if (_hhi >= 0.55 && _fp1stProb >= 0.50) _confRank = 'HIGH';
         else if (_hhi >= 0.35 || _fp1stProb >= 0.40) _confRank = 'MID';
         else _confRank = 'LOW';
-        const _allow2ndAxis = _fpDiff <= 15.0;
+
+        // 【変更】2軸目の判定: fp差ベース → fp2nd絶対値ベース
+        // fp2ndが FP2ND_MIN_FOR_2AXIS(20%) 以上あれば2軸展開
+        const _allow2ndAxis = _fp2ndProb >= FP2ND_MIN_FOR_2AXIS;
 
         const p2r1 = getP2RankingF(fp1st);
         const second_A = p2r1[0];
