@@ -1189,19 +1189,21 @@ function calcTenkaiProbs(boats, arek){
     '逃げ':       new Set(['2','3','4','5','6']),
     '差し':       new Set(['1']),
     'まくり':     new Set(['1']),
-    'まくり差し': new Set(['1','2']),
+    'まくり差し': new Set(['1','2','3']),  // 3コースも除外（物理的に届きにくい）
     '抜き':       new Set(),
   };
 
   // ── グレーゾーン：個人kimari%が閾値以上なら有効とみなす ──
   const KIMARI_SOFT_THRESHOLD = {
-    'まくり': {'2': 0.05},   // 2コースのまくりは個人実績5%以上で有効
-    '抜き':   {'1': 0.03},   // 1コースの抜きは個人実績3%以上で有効
+    'まくり':     {'2': 0.05},             // 2コースのまくりは個人実績5%以上で有効
+    'まくり差し': {'5': 0.05, '6': 0.08}, // 5コースは5%以上、6コースは8%以上で有効
+    '抜き':       {'1': 0.03},             // 1コースの抜きは個人実績3%以上で有効
   };
 
   // 相対評価補正の上下限（個人差をより大きく反映するため拡大 ※会場3:個人7）
+  // 荒れ強会場（戸田・平和島・三国等）はまくり等外コース補正が上限に当たりやすいため引き上げ
   const RELATIVE_MIN = 0.3;
-  const RELATIVE_MAX = 3.0;
+  const RELATIVE_MAX = (['戸田','平和島','三国','浜名湖','蒲郡'].includes(venue)) ? 4.5 : 3.0;
 
   // 選手のコース別kimari%をマスタから取得するヘルパー
   // グレードモード(SG/G1)の場合は getCourseMaster() 経由で自動的に g1マスタ→一般マスタのフォールバックが効く
@@ -1310,7 +1312,7 @@ function calcTenkaiProbs(boats, arek){
     const hiKimari = getCourseMaster(boat1.name, '1')?.['被kimari'];
     const boat1Runs = getCourseMaster(boat1.name, '1')?.runs ?? 0;
     // 被kimari（1コース専用）: 差され/捲られ率の閾値は30走（決まり手ブレンドとは独立した設定）
-    if(hiKimari && boat1Runs >= 30){
+    if(hiKimari && boat1Runs >= 20){
       // 被kimari率をどれだけ信頼するか（100走で信頼度1.0） ※50→100に変更
       const hiTrust = Math.min(boat1Runs / 100, 1.0);
 
@@ -1679,26 +1681,28 @@ function combo2(a,b){ return `${Math.min(a,b)}＝${Math.max(a,b)}`; }
 //   null の場合は補正なし（係数=1.0 として扱う）。
 //   補正強度は TENJI_P2_COEF_CLIP でクリップ（過補正防止）。
 //
-function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
+function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdataOverride){
   if(!MASTER_EXT || !MASTER_EXT.venue_kimari){
     return { valid: false };
   }
-  const venue   = DATA.venue;
+  // venueOverride / vdataOverride が渡された場合はそちらを優先（過去日集計など DATA が当日以外のケース）
+  const venue   = venueOverride || DATA?.venue;
   const vKimari = MASTER_EXT.venue_kimari[venue];
   if(!vKimari) return { valid: false };
 
   // inn_2place: inn_data に直接入っていれば使用、なければ venue_stats から取得
+  const _vdata = vdataOverride || DATA;
   const inn2Place = (() => {
-    const v = (DATA.inn_data || {}).inn_2place;
+    const v = (_vdata?.inn_data || {}).inn_2place;
     if(v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
-    return MASTER_EXT?.venue_stats?.[DATA.venue]?.inn_2place || {};
+    return MASTER_EXT?.venue_stats?.[venue]?.inn_2place || {};
   })();
 
   const KIMARI_HARD_EXCLUDE = {
     '逃げ':       new Set(['2','3','4','5','6']),
     '差し':       new Set(['1']),
     'まくり':     new Set(['1']),
-    'まくり差し': new Set(['1','2']),
+    'まくり差し': new Set(['1','2','3']),  // 3コースも除外（calcTenkaiProbsと統一）
     '抜き':       new Set(),
   };
   function isValidFirst(boat, kimari){
@@ -1714,7 +1718,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
   if(boat1Scenario){
     const hiKimari = getCourseMaster(boat1Scenario.name, '1')?.['被kimari'];
     const boat1Runs = getCourseMaster(boat1Scenario.name, '1')?.runs ?? 0;
-    if(hiKimari && boat1Runs >= 30){
+    if(hiKimari && boat1Runs >= 20){
       const hiTrust = Math.min(boat1Runs / 100, 1.0);
       const hiStr   = getHiKimariStrength(venue); // 会場別強度 (calcTenkaiProbs と同一テーブル参照)
       const sasareRate       = hiKimari['差され']     ?? null;
@@ -1844,9 +1848,9 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap){
             const personTrust = personEntry?.trust ?? 0;
             if(baseTR != null && personRate2 != null && personTrust > 0.3){
               const wPerson = personTrust;
-              const wNat    = trTrust * (1 - personTrust);
-              const wTot    = wPerson + wNat;
-              p2 = wTot > 0 ? (personRate2 * wPerson + baseTR * wNat) / wTot : baseTR;
+              const wNat    = (1 - personTrust);  // ② 修正: trTrust二重適用を排除
+              const wTot    = wPerson + wNat;      // 常に1.0
+              p2 = (personRate2 * wPerson + baseTR * wNat) / wTot;
             } else if(baseTR != null){
               p2 = baseTR;
             } else {
@@ -1965,20 +1969,31 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
     .map(b => {
       const sc = String(b.boat);
       const remEntry    = remForThis?.[sc];
-      const baseR3      = remEntry?.rate3  ?? null;
+      // ③ rate3i をベース計算に活用（rate3i×0.6 + rate3×0.4 ブレンドで荒れ耐性UP）
+      const rawR3i      = remEntry?.rate3i ?? null;
+      const rawR3       = remEntry?.rate3  ?? null;
+      const baseR3      = rawR3i != null
+        ? rawR3i * 0.6 + (rawR3 ?? rawR3i) * 0.4
+        : rawR3;
       const trTrust     = remEntry?.trust  ?? 0;
       const personEntry = winnerCO[b.name]?.[sc]?.[wc];
       const personR3    = personEntry?.rate3  ?? null;
       const personTrust = personEntry?.trust  ?? 0;
+      // ① avg_rank 補正係数（着順が良いほどスコアUP: avg_rank=2.0→1.2倍, 3.5→0.7倍）
+      const avgRank     = personEntry?.avg_rank ?? null;
+      const rankCoef    = avgRank != null
+        ? Math.max(0.5, Math.min(1.5, (3.5 - avgRank) / 1.5 + 0.7))
+        : 1.0;
 
       // ── 2着と同じ3パターン優先順位 ──
       let r3;
       if(baseR3 != null && personR3 != null && personTrust > 0.3){
-        // ①ベース＋個人両方あり → trust で重み付けブレンド（2着の非逃げと同一ロジック）
+        // ①ベース＋個人両方あり
+        // ② wNat修正: baseは常にフルウェイト、個人が上乗せ（trTrust二重適用を排除）
         const wPerson = personTrust;
-        const wNat    = trTrust * (1 - personTrust);
-        const wTot    = wPerson + wNat;
-        r3 = wTot > 0 ? (personR3 * wPerson + baseR3 * wNat) / wTot : baseR3;
+        const wNat    = (1 - personTrust);   // 修正: trTrust * (1-personTrust) → (1-personTrust)
+        const wTot    = wPerson + wNat;       // 常に1.0
+        r3 = (personR3 * wPerson + baseR3 * wNat) / wTot;
       } else if(baseR3 != null){
         // ②ベースのみ
         r3 = baseR3;
@@ -1986,7 +2001,7 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
         // ③個人のみ（ベースなし）
         r3 = personR3;
       } else {
-        // ④フォールバック: final_prob 相対比（2着のフォールバックと同一）
+        // ④フォールバック: final_prob 相対比
         r3 = null;
       }
 
@@ -2003,7 +2018,8 @@ function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
       const tenjiCoef = tenjiScoreMap ? (tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0) : 1.0;
       const [c3lo, c3hi] = CLIP3_BY_COURSE[b.boat] ?? [0.75, 1.35];
       const clipped = Math.min(c3hi, Math.max(c3lo, tenjiCoef));
-      const score = baseScore * clipped;
+      // ① avgRank補正を最終スコアに乗算
+      const score = baseScore * clipped * rankCoef;
 
       return { boat: b.boat, name: b.name, r3, score };
     });
@@ -3346,14 +3362,8 @@ function renderBuy(rno){
   const _boat1ForIT = ranked2.find(b => b.boat === 1);
   const _isInTepCond = _boat1ForIT && (_boat1ForIT.final_prob ?? 0) >= 0.75;
 
-  // イン否定条件（タブの強調表示判定）
-  const _innData_tab   = DATA.inn_data || {};
-  const _cRates_tab    = _innData_tab.course_rates || [];
-  const _venueAvg1_tab = _cRates_tab[1] ?? null;
-  const _fp1_tab       = _boat1ForIT?.final_prob ?? null;
-  const _isInNegCond   = (_venueAvg1_tab !== null && _fp1_tab !== null)
-    ? _fp1_tab <= _venueAvg1_tab - 0.10
-    : false;
+  // イン否定条件（タブの強調表示判定）【改修: σ基準ユーティリティを使用】
+  const { condMet: _isInNegCond, usingStd: _inNegUsingStd } = _calcInNegCond(ranked2);
 
   // ── タブUI ──
   const modeTabs = `
@@ -3377,7 +3387,7 @@ function renderBuy(rno){
                border-bottom:2px solid transparent;color:${_isInNegCond?'var(--orange)':'var(--text3)'};font-family:'Noto Sans JP',sans-serif;
                display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.2;">
         <span>⚡ イン否定</span>
-        <span style="font-size:9px;font-weight:400;color:var(--text3);">${_isInNegCond?'条件成立':'場平均-10%未満'}</span>
+        <span style="font-size:9px;font-weight:400;color:var(--text3);">${_isInNegCond?'条件成立':(_inNegUsingStd?`場平均-${IN_NEG_N_SIGMA}σ未満`:'場平均-10%未満')}</span>
       </button>
       <button id="buy-tab-hit" onclick="switchBuyMode('hit')"
         style="flex:1;padding:8px 2px 6px;font-size:11px;font-weight:500;border:none;background:none;cursor:pointer;
@@ -3757,34 +3767,79 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
     </div>`;
 }
 
+// ── イン否定: σ基準の閾値ユーティリティ ──────────────────────────────────
+//
+// 【改修】固定10%pt → 会場別σ(標準偏差)基準に変更
+//
+// 判定ロジック:
+//   ① MASTER_EXT.venue_stats[venue].course1_std が存在する場合
+//      → 閾値 = μ(venue_avg1) - N_SIGMA × σ  (N_SIGMA = 1.0)
+//   ② σデータなし（旧JSON互換フォールバック）
+//      → 閾値 = μ - FALLBACK_PT (固定 10%pt) ← 以前の挙動を維持
+//
+// Python側でσを追加するまでは②で動作し、追加後は即①に切り替わる。
+//
+// 戻り値:
+//   { condMet, venueAvg1, fp1, sigma, threshold, usingStd, condDesc }
+// ─────────────────────────────────────────────────────────────────────────
+const IN_NEG_N_SIGMA    = 1.0;   // σの倍率（1.0σ ≈ 会場ごとの「1標準偏差下」）
+const IN_NEG_FALLBACK_PT = 0.10; // σデータがないときの固定マージン（10%pt）
+
+function _calcInNegCond(ranked2, venueOverride) {
+  const _venue    = venueOverride ?? DATA.venue ?? null;
+  const innData   = DATA.inn_data || {};
+  const cRates    = innData.course_rates || [];
+  const venueAvg1 = cRates[1] ?? null;
+  const boat1     = ranked2.find(b => b.boat === 1);
+  const fp1       = boat1?.final_prob ?? null;
+
+  // σ取得: MASTER_EXT.venue_stats[venue].course1_std（小数表現, 例: 0.08）
+  const sigma_raw  = MASTER_EXT?.venue_stats?.[_venue]?.course1_std ?? null;
+  const sigma      = (sigma_raw !== null && isFinite(sigma_raw) && sigma_raw > 0) ? sigma_raw : null;
+  const usingStd   = sigma !== null;
+  const margin     = usingStd ? (IN_NEG_N_SIGMA * sigma) : IN_NEG_FALLBACK_PT;
+  const threshold  = (venueAvg1 !== null) ? venueAvg1 - margin : null;
+
+  const condMet = (threshold !== null && fp1 !== null)
+    ? fp1 <= threshold
+    : false;
+
+  // 表示用説明文
+  let condDesc;
+  if (venueAvg1 === null) {
+    condDesc = '場平均データなし';
+  } else if (usingStd) {
+    condDesc = `1号艇 ${fp1 != null ? (fp1*100).toFixed(1)+'%' : '?'} ／ 場平均 ${(venueAvg1*100).toFixed(1)}%`
+      + ` σ=${(sigma*100).toFixed(1)}%pt`
+      + `（閾値: 場平均-${IN_NEG_N_SIGMA}σ = ${(threshold*100).toFixed(1)}%）`;
+  } else {
+    condDesc = `1号艇 ${fp1 != null ? (fp1*100).toFixed(1)+'%' : '?'} ／ 場平均 ${(venueAvg1*100).toFixed(1)}%`
+      + `（差: ${fp1 != null ? ((fp1 - venueAvg1)*100).toFixed(1) : '?'}%pt`
+      + ` ／ σデータなし・固定${(IN_NEG_FALLBACK_PT*100).toFixed(0)}%pt閾値）`;
+  }
+
+  return { condMet, venueAvg1, fp1, sigma, threshold, usingStd, condDesc };
+}
+
 // ── イン否定買い目パネル生成 ──
-// 条件: 1号艇 final_prob が場平均（course_rates[1]）より 10%pt 以上低い
+// 【改修】条件: 1号艇 final_prob が 場平均 - N×σ 以下（σあり）
+//         または 場平均 - 10%pt 以下（σなし・フォールバック）
 // 買い目:
 //   軸A・軸B = 1号艇以外の final_prob 上位2艇
 //   各軸に対して:
 //     ◯-2着上位2艇-3着上位3艇（折り返し含む）各6点 × 2軸 = 計24点 → 被り目除去
 function buildInNegBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo){
 
-  // ── 条件チェック ──
-  const innData_neg    = DATA.inn_data || {};
-  const cRates_neg     = innData_neg.course_rates || [];
-  const venueAvg1      = cRates_neg[1] ?? null;
-  const boat1_neg      = ranked2.find(b => b.boat === 1);
-  const fp1_neg        = boat1_neg?.final_prob ?? null;
-
-  const condMet = (venueAvg1 !== null && fp1_neg !== null)
-    ? fp1_neg <= venueAvg1 - 0.10
-    : false;
-
-  const condDesc = venueAvg1 !== null
-    ? `1号艇 ${fp1_neg != null ? (fp1_neg*100).toFixed(1)+'%' : '?'} ／ 場平均 ${(venueAvg1*100).toFixed(1)}%（差: ${fp1_neg != null ? ((fp1_neg - venueAvg1)*100).toFixed(1) : '?'}%pt）`
-    : '場平均データなし';
+  // ── 条件チェック（σ基準ユーティリティを使用）──
+  const {
+    condMet, venueAvg1, fp1: fp1_neg, sigma, threshold, usingStd, condDesc
+  } = _calcInNegCond(ranked2);
 
   if(!condMet){
     return `<div id="buy-mode-inneg" style="display:none">
       <div style="padding:16px 12px;color:var(--text3);font-size:12px;line-height:1.8">
         <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:6px">⚡ イン否定</div>
-        <div>1号艇の最終確率が <strong>場平均より10%pt以上低い</strong> とき表示されます。</div>
+        <div>1号艇の最終確率が <strong>${usingStd ? `場平均-${IN_NEG_N_SIGMA}σ以下` : `場平均より${(IN_NEG_FALLBACK_PT*100).toFixed(0)}%pt以上低い`}</strong> とき表示されます。</div>
         <div style="margin-top:6px;font-size:11px;color:var(--text3)">${condDesc}</div>
       </div>
     </div>`;
@@ -4026,6 +4081,75 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   const isInNeg  = _tagType === 'in_neg';
   const isInTep  = _tagType === 'in_tetsup';
 
+  // ══════════════════════════════════════════════════════════════
+  // 1着確信度スコア（HHI: ハーフィンダール指数）
+  // ──────────────────────────────────────────────────────────────
+  // scenarioProb[winner][kimari] の分布がどれだけ1点に集中しているかを測る。
+  //
+  //   HHI = Σ(各kimariの発生確率)²
+  //     → 逃げ100%なら HHI = 1.0（完全確信）
+  //     → 5択均等なら HHI = 0.20（全く読めない）
+  //
+  // ただし競艇は「展開の読めなさ」ではなく「1着艇の特定」が目標なので、
+  // 軸候補艇（fp1st）の全シナリオにわたる合計勝率も組み合わせる。
+  //
+  // 確信度ランク（通常モード・イン鉄板/否定は独自ルールで上書き）:
+  //   HIGH  : HHI ≥ 0.55  かつ fp1st合計確率 ≥ 0.50
+  //           → 1軸固定・2着A/Bのみ（block3なし）= 最大12点
+  //   MID   : HHI ≥ 0.35  または fp1st合計確率 ≥ 0.40
+  //           → 現行通り2軸18点
+  //   LOW   : それ以外
+  //           → 2軸18点 + パネル上部に「読みにくいレース」警告表示
+  // ══════════════════════════════════════════════════════════════
+
+  // fp1st を先に仮決めしてHHI計算に使う（イン否定/鉄板は後で上書き）
+  const _fp1stTmp = isInNeg
+    ? (ranked2.find(b => b.boat !== 1)?.boat ?? ranked2[0]?.boat)
+    : ranked2[0]?.boat;
+
+  function calcHHI(winnerBoat) {
+    const probs = sd?.kimariTypes?.map(k => sd.scenarioProb?.[winnerBoat]?.[k] ?? 0) ?? [];
+    const total = probs.reduce((s, p) => s + p, 0);
+    if (total <= 0) return 0;
+    return probs.reduce((s, p) => s + (p / total) ** 2, 0);
+  }
+
+  // 軸艇の全シナリオ合計勝率（ranked2の final_prob ベース）
+  const _fp1stProb = ranked2.find(b => b.boat === _fp1stTmp)?.final_prob ?? 0;
+  const _fp2ndTmp  = isInNeg
+    ? (ranked2.find(b => b.boat !== 1 && b.boat !== _fp1stTmp)?.boat ?? ranked2[1]?.boat)
+    : ranked2[1]?.boat;
+  const _fp2ndProb = ranked2.find(b => b.boat === _fp2ndTmp)?.final_prob ?? 0;
+  const _fpDiffPct = (_fp1stProb - _fp2ndProb) * 100;  // %pt差
+
+  const _hhi = calcHHI(_fp1stTmp);
+
+  // 確信度ランク判定（通常モードのみ適用。鉄板/否定はそれぞれ固定ルール）
+  const SCEN_CONF_HIGH_HHI  = 0.55;  // HHI閾値（高確信）
+  const SCEN_CONF_HIGH_PROB = 0.50;  // 1着確率閾値（高確信）
+  const SCEN_CONF_MID_HHI   = 0.35;  // HHI閾値（中確信）
+  const SCEN_CONF_MID_PROB  = 0.40;  // 1着確率閾値（中確信）
+  // [2026-05-31 変更] fp差ゲート廃止 → fp2nd絶対値ベース
+  // 旧: SCEN_AXIS2_FP_GAP = 15.0 (%pt差が15以下なら2軸)
+  // 新: FP2ND_MIN_FOR_2AXIS = 0.20 (fp2ndが20%以上なら2軸)
+  const FP2ND_MIN_FOR_2AXIS = 0.20;
+
+  let _confRank;  // 'HIGH' | 'MID' | 'LOW'
+  if(isInTep || isInNeg){
+    // 鉄板・否定は独自ルールで制御するためHHI判定を経由しない
+    _confRank = 'MID';
+  } else if(_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= SCEN_CONF_HIGH_PROB){
+    _confRank = 'HIGH';
+  } else if(_hhi >= SCEN_CONF_MID_HHI || _fp1stProb >= SCEN_CONF_MID_PROB){
+    _confRank = 'MID';
+  } else {
+    _confRank = 'LOW';
+  }
+
+  // 2軸目（block3）を出すか: fp2ndが FP2ND_MIN_FOR_2AXIS 以上のときだけ展開
+  // HIGH確信時はすでに1軸固定なのでこのフラグは MID/LOW にしか作用しない
+  const _allow2ndAxis = _fp2ndProb >= FP2ND_MIN_FOR_2AXIS;
+
   // ── 軸艇の決定 ──
   // イン逃げ否定: 1号艇を除いた final_prob 最上位を1着軸に
   // イン逃げ鉄板: 1号艇を固定軸に
@@ -4135,15 +4259,38 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
     block2 = second_B != null ? makeBlock(fp1st, second_B, getPlace3Ranking(fp1st, second_B)) : [];
     block3 = [];  // 鉄板時は2グループに絞り EV 向上
   } else {
-    // 通常
+    // ── 通常モード: 確信度ランクで買い目構成を分岐 ──────────────────
+    //
+    //  HIGH: 1着がほぼ1艇に絞れている
+    //        → fp1st 1軸固定・2着A/Bのみ（block3なし）= 最大12点
+    //          水物の2軸目を省いて合成オッズを高める
+    //
+    //  MID : 1着はある程度絞れているが不確実性もある（現行ロジック）
+    //        → fp1st/fp2nd 2軸展開だが fp差 > 15%pt なら1軸に縮退
+    //          = 最大18点（fp差大時は最大12点）
+    //
+    //  LOW : 展開が読みにくい
+    //        → MIDと同じ買い目だが警告バナーを表示
+    //          「読めないなら買わない」の判断材料として使う
+    //
     const p2Ranking1st = getPlace2Ranking(fp1st);
     second_A = p2Ranking1st[0];
     second_B = p2Ranking1st[1];
     block1 = second_A != null ? makeBlock(fp1st, second_A, getPlace3Ranking(fp1st, second_A)) : [];
     block2 = second_B != null ? makeBlock(fp1st, second_B, getPlace3Ranking(fp1st, second_B)) : [];
-    const p2Ranking2nd = getPlace2Ranking(fp2nd);
-    second_C = p2Ranking2nd[0];
-    block3 = second_C != null ? makeBlock(fp2nd, second_C, getPlace3Ranking(fp2nd, second_C)) : [];
+
+    // [変更] HIGH でも fp2nd ≥ FP2ND_MIN_FOR_2AXIS(20%) なら2軸許可
+    // 旧: HIGH固定で block3なし
+    // 新: fp2nd絶対値で判断（例: 52.6% vs 26.8% → 2軸展開）
+    if(_allow2ndAxis){
+      const p2Ranking2nd = getPlace2Ranking(fp2nd);
+      second_C = p2Ranking2nd[0];
+      block3 = second_C != null ? makeBlock(fp2nd, second_C, getPlace3Ranking(fp2nd, second_C)) : [];
+    } else {
+      // fp2nd < 20% → 2軸目は根拠が薄いため追加しない
+      second_C = null;
+      block3   = [];
+    }
   }
 
   // 重複除去しつつ順番を保持
@@ -4290,11 +4437,36 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
     }
   }
 
+  // ── 確信度バナー（通常モードのみ表示）──────────────────────────────────
+  // HHI と fp1st確率をもとに「このレースの1着がどれだけ読めているか」を表示する。
+  // イン鉄板・イン否定は独自ロジックで決まるためバナーを出さない。
+  const _confBannerHtml = (()=>{
+    if(isInNeg || isInTep) return '';
+    const hhiPct = Math.round(_hhi * 100);
+    const fp1Pct = Math.round(_fp1stProb * 100);
+    if(_confRank === 'HIGH'){
+      return `<div style="font-size:10px;color:var(--green);margin-bottom:4px;padding:4px 8px;background:rgba(29,158,117,0.10);border-radius:4px;line-height:1.7">
+        🎯 高確信（1軸） — HHI ${hhiPct}% / 1着確率 ${fp1Pct}%｜2軸目を省いて合成オッズ優先
+      </div>`;
+    } else if(_confRank === 'LOW'){
+      return `<div style="font-size:10px;color:var(--orange);margin-bottom:4px;padding:4px 8px;background:rgba(239,159,39,0.10);border-radius:4px;line-height:1.7">
+        ⚠ 読みにくいレース — HHI ${hhiPct}% / 1着確率 ${fp1Pct}%｜展開が分散しています。見送りも検討を
+      </div>`;
+    }
+    // MID はバナーなし（静かに2軸展開）
+    return '';
+  })();
+
   // モード別説明文
   const modeDescHtml = isInNeg
     ? `<div style="font-size:10px;color:var(--orange);margin-bottom:4px;font-weight:700">⚡ イン逃げ否定モード — 外艇を軸に組み立てます</div>`
     : isInTep
     ? `<div style="font-size:10px;color:var(--accent2);margin-bottom:4px;font-weight:700">🔒 イン逃げ鉄板モード — 1号艇固定・inn_2place 上位2着に絞り込み</div>`
+    : _confBannerHtml;
+
+  // 確信度ランクをタイトルに添える（通常モードのみ）
+  const _confLabel = (!isInNeg && !isInTep)
+    ? { HIGH: ' 🎯高確信', MID: '', LOW: ' ⚠要注意' }[_confRank]
     : '';
 
   const axisDesc = isInTep
@@ -4308,7 +4480,7 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
       <div class="buy-grid">
         <div class="buy-card">
           <div class="buy-card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span>🎲 シナリオ買い（3連単）</span>
+            <span>🎲 シナリオ買い（3連単）${_confLabel}</span>
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;font-size:11px">

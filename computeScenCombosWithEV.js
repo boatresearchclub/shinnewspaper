@@ -334,7 +334,7 @@
         if (!ranked2 || ranked2.length < 2) return _empty;
 
         // シナリオデータ算出
-        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
+        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);  // venue/vdata を明示渡し
       } finally {
         // 必ず元に戻す
         window.DATA         = _origDATA;
