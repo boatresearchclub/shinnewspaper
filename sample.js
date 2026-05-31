@@ -1579,7 +1579,7 @@ function calcPlace2Probs(boats, ranked){
   // tenkai_remaining: {決まり手: {1着コース: {進入コース: {rate2, trust}}}}
   // 会場別データ優先、なければ全国実績にフォールバック（calcScenarioData と統一）
   const tenkaiRemaining = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
     if(vLocal && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || {};
   })();
@@ -1799,7 +1799,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdata
 
   // ── 各シナリオの2着リストを計算して scenarioPlace2 に格納 ──
   const tenkaiRem = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
     if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || {};
   })();
@@ -1950,7 +1950,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdata
 // ── トップレベル関数（buildScenarioSection・renderBuy 両方から参照）──
 function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
   const tenkaiRem = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
     if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || null;
   })();
@@ -2536,7 +2536,7 @@ function renderBuy(rno){
   // rate3 データが全くない場合は final_prob 最下位を除外してフォールバック。
   //
   const tenkaiRem_buy = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[DATA.venue]?.tenkai_remaining;
+    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
     if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || null;
   })();
