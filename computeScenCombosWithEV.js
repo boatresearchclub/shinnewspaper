@@ -318,28 +318,29 @@
       } catch (_e) { /* tenjiCache が利用不可でも続行 */ }
 
       // ── DATA / currentVenue を一時差し替え ──
-      // calcTenkaiProbs / calcScenarioData が DATA.venue / currentVenue を参照するため
-      const _origDATA    = window.DATA;
-      const _origVenue   = window.currentVenue;
-      const _tempData    = Object.assign({}, vdata, { venue: venue });
-      if (!_tempData.venue) return _empty; // venue が空なら中断
+      // sample_obf.js 内の DATA はローカルスコープのため window.DATA では届かない。
+      // top_stats_obf.js と同スコープの _setDataForCalc / _restoreDataForCalc を経由する。
+      if (!venue) return _empty;
 
       let ranked2, sd;
+      let _saved = null;
       try {
-        window.DATA         = _tempData;
-        window.currentVenue = venue;
+        if (typeof window._setDataForCalc === 'function') {
+          _saved = window._setDataForCalc(vdata, venue);
+        }
 
-        // calcTenkaiProbs で ranked2 を構築（arek は数値のみ渡す）
+        // calcTenkaiProbs で ranked2 を構築
         const _arek = (typeof rd.arek === 'number' && rd.arek > 0) ? rd.arek : 54.7;
-        ranked2 = calcTenkaiProbs(rawBoats, _arek, venue);  // venue を明示渡し（DATA.venue依存を排除）
+        ranked2 = calcTenkaiProbs(rawBoats, _arek);
         if (!ranked2 || ranked2.length < 2) return _empty;
 
         // シナリオデータ算出
-        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);  // venue/vdata を明示渡し
+        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);
       } finally {
         // 必ず元に戻す
-        window.DATA         = _origDATA;
-        window.currentVenue = _origVenue;
+        if (_saved !== null && typeof window._restoreDataForCalc === 'function') {
+          window._restoreDataForCalc(_saved);
+        }
       }
       if (!sd || !sd.valid) return _empty;
 
