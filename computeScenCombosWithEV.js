@@ -593,9 +593,17 @@
           }
 
           // ── hitProbEst も更新（キャリブレーション補正済みの値で上書き）──
+          // [2026-06-01 修正] hitProbEst 上書き後に r.ev も必ず再計算する。
+          // 旧: r.ev を再計算せずに放置 → r.ev = null のままキャッシュに保存され
+          //     EV1.1フィルタを通過するレースが過去30日分で0件になるバグ。
+          // 新: r.synth が取れていれば ev = synth × 補正後 hitProbEst で上書き。
           if (res.hitProbEst != null) {
             r.hitProbEst = res.hitProbEst;
             r.hitRate    = res.hitProbEst; // hitRate は hitProbEst の別名
+            // ★ ev を synth × 補正済み hitProbEst で再計算
+            if (r.synth != null) {
+              r.ev = r.synth * res.hitProbEst;
+            }
           }
 
         } catch (_e) { /* エラーは無視して元の値を保持 */ }
