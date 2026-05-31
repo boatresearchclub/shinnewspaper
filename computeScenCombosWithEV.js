@@ -417,11 +417,13 @@
       const SCEN_CONF_HIGH_PROB = 0.50;
       const SCEN_CONF_MID_HHI   = 0.35;
       const SCEN_CONF_MID_PROB  = 0.40;
-      const SCEN_AXIS2_FP_GAP   = 15.0; // %pt
+      // [2026-05-31 変更] fp差ゲート廃止 → fp2nd絶対値ベースに変更
+      // 旧: SCEN_AXIS2_FP_GAP = 15.0 (%pt差が15以下なら2軸)
+      // 新: FP2ND_MIN_FOR_2AXIS = 0.20 (fp2ndが20%以上なら2軸)
+      const FP2ND_MIN_FOR_2AXIS = 0.20;
 
       const _fp1stProb = ranked2.find(b => b.boat === fp1st)?.final_prob ?? 0;
       const _fp2ndProb = ranked2.find(b => b.boat === fp2nd)?.final_prob ?? 0;
-      const _fpDiffPct = (_fp1stProb - _fp2ndProb) * 100;
       const _hhi = _calcHHI(fp1st);
 
       let _confRank;
@@ -432,7 +434,7 @@
       } else {
         _confRank = 'LOW';
       }
-      const _allow2ndAxis = _fpDiffPct <= SCEN_AXIS2_FP_GAP;
+      const _allow2ndAxis = _fp2ndProb >= FP2ND_MIN_FOR_2AXIS;
 
       // ── ブロック生成（buildScenarioBuyPanel 通常モードと完全一致）──
       const p2r1 = getP2Ranking(fp1st);
