@@ -279,7 +279,8 @@
    *   weighted3rd : object,
    * }}
    */
-  window.computeScenCombosWithEV = function (venue, vdata, rno) {
+  // 実装本体を別名でも保持（強制上書き用）
+  function _computeScenCombosWithEV_impl(venue, vdata, rno) {
 
     const _empty = {
       combos: [], hitProbEst: null, synthOdds: null, ev: null,
@@ -289,18 +290,18 @@
 
     try {
       // ── 引数バリデーション ──
-      if (!venue || typeof venue !== 'string') { console.warn('[scenEV] GUARD1: venue invalid', venue); return _empty; }
-      if (!vdata || typeof vdata !== 'object') { console.warn('[scenEV] GUARD2: vdata invalid'); return _empty; }
-      if (rno == null) { console.warn('[scenEV] GUARD3: rno null'); return _empty; }
+      if (!venue || typeof venue !== 'string') return _empty;
+      if (!vdata || typeof vdata !== 'object') return _empty;
+      if (rno == null) return _empty;
 
       // ── 必要な関数の存在確認 ──
-      if (typeof calcScenarioData         !== 'function') { console.warn('[scenEV] GUARD4: calcScenarioData undefined'); return _empty; }
-      if (typeof calcScenarioComboProb    !== 'function') { console.warn('[scenEV] GUARD5: calcScenarioComboProb undefined'); return _empty; }
-      if (typeof calcTenkaiProbs          !== 'function') { console.warn('[scenEV] GUARD6: calcTenkaiProbs undefined'); return _empty; }
+      if (typeof calcScenarioData         !== 'function') return _empty;
+      if (typeof calcScenarioComboProb    !== 'function') return _empty;
+      if (typeof calcTenkaiProbs          !== 'function') return _empty;
 
       // ── レースデータ取得 ──
       const rd = vdata?.races?.[String(rno)];
-      if (!rd || !rd.boats || rd.boats.length < 2) { console.warn('[scenEV] GUARD7: rd invalid'); return _empty; }
+      if (!rd || !rd.boats || rd.boats.length < 2) return _empty;
 
       // ── 展示・最終確率の算出（sample.js の標準フロー再現）──
       const rawBoats = rd.boats;
@@ -321,7 +322,7 @@
       const _origDATA    = window.DATA;
       const _origVenue   = window.currentVenue;
       const _tempData    = Object.assign({}, vdata, { venue: venue });
-      if (!_tempData.venue) { console.warn('[scenEV] GUARD8: _tempData.venue empty'); return _empty; }
+      if (!_tempData.venue) return _empty; // venue が空なら中断
 
       let ranked2, sd;
       try {
@@ -331,7 +332,7 @@
         // calcTenkaiProbs で ranked2 を構築（arek は数値のみ渡す）
         const _arek = (typeof rd.arek === 'number' && rd.arek > 0) ? rd.arek : 54.7;
         ranked2 = calcTenkaiProbs(rawBoats, _arek, venue);  // venue を明示渡し（DATA.venue依存を排除）
-        if (!ranked2 || ranked2.length < 2) { console.warn('[scenEV] GUARD9: ranked2 empty'); return _empty; }
+        if (!ranked2 || ranked2.length < 2) return _empty;
 
         // シナリオデータ算出
         sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);  // venue/vdata を明示渡し
@@ -340,7 +341,7 @@
         window.DATA         = _origDATA;
         window.currentVenue = _origVenue;
       }
-      if (!sd || !sd.valid) { console.warn('[scenEV] GUARD10: sd invalid', sd?.valid); return _empty; }
+      if (!sd || !sd.valid) return _empty;
 
       // ── 買い目生成（buildScenarioBuyPanel と同一ロジック）──
       // ※ DATA / _pickupRaceTagType はグローバル依存のため、
@@ -348,7 +349,7 @@
 
       const fp1st = ranked2[0]?.boat;
       const fp2nd = ranked2[1]?.boat;
-      if (fp1st == null) { console.warn('[scenEV] GUARD11: fp1st null'); return _empty; }
+      if (fp1st == null) return _empty;
 
       // ── 2着確率上位リスト取得（getPlace2Ranking の内部ロジックを再現）──
       function getP2Ranking(winnerBoat) {
@@ -469,7 +470,7 @@
         });
       });
 
-      if (allCombos.length === 0) { console.warn('[scenEV] GUARD12: allCombos empty'); return _empty; }
+      if (allCombos.length === 0) return _empty;
 
       // ── hitProbEst 算出（各買い目の calcScenarioComboProb を合算）──
       let rawHitProb = 0;
@@ -623,6 +624,29 @@
     // 既に DOMContentLoaded 済み → 遅延実行で top_stats.js の定義を待つ
     setTimeout(_applyPred2ndPatch, 0);
   }
+
+  window.computeScenCombosWithEV = _computeScenCombosWithEV_impl;
+
+  // ── 強制上書き: obf ファイルのラッパーが古い _orig を掴んでいる問題を回避 ──
+  // obf ファイルが window.computeScenCombosWithEV をラップして
+  // 古い実装を _orig として保持し続けるため、
+  // このファイルのロード完了時点で新実装で強制再上書きする。
+  // obf ファイルが後からロードされて上書きする可能性があるため
+  // setTimeout で遅延実行し、全スクリプト読み込み完了後に強制上書きする
+  function _forceOverride() {
+    const _src = window.computeScenCombosWithEV
+      ? window.computeScenCombosWithEV.toString() : '';
+    if (_src.indexOf('_orig') !== -1 || _src.indexOf('_computeScenCombosWithEV_impl') === -1) {
+      console.log('[computeScenCombosWithEV] ラッパー検出 → 新実装で強制上書き');
+      window.computeScenCombosWithEV = _computeScenCombosWithEV_impl;
+    } else {
+      console.log('[computeScenCombosWithEV] 上書き不要（新実装が有効）');
+    }
+  }
+  // 即時 + 遅延の二段構え
+  _forceOverride();
+  setTimeout(_forceOverride, 0);
+  setTimeout(_forceOverride, 500);
 
   console.log('[computeScenCombosWithEV] モジュール読み込み完了');
 
