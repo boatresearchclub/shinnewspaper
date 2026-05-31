@@ -19,6 +19,15 @@
 //            MID/LOW かつ fp差>15%pt     : 1軸最大12点
 //            MID/LOW かつ fp差≤15%pt     : 2軸最大18点（重複除去後16〜18点）
 //
+//   問題⑤ allCombos が空になる（sd.valid:true でも買い目が0件）【根本原因】
+//          → calcTenkaiProbs だけ呼んで ranked2 を作っていたため、
+//            _multi_score → final_prob 確定 → calcPlace2Probs → ranked2
+//            の3ステップが抜けており scenarioPlace2 の p2 が正しく計算されず
+//            getP2Ranking が空配列を返していた。
+//          → computeBuy3 と同一の _multi_score 計算ロジックを追加し修正。
+//            ステップ順: calcTenkaiProbs → _multi_score → final_prob →
+//                        calcPlace2Probs(place2_prob) → calcScenarioData
+//
 // 【使い方】
 //   このファイルを sample.js / top_stats.js より後に <script> で読み込むだけ。
 //   既存コードの変更は一切不要。
@@ -297,6 +306,8 @@
       if (typeof calcScenarioData         !== 'function') return _empty;
       if (typeof calcScenarioComboProb    !== 'function') return _empty;
       if (typeof calcTenkaiProbs          !== 'function') return _empty;
+      if (typeof calcPlace2Probs          !== 'function') return _empty;
+      if (typeof calcDynamicWeights       !== 'function') return _empty;
 
       // ── レースデータ取得 ──
       const rd = vdata?.races?.[String(rno)];
@@ -328,13 +339,160 @@
         window.DATA         = _tempData;
         window.currentVenue = venue;
 
-        // calcTenkaiProbs で ranked2 を構築（arek は数値のみ渡す）
+        // ── Step 1: calcTenkaiProbs で基本確率を取得 ──
         const _arek = (typeof rd.arek === 'number' && rd.arek > 0) ? rd.arek : 54.7;
-        ranked2 = calcTenkaiProbs(rawBoats, _arek, venue);  // venue を明示渡し（DATA.venue依存を排除）
-        if (!ranked2 || ranked2.length < 2) return _empty;
+        const ranked = calcTenkaiProbs(rawBoats, _arek, venue);
+        if (!ranked || ranked.length < 2) return _empty;
 
-        // シナリオデータ算出
-        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);  // venue/vdata を明示渡し
+        // ── Step 2: _multi_score → final_prob 確定（computeBuy3 と同一ロジック）──
+        // renderBuy / computeBuy3 では calcTenkaiProbs 後にこの3ステップが必須。
+        // 省略すると scenarioPlace2 の p2 が final_prob ベースで計算されず
+        // getP2Ranking → allCombos が空になる。
+        const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
+        const useMaster = (typeof hasMasterExt === 'function') && hasMasterExt() &&
+                          !!(typeof MASTER_EXT !== 'undefined' && MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
+        const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
+
+        // 展示タイム生データ
+        const tenjiData = (tenjiScoreMap && Object.keys(tenjiScoreMap).length > 0) ? tenjiScoreMap : null;
+        const tenjiRawMap = {};
+        if (tenjiData) {
+          Object.keys(tenjiData).filter(k => /^\d+$/.test(k)).forEach(k => {
+            const entry = tenjiData[k];
+            if (entry && typeof entry.tenji === 'number') tenjiRawMap[parseInt(k)] = entry.tenji;
+          });
+        }
+        const boatByNo = {};
+        rawBoats.forEach(b => { boatByNo[b.boat] = b; });
+        const hasTenji = Object.keys(tenjiRawMap).length > 0;
+
+        const { wBase: _wBase, wTenkai: _wTenkai, wTenji: _wTenji, wSlit: _wSlit } = calcDynamicWeights(_arek);
+        const BONUS_BASE_TENKAI = 0.15;
+        const BONUS_BASE_TENJI  = 0.15;
+        const SLIT_BONUS_BASE   = 0.15;
+        const MAKURI_ALERT_BONUS = 0.20;
+
+        // 1パス目: 各係数を計算して保存
+        ranked.forEach(b => {
+          const baseNorm = b.prob / probTotal;
+          const prevBoat = boatByNo[b.boat - 1] || null;
+
+          // 展開補正
+          let tenkaiCoef = 1.0;
+          if (useMaster && baseNorm > 0) {
+            const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
+            tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
+          }
+          if (prevBoat) {
+            const myStRank   = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+            const prevStRank = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank : null;
+            if (myStRank != null && prevStRank != null) {
+              tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + (prevStRank - myStRank) * 0.10));
+            }
+          }
+
+          // 展示補正
+          let tenjiCoef = 1.0;
+          if (tenjiData) tenjiCoef = tenjiData[`__coef_${b.boat}`] ?? 1.0;
+          if (prevBoat && hasTenji) {
+            const myTenji   = tenjiRawMap[b.boat]        ?? null;
+            const prevTenji = tenjiRawMap[prevBoat.boat] ?? null;
+            if (myTenji != null && prevTenji != null) {
+              tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + (prevTenji - myTenji) * 0.50));
+            }
+          }
+
+          // スリット補正（1パス目）
+          let slitCoef = 1.0;
+          if (prevBoat && hasTenji && _wSlit > 0 && typeof SLIT_LAP_THRESHOLDS !== 'undefined') {
+            const myTenji    = tenjiRawMap[b.boat]          ?? null;
+            const prevTenji  = tenjiRawMap[prevBoat.boat]   ?? null;
+            const myStRank   = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+            const prevStRank = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank : null;
+            let slitDiff = null;
+            if (myTenji != null && prevTenji != null && myStRank != null && prevStRank != null) {
+              slitDiff = (prevTenji - myTenji) + (prevStRank - myStRank) * 0.02;
+            } else if (myTenji != null && prevTenji != null) {
+              slitDiff = prevTenji - myTenji;
+            } else if (myStRank != null && prevStRank != null) {
+              slitDiff = (prevStRank - myStRank) * 0.02;
+            }
+            if (slitDiff !== null) {
+              const found   = SLIT_LAP_THRESHOLDS.find(t => slitDiff >= t.min);
+              const rawCoef = found ? found.coef : 1.0;
+              slitCoef = 1.0 + (rawCoef - 1.0) * _wSlit;
+            }
+            // まくりアラートボーナス
+            const tenjiAlertDiff = (tenjiRawMap[b.boat] != null && tenjiRawMap[prevBoat.boat] != null)
+              ? Math.round((tenjiRawMap[prevBoat.boat] - tenjiRawMap[b.boat]) * 100) / 100 : null;
+            const tenjiAlertOk = tenjiAlertDiff != null && tenjiAlertDiff >= 0.10;
+            const myStRankA  = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+            const preStRankA = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank : null;
+            const stAlertOk = myStRankA != null && preStRankA != null && (preStRankA - myStRankA >= 0.5);
+            if (tenjiAlertOk && stAlertOk) slitCoef += MAKURI_ALERT_BONUS;
+            slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
+          }
+
+          b._baseNorm    = baseNorm;
+          b._tenkaiCoef  = tenkaiCoef;
+          b._tenjiCoef   = tenjiCoef;
+          b._slitCoef    = slitCoef;
+          b._wTenjiCourse = _wTenji;
+        });
+
+        // 2パス目: 加算ボーナス方式 + 後艇スリットペナルティ → _multi_score
+        ranked.forEach(b => {
+          const nextBoat = boatByNo[b.boat + 1] || null;
+          const tenkaiBonus = BONUS_BASE_TENKAI * (b._tenkaiCoef - 1.0) * _wTenkai;
+          const tenjiBonus  = BONUS_BASE_TENJI  * (b._tenjiCoef  - 1.0) * b._wTenjiCourse;
+          const slitBonus   = SLIT_BONUS_BASE   * (b._slitCoef   - 1.0) * _wSlit;
+
+          let slitPenalty = 0;
+          if (nextBoat && hasTenji && _wSlit > 0 && typeof SLIT_LAP_THRESHOLDS !== 'undefined') {
+            const myTenjiN   = tenjiRawMap[b.boat]          ?? null;
+            const nextTenji  = tenjiRawMap[nextBoat.boat]   ?? null;
+            const myStRankN  = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+            const nextStRank = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank : null;
+            let nextDiff = null;
+            if (myTenjiN != null && nextTenji != null && myStRankN != null && nextStRank != null) {
+              nextDiff = (myTenjiN - nextTenji) + (myStRankN - nextStRank) * 0.02;
+            } else if (myTenjiN != null && nextTenji != null) {
+              nextDiff = myTenjiN - nextTenji;
+            } else if (myStRankN != null && nextStRank != null) {
+              nextDiff = (myStRankN - nextStRank) * 0.02;
+            }
+            if (nextDiff !== null && nextDiff > 0 && typeof SLIT_LAP_THRESHOLDS !== 'undefined') {
+              const found    = SLIT_LAP_THRESHOLDS.find(t => nextDiff >= t.min);
+              const nextCoef = found ? found.coef : 1.0;
+              slitPenalty = SLIT_BONUS_BASE * (nextCoef - 1.0) * _wSlit;
+            }
+            // まくりアラート追加ペナルティ
+            const nextTenjiAlertOk = myTenjiN != null && nextTenji != null && (nextTenji - myTenjiN <= -0.10);
+            const nxtStRankA  = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank : null;
+            const myStRankA2  = (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+            const nextStAlertOk = myStRankA2 != null && nxtStRankA != null && (nxtStRankA - myStRankA2 <= -0.5);
+            if (nextTenjiAlertOk && nextStAlertOk) slitPenalty += SLIT_BONUS_BASE * 0.20 * _wSlit;
+          }
+
+          b._multi_score = Math.max(0.001,
+            b._baseNorm + tenkaiBonus + tenjiBonus + slitBonus - slitPenalty
+          );
+        });
+
+        // _multi_score を正規化して final_prob を確定
+        const multiTotal = ranked.reduce((s, b) => s + b._multi_score, 0) || 1;
+        ranked.forEach(b => { b.final_prob = b._multi_score / multiTotal; });
+        ranked.sort((a, b) => b.final_prob - a.final_prob);
+
+        // ── Step 3: calcPlace2Probs → ranked2 確定 ──
+        // この place2_prob が calcScenarioData → scenarioPlace2 の p2 計算に必須。
+        const place2Map = calcPlace2Probs(rawBoats, ranked);
+        ranked2 = ranked.map(b => ({ ...b, place2_prob: place2Map[b.boat] || 0 }));
+
+        // ── Step 4: シナリオデータ算出 ──
+        // ranked2（final_prob + place2_prob 付き）を渡すことで
+        // scenarioPlace2 が正しく構築され getP2Ranking → allCombos が埋まる。
+        sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, _tempData);
       } finally {
         // 必ず元に戻す
         window.DATA         = _origDATA;
