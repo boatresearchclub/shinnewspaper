@@ -277,10 +277,9 @@
         return _orig.call(this, [], filteredSd, resultSan3, raceOdds3tEv, comboToBadges, normalizeCombo, rno);
       }
 
-      // fp2nd が閾値未満の場合: ranked2 から fp2nd エントリを除去して1軸に強制
+      // fp2nd が閾値未満の場合のみ1軸に強制（HIGH でも fp2nd≥20% なら2軸許可）
       let filteredRanked2 = ranked2;
       if (fp2ndProb < FP2ND_MIN_FOR_2AXIS) {
-        // fp2nd を末尾に移動（final_prob を 0 にして確信度判定に影響させない）
         filteredRanked2 = ranked2.map((b, i) =>
           i === 1 ? Object.assign({}, b, { final_prob: 0 }) : b
         );
@@ -451,7 +450,8 @@
         const block2 = second_B != null ? makeBlockF(fp1st, second_B, getP3RankingF(fp1st, second_B)) : [];
 
         let block3 = [];
-        if (_confRank !== 'HIGH' && _allow2ndAxis) {
+        // 【変更】HIGH でも fp2nd≥20% なら2軸許可
+        if (_allow2ndAxis) {
           const p2r2 = getP2RankingF(fp2nd);
           const second_C = p2r2[0];
           block3 = second_C != null ? makeBlockF(fp2nd, second_C, getP3RankingF(fp2nd, second_C)) : [];
