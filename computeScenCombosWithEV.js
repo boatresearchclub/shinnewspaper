@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════════════════════
 // computeScenCombosWithEV.js  — シナリオ買い目 + EV + 2着/3着予測（完全実装版）
 //
-// 【解決する3つの問題】
+// 【解決する問題】
 //
 //   問題① pred2ndRank / pred3rdRank が「頻度ベース」で誤判定
 //          → scenarioPlace2 の p2 × シナリオ重み の加重確率ベースに変更
@@ -11,6 +11,13 @@
 //
 //   問題③ hitProbEst が系統的に過小評価（実測で +10〜17% のズレ）
 //          → Platt Scaling 的なビン補間キャリブレーションで補正
+//
+//   問題④ 買い目点数が buildScenarioBuyPanel と食い違う（常に2軸18点で固定）
+//          → _confRank（HIGH/MID/LOW）と _allow2ndAxis（fp差ゲート）を追加し
+//            buildScenarioBuyPanel 通常モードと完全一致させた
+//            HIGH(HHI≥0.55 かつ fp≥0.50): 1軸最大12点
+//            MID/LOW かつ fp差>15%pt     : 1軸最大12点
+//            MID/LOW かつ fp差≤15%pt     : 2軸最大18点（重複除去後16〜18点）
 //
 // 【使い方】
 //   このファイルを sample.js / top_stats.js より後に <script> で読み込むだけ。
@@ -397,20 +404,61 @@
         ];
       }
 
-      // ── ブロック生成（通常モード）──
-      // イン逃げ否定 / 鉄板は prefillScenEVCache から呼ばれる際は判定不可のため
-      // 通常モードで統一（画面表示と一致させるためキャッシュを優先する設計）
+      // ── buildScenarioBuyPanel と同一の確信度ランク判定 ──
+      // prefill / top_stats 経由では isInNeg / isInTep は常に false（通常モード）
+      function _calcHHI(winnerBoat) {
+        const probs = sd?.kimariTypes?.map(k => sd.scenarioProb?.[winnerBoat]?.[k] ?? 0) ?? [];
+        const total = probs.reduce((s, p) => s + p, 0);
+        if (total <= 0) return 0;
+        return probs.reduce((s, p) => s + (p / total) ** 2, 0);
+      }
+
+      const SCEN_CONF_HIGH_HHI  = 0.55;
+      const SCEN_CONF_HIGH_PROB = 0.50;
+      const SCEN_CONF_MID_HHI   = 0.35;
+      const SCEN_CONF_MID_PROB  = 0.40;
+      const SCEN_AXIS2_FP_GAP   = 15.0; // %pt
+
+      const _fp1stProb = ranked2.find(b => b.boat === fp1st)?.final_prob ?? 0;
+      const _fp2ndProb = ranked2.find(b => b.boat === fp2nd)?.final_prob ?? 0;
+      const _fpDiffPct = (_fp1stProb - _fp2ndProb) * 100;
+      const _hhi = _calcHHI(fp1st);
+
+      let _confRank;
+      if (_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= SCEN_CONF_HIGH_PROB) {
+        _confRank = 'HIGH';
+      } else if (_hhi >= SCEN_CONF_MID_HHI || _fp1stProb >= SCEN_CONF_MID_PROB) {
+        _confRank = 'MID';
+      } else {
+        _confRank = 'LOW';
+      }
+      const _allow2ndAxis = _fpDiffPct <= SCEN_AXIS2_FP_GAP;
+
+      // ── ブロック生成（buildScenarioBuyPanel 通常モードと完全一致）──
       const p2r1 = getP2Ranking(fp1st);
       const second_A = p2r1[0];
       const second_B = p2r1[1];
       const block1 = second_A != null ? makeBlock(fp1st, second_A, getP3Ranking(fp1st, second_A)) : [];
       const block2 = second_B != null ? makeBlock(fp1st, second_B, getP3Ranking(fp1st, second_B)) : [];
 
-      const p2r2 = getP2Ranking(fp2nd);
-      const second_C = p2r2[0];
-      const block3 = (fp2nd != null && second_C != null)
-        ? makeBlock(fp2nd, second_C, getP3Ranking(fp2nd, second_C))
-        : [];
+      let block3;
+      let second_C;
+      if (_confRank === 'HIGH') {
+        // 高確信: 1軸固定・block3なし（最大12点）
+        second_C = null;
+        block3 = [];
+      } else if (_allow2ndAxis) {
+        // MID/LOW かつ fp差 ≤ 15%pt: 2軸展開（最大18点）
+        const p2r2 = getP2Ranking(fp2nd);
+        second_C = p2r2[0];
+        block3 = (fp2nd != null && second_C != null)
+          ? makeBlock(fp2nd, second_C, getP3Ranking(fp2nd, second_C))
+          : [];
+      } else {
+        // MID/LOW かつ fp差 > 15%pt: 2軸目なし
+        second_C = null;
+        block3 = [];
+      }
 
       // 重複除去
       const allCombosSet = new Set();
@@ -606,7 +654,14 @@
 //    旧（頻度ベース）: 20% → 改善目標: 30〜35%
 //    理由: merged3rdMap の r3 × p2 × scenarioProb で真の3着確率を算出するため
 //
-//  ■ 回収率への影響
+//  ■ 買い目点数の一致（修正④）
+//    旧: 常に2軸18点で固定 → 画面表示（buildScenarioBuyPanel）と食い違うケースあり
+//    新: _confRank（HIGH/MID/LOW）と _allow2ndAxis を追加
+//        HIGH または fp差>15%pt → 1軸最大12点
+//        MID/LOW かつ fp差≤15%pt → 2軸最大18点（重複除去後16〜18点）
+//        → top_stats.js の集計点数・期待値が画面表示と完全に一致する
+//
+
 //    hitProbEst が実態に近づくことで EV = synthOdds × hitProbEst の精度が向上し、
 //    EV フィルタ（例: EV ≥ 1.1）による買い目選別の正確性が上がる。
 //    「高EV → 実際に高回収」の相関が強まり、長期的な回収率改善に寄与する。
