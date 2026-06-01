@@ -1,0 +1,47 @@
+{
+  "venue": "びわこ",
+  "venue_slug": "biwako",
+  "date": "20260601",
+  "race": 6,
+  "fetched_at": "2026-06-01 13:17:21",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 140,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 150,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-2",
+      "odds": 450,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-2-1",
+      "odds": 2520,
+      "ninki": 8
+    }
+  ],
+  "cancelled": false
+}
