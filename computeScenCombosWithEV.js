@@ -334,6 +334,140 @@
         ranked2 = calcTenkaiProbs(rawBoats, _arek);
         if (!ranked2 || ranked2.length < 2) return _empty;
 
+        // ── final_prob を計算（renderBuy と同一ロジック）──
+        // calcTenkaiProbs は prob 順だが、renderBuy は展示・スリット補正後の
+        // final_prob でソートして fp1st を決める。
+        // ここで final_prob を計算しないと fp1st がズレて買い目が変わる。
+        try {
+          const _probTotal = ranked2.reduce((s, b) => s + b.prob, 0) || 1;
+          const _useMaster = (typeof hasMasterExt === 'function') && hasMasterExt() &&
+                             !!(typeof MASTER_EXT !== 'undefined' && MASTER_EXT?.venue_kimari?.[venue]);
+          const _tenkaiOnlyTotal = ranked2.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
+          const _boatByNo = {};
+          rawBoats.forEach(b => { _boatByNo[b.boat] = b; });
+          const _tenjiRawMap = {};
+          if (tenjiScoreMap && typeof tenjiScoreMap === 'object') {
+            Object.keys(tenjiScoreMap).filter(k => /^\d+$/.test(k)).forEach(k => {
+              const entry = tenjiScoreMap[k];
+              if (entry && typeof entry.tenji === 'number') _tenjiRawMap[parseInt(k)] = entry.tenji;
+            });
+          }
+          const { wBase: _wBase, wTenkai: _wTenkai, wTenji: _wTenji, wSlit: _wSlit } =
+            (typeof calcDynamicWeights === 'function') ? calcDynamicWeights(_arek) : { wBase:1, wTenkai:1, wTenji:1, wSlit:0 };
+
+          const BONUS_BASE_TENKAI = 0.15;
+          const BONUS_BASE_TENJI  = 0.15;
+          const SLIT_BONUS_BASE   = 0.15;
+          const MAKURI_ALERT_BONUS = 0.20;
+          const hasTenji_ = Object.keys(_tenjiRawMap).length > 0;
+
+          // 1パス目: 係数計算
+          ranked2.forEach(b => {
+            const baseNorm = b.prob / _probTotal;
+            const prevBoat = _boatByNo[b.boat - 1] || null;
+
+            let tenkaiCoef = 1.0;
+            if (_useMaster && baseNorm > 0) {
+              const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / _tenkaiOnlyTotal;
+              tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiNorm / baseNorm));
+            }
+            if (prevBoat) {
+              const myStRank   = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank : null;
+              const prevStRank = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank : null;
+              if (myStRank != null && prevStRank != null) {
+                tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + (prevStRank - myStRank) * 0.10));
+              }
+            }
+
+            let tenjiCoef = 1.0;
+            if (tenjiScoreMap && typeof tenjiScoreMap === 'object') tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
+            if (prevBoat && hasTenji_) {
+              const myTenji   = _tenjiRawMap[b.boat]        ?? null;
+              const prevTenji = _tenjiRawMap[prevBoat.boat] ?? null;
+              if (myTenji != null && prevTenji != null) {
+                tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + (prevTenji - myTenji) * 0.50));
+              }
+            }
+
+            let slitCoef = 1.0;
+            if (prevBoat && hasTenji_ && _wSlit > 0 && typeof SLIT_LAP_THRESHOLDS !== 'undefined') {
+              const myTenji    = _tenjiRawMap[b.boat]          ?? null;
+              const prevTenji  = _tenjiRawMap[prevBoat.boat]   ?? null;
+              const myStRank   = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank         ?? null : null;
+              const prevStRank = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null : null;
+              let slitDiff = null;
+              if (myTenji != null && prevTenji != null && myStRank != null && prevStRank != null) {
+                slitDiff = (prevTenji - myTenji) + (prevStRank - myStRank) * 0.02;
+              } else if (myTenji != null && prevTenji != null) {
+                slitDiff = prevTenji - myTenji;
+              } else if (myStRank != null && prevStRank != null) {
+                slitDiff = (prevStRank - myStRank) * 0.02;
+              }
+              if (slitDiff !== null) {
+                const found   = SLIT_LAP_THRESHOLDS.find(t => slitDiff >= t.min);
+                const rawCoef = found ? found.coef : 1.0;
+                slitCoef = 1.0 + (rawCoef - 1.0) * _wSlit;
+              }
+              const tenjiAlertDiff = (myTenji != null && prevTenji != null) ? Math.round((prevTenji - myTenji) * 100) / 100 : null;
+              const tenjiAlertOk = tenjiAlertDiff != null && tenjiAlertDiff >= 0.10;
+              const myStA  = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null : null;
+              const preStA = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null : null;
+              const stAlertOk = myStA != null && preStA != null && (preStA - myStA >= 0.5);
+              if (tenjiAlertOk && stAlertOk) slitCoef += MAKURI_ALERT_BONUS;
+              slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
+            }
+
+            b._baseNorm   = baseNorm;
+            b._tenkaiCoef = tenkaiCoef;
+            b._tenjiCoef  = tenjiCoef;
+            b._slitCoef   = slitCoef;
+            b._wTenjiCourse = _wTenji;
+          });
+
+          // 2パス目: 加算ボーナス方式 + 後艇スリットペナルティ
+          ranked2.forEach(b => {
+            const nextBoat = _boatByNo[b.boat + 1] || null;
+            const tenkaiBonus = BONUS_BASE_TENKAI * (b._tenkaiCoef - 1.0) * _wTenkai;
+            const tenjiBonus  = BONUS_BASE_TENJI  * (b._tenjiCoef  - 1.0) * b._wTenjiCourse;
+            const slitBonus   = SLIT_BONUS_BASE   * (b._slitCoef   - 1.0) * _wSlit;
+
+            let slitPenalty = 0;
+            if (nextBoat && hasTenji_ && _wSlit > 0 && typeof SLIT_LAP_THRESHOLDS !== 'undefined') {
+              const myTenjiN   = _tenjiRawMap[b.boat]           ?? null;
+              const nextTenji  = _tenjiRawMap[nextBoat.boat]    ?? null;
+              const myStRankN  = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank              ?? null : null;
+              const nextStRank = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank ?? null : null;
+              let nextDiff = null;
+              if (myTenjiN != null && nextTenji != null && myStRankN != null && nextStRank != null) {
+                nextDiff = (myTenjiN - nextTenji) + (myStRankN - nextStRank) * 0.02;
+              } else if (myTenjiN != null && nextTenji != null) {
+                nextDiff = myTenjiN - nextTenji;
+              } else if (myStRankN != null && nextStRank != null) {
+                nextDiff = (myStRankN - nextStRank) * 0.02;
+              }
+              if (nextDiff !== null && nextDiff > 0) {
+                const found    = SLIT_LAP_THRESHOLDS.find(t => nextDiff >= t.min);
+                const nextCoef = found ? found.coef : 1.0;
+                slitPenalty = SLIT_BONUS_BASE * (nextCoef - 1.0) * _wSlit;
+              }
+              const nextTenjiAlertOk = myTenjiN != null && nextTenji != null && (nextTenji - myTenjiN <= -0.10);
+              const nxtStA  = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank ?? null : null;
+              const myStA2  = typeof MASTER_EXT !== 'undefined' ? MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null : null;
+              const nextStAlertOk = myStA2 != null && nxtStA != null && (nxtStA - myStA2 <= -0.5);
+              if (nextTenjiAlertOk && nextStAlertOk) slitPenalty += SLIT_BONUS_BASE * 0.20 * _wSlit;
+            }
+
+            b._multi_score = Math.max(0.001, b._baseNorm + tenkaiBonus + tenjiBonus + slitBonus - slitPenalty);
+          });
+
+          const _multiTotal = ranked2.reduce((s, b) => s + b._multi_score, 0) || 1;
+          ranked2.forEach(b => { b.final_prob = b._multi_score / _multiTotal; });
+          ranked2.sort((a, b) => b.final_prob - a.final_prob);
+        } catch (_efp) {
+          // final_prob 計算失敗時は prob 順のまま続行（旧挙動フォールバック）
+          ranked2.forEach(b => { if (b.final_prob == null) b.final_prob = b.prob; });
+        }
+
         // シナリオデータ算出
         sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, vdata);
       } finally {
