@@ -288,6 +288,53 @@
       weighted2nd: {}, weighted3rd: {},
     };
 
+    // ══════════════════════════════════════════════════════════════════════
+    // § CACHE-FIRST: buildScenarioBuyPanel が書いたキャッシュを最優先で返す
+    //
+    // 【設計方針】
+    //   買い目のズレを根絶するための唯一確実な手段は
+    //   「画面表示と集計が同一のデータを参照する」こと。
+    //
+    //   buildScenarioBuyPanel は allCombos 確定時に
+    //     _saveScenComboToLS(venue, date, rno, allCombos)
+    //   を呼び出し、_scenComboCache[memKey] と localStorage 両方に書く。
+    //
+    //   このキャッシュが存在する場合、ここで再計算は一切行わず
+    //   キャッシュの combos をそのまま返す。
+    //   hitProbEst など EV 系の値は後段で引き続き計算する。
+    //
+    //   キャッシュが空の場合（過去日・未表示レース等）は
+    //   従来の再計算ロジックにフォールスルーする。
+    // ══════════════════════════════════════════════════════════════════════
+    try {
+      if (venue && vdata?.date && rno != null &&
+          typeof _scenComboCache !== 'undefined' &&
+          typeof VENUE_SLUG_MAP   !== 'undefined') {
+        const _slug    = VENUE_SLUG_MAP[venue] || venue;
+        const _memKey  = `${_slug}_${vdata.date}_${rno}`;
+        const _cached  = _scenComboCache[_memKey];
+        if (Array.isArray(_cached) && _cached.length > 0) {
+          // キャッシュ命中 → combos は確定値として返す
+          // hitProbEst は後段の計算が必要なため null を返す
+          // （top_stats.js は hitProbEst が null でも集計上問題ない）
+          return {
+            combos      : _cached.slice(),
+            hitProbEst  : null,   // EV集計は synth × hitProbEst だが combos 命中が最優先
+            synthOdds   : null,
+            ev          : null,
+            pred2ndRank : null,
+            pred3rdRank : null,
+            weighted2nd : {},
+            weighted3rd : {},
+            _fromCache  : true,   // デバッグ用フラグ
+          };
+        }
+      }
+    } catch (_cacheErr) {
+      // キャッシュ参照エラーは無視して再計算にフォールスルー
+    }
+    // ── キャッシュなし → 従来の再計算ロジック ──
+
     try {
       // ── 引数バリデーション ──
       if (!venue || typeof venue !== 'string') return _empty;
