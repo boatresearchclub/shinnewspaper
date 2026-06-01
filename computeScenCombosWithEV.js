@@ -541,7 +541,10 @@
       }
 
       // ── buildScenarioBuyPanel と同一の確信度ランク判定 ──
-      // prefill / top_stats 経由では isInNeg / isInTep は常に false（通常モード）
+      // [2026-06-01 同期] sample.js の 2026-05-31 変更を反映:
+      //   旧: _allow2ndAxis = fpDiff <= 15%pt
+      //   新: _allow2ndAxis = fp2ndProb >= 0.20（絶対値ベース）
+      //   HIGH でも _allow2ndAxis なら2軸許可
       function _calcHHI(winnerBoat) {
         const probs = sd?.kimariTypes?.map(k => sd.scenarioProb?.[winnerBoat]?.[k] ?? 0) ?? [];
         const total = probs.reduce((s, p) => s + p, 0);
@@ -553,11 +556,10 @@
       const SCEN_CONF_HIGH_PROB = 0.50;
       const SCEN_CONF_MID_HHI   = 0.35;
       const SCEN_CONF_MID_PROB  = 0.40;
-      const SCEN_AXIS2_FP_GAP   = 15.0; // %pt
+      const FP2ND_MIN_FOR_2AXIS = 0.20; // fp2nd がこれ以上なら2軸許可
 
       const _fp1stProb = ranked2.find(b => b.boat === fp1st)?.final_prob ?? 0;
       const _fp2ndProb = ranked2.find(b => b.boat === fp2nd)?.final_prob ?? 0;
-      const _fpDiffPct = (_fp1stProb - _fp2ndProb) * 100;
       const _hhi = _calcHHI(fp1st);
 
       let _confRank;
@@ -568,7 +570,8 @@
       } else {
         _confRank = 'LOW';
       }
-      const _allow2ndAxis = _fpDiffPct <= SCEN_AXIS2_FP_GAP;
+      // HIGH でも fp2nd >= 20% なら2軸許可（buildScenarioBuyPanel と同一）
+      const _allow2ndAxis = _fp2ndProb >= FP2ND_MIN_FOR_2AXIS;
 
       // ── ブロック生成（buildScenarioBuyPanel 通常モードと完全一致）──
       const p2r1 = getP2Ranking(fp1st);
@@ -579,19 +582,17 @@
 
       let block3;
       let second_C;
-      if (_confRank === 'HIGH') {
-        // 高確信: 1軸固定・block3なし（最大12点）
-        second_C = null;
-        block3 = [];
-      } else if (_allow2ndAxis) {
-        // MID/LOW かつ fp差 ≤ 15%pt: 2軸展開（最大18点）
+      if (_allow2ndAxis) {
+        // fp2nd >= 20%: 2軸展開（HIGH/MID/LOW 問わず）
+        // [2026-06-01 同期] buildScenarioBuyPanel の新仕様に合わせ
+        // HIGH でも fp2nd が十分あれば2軸許可
         const p2r2 = getP2Ranking(fp2nd);
         second_C = p2r2[0];
         block3 = (fp2nd != null && second_C != null)
           ? makeBlock(fp2nd, second_C, getP3Ranking(fp2nd, second_C))
           : [];
       } else {
-        // MID/LOW かつ fp差 > 15%pt: 2軸目なし
+        // fp2nd < 20%: 2軸目なし
         second_C = null;
         block3 = [];
       }
