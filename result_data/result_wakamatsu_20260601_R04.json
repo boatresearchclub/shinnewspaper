@@ -1,0 +1,47 @@
+{
+  "venue": "若松",
+  "venue_slug": "wakamatsu",
+  "date": "20260601",
+  "race": 4,
+  "fetched_at": "2026-06-01 17:11:23",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 1170,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 520,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 390,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-4",
+      "odds": 2550,
+      "ninki": 12
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-4-6",
+      "odds": 6230,
+      "ninki": 24
+    }
+  ],
+  "cancelled": false
+}
