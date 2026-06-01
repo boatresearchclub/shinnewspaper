@@ -588,10 +588,11 @@
       }
 
       // ── buildScenarioBuyPanel と同一の確信度ランク判定 ──
-      // [2026-06-01 同期] sample.js の 2026-05-31 変更を反映:
-      //   旧: _allow2ndAxis = fpDiff <= 15%pt
-      //   新: _allow2ndAxis = fp2ndProb >= 0.20（絶対値ベース）
-      //   HIGH でも _allow2ndAxis なら2軸許可
+      // [2026-06-01 同期] sample.js の変更を反映:
+      //   ・HIGH確率閾値を艇番で分岐（1号艇75% / 2〜6号艇50%）
+      //   ・SCEN_CONF_MID_PROB 廃止 → HIGH未満はすべてMID
+      //   ・_allow2ndAxis = fp2ndProb >= 0.20（絶対値ベース）
+      //   ・HIGH でも _allow2ndAxis なら2軸許可
       function _calcHHI(winnerBoat) {
         const probs = sd?.kimariTypes?.map(k => sd.scenarioProb?.[winnerBoat]?.[k] ?? 0) ?? [];
         const total = probs.reduce((s, p) => s + p, 0);
@@ -599,20 +600,27 @@
         return probs.reduce((s, p) => s + (p / total) ** 2, 0);
       }
 
-      const SCEN_CONF_HIGH_HHI  = 0.55;
-      const SCEN_CONF_HIGH_PROB = 0.50;
-      const SCEN_CONF_MID_HHI   = 0.35;
-      const SCEN_CONF_MID_PROB  = 0.40;
-      const FP2ND_MIN_FOR_2AXIS = 0.20; // fp2nd がこれ以上なら2軸許可
+      const SCEN_CONF_HIGH_HHI      = 0.55;
+      // [同期: sample.js] HIGH確率閾値を艇番で分岐
+      //   1号艇軸: 75%以上（イン鉄板と同等の根拠が必要）
+      //   2〜6号艇軸: 50%以上
+      const SCEN_CONF_HIGH_PROB_INN = 0.75;
+      const SCEN_CONF_HIGH_PROB_OUT = 0.50;
+      const SCEN_CONF_MID_HHI       = 0.35;
+      // [同期: sample.js] SCEN_CONF_MID_PROB 廃止 → HIGH未満はすべてMID
+      const FP2ND_MIN_FOR_2AXIS     = 0.20; // fp2nd がこれ以上なら2軸許可
 
       const _fp1stProb = ranked2.find(b => b.boat === fp1st)?.final_prob ?? 0;
       const _fp2ndProb = ranked2.find(b => b.boat === fp2nd)?.final_prob ?? 0;
       const _hhi = _calcHHI(fp1st);
 
+      // 軸艇が1号艇かどうかで HIGH の確率閾値を切り替える（sample.js と完全一致）
+      const _highProbThreshold = (fp1st === 1) ? SCEN_CONF_HIGH_PROB_INN : SCEN_CONF_HIGH_PROB_OUT;
+
       let _confRank;
-      if (_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= SCEN_CONF_HIGH_PROB) {
+      if (_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= _highProbThreshold) {
         _confRank = 'HIGH';
-      } else if (_hhi >= SCEN_CONF_MID_HHI || _fp1stProb >= SCEN_CONF_MID_PROB) {
+      } else if (_hhi >= SCEN_CONF_MID_HHI || _fp1stProb < _highProbThreshold) {
         _confRank = 'MID';
       } else {
         _confRank = 'LOW';
