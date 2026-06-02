@@ -1,0 +1,47 @@
+{
+  "venue": "住之江",
+  "venue_slug": "suminoe",
+  "date": "20260602",
+  "race": 7,
+  "fetched_at": "2026-06-02 18:29:02",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 310,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 140,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 210,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 1730,
+      "ninki": 10
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-5",
+      "odds": 3790,
+      "ninki": 17
+    }
+  ],
+  "cancelled": false
+}
