@@ -1,0 +1,47 @@
+{
+  "venue": "尼崎",
+  "venue_slug": "amagasaki",
+  "date": "20260602",
+  "race": 11,
+  "fetched_at": "2026-06-02 15:47:32",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 1140,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 230,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-1",
+      "odds": 2020,
+      "ninki": 6
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-1-2",
+      "odds": 7680,
+      "ninki": 24
+    }
+  ],
+  "cancelled": false
+}
