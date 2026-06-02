@@ -1,0 +1,47 @@
+{
+  "venue": "多摩川",
+  "venue_slug": "tamagawa",
+  "date": "20260602",
+  "race": 6,
+  "fetched_at": "2026-06-02 14:26:58",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 390,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 160,
+      "ninki": null
+    },
+    {
+      "combo": "5",
+      "odds": 310,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-5",
+      "odds": 2060,
+      "ninki": 7
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-5-2",
+      "odds": 16940,
+      "ninki": 38
+    }
+  ],
+  "cancelled": false
+}
