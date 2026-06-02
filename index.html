@@ -237,6 +237,59 @@
     <div class="top-hero-sub">競艇レース分析・AI予想プラットフォーム</div>
   </div>
 
+  <!-- 📢 お知らせ（開発記録）折りたたみセクション -->
+  <div id="news-accordion" style="margin-bottom:0.8rem">
+    <button
+      id="news-accordion-btn"
+      onclick="(function(){
+        var content = document.getElementById('news-accordion-content');
+        var arrow = document.getElementById('news-accordion-arrow');
+        var isOpen = content.style.display !== 'none';
+        content.style.display = isOpen ? 'none' : 'block';
+        arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+      })()"
+      style="
+        width:100%;
+        display:flex;
+        align-items:center;
+        gap:8px;
+        background:var(--bg2,#fff);
+        border:1px solid var(--border,rgba(0,0,0,0.10));
+        border-radius:10px;
+        padding:10px 14px;
+        font-size:13px;
+        font-weight:700;
+        color:var(--text1,#1a1a1a);
+        cursor:pointer;
+        text-align:left;
+      "
+    >
+      <span>📢</span>
+      <span style="flex:1">お知らせ（開発記録）</span>
+      <span
+        id="news-accordion-arrow"
+        style="font-size:11px;color:var(--text3,#888);transition:transform 0.2s;display:inline-block;transform:rotate(0deg)"
+      >▼</span>
+    </button>
+    <div
+      id="news-accordion-content"
+      style="
+        display:none;
+        border:1px solid var(--border,rgba(0,0,0,0.10));
+        border-top:none;
+        border-radius:0 0 10px 10px;
+        padding:12px 14px;
+        background:var(--bg2,#fff);
+        font-size:13px;
+        color:var(--text2,#444);
+        line-height:1.7;
+      "
+    >
+      <!-- ここにお知らせ内容を入れる -->
+      <div style="color:var(--text3,#888);font-size:12px">（内容は別途入れる）</div>
+    </div>
+  </div>
+
   <!-- 🎯 的中速報（top_stats.js の _buildHitSokuhoPanel が書き込む） -->
   <div class="top-section-label">🎯 本日の的中速報</div>
   <div id="top-scen-ev-section" style="margin-bottom:0.8rem"></div>
@@ -407,19 +460,19 @@
 <div class="toast" id="toast"></div>
 
 <!-- data.js は同期（グローバル変数を即時定義するため defer 不可） -->
-<script src="data.js?v=20260602103728"></script>
+<script src="data.js?v=20260602104016"></script>
 <!-- 残りのスクリプトは defer で並列ダウンロード・DOMContentLoaded後に順序保証付き実行 -->
 <!-- これによりHTMLパース・初期描画をブロックしなくなる -->
-<script defer src="params_obf.js?v=20260602103728"></script>
-<script defer src="csv_export_obf.js?v=20260602103728"></script>
-<script defer src="sim_obf.js?v=20260602103728"></script>
-<script defer src="backtest_obf.js?v=20260602103728"></script>
-<script defer src="top_page_obf.js?v=20260602103728"></script>
-<script defer src="sample_obf.js?v=20260602103728"></script>
-<script defer src="top_stats_obf.js?v=20260602103728"></script>
-<script defer src="calibration.js?v=20260602103728"></script>
-<script defer src="dynamic_inn2place.js?v=20260602103728"></script>
-<script defer src="computeScenCombosWithEV.js?v=20260602103728"></script>
+<script defer src="params_obf.js?v=20260602104016"></script>
+<script defer src="csv_export_obf.js?v=20260602104016"></script>
+<script defer src="sim_obf.js?v=20260602104016"></script>
+<script defer src="backtest_obf.js?v=20260602104016"></script>
+<script defer src="top_page_obf.js?v=20260602104016"></script>
+<script defer src="sample_obf.js?v=20260602104016"></script>
+<script defer src="top_stats_obf.js?v=20260602104016"></script>
+<script defer src="calibration.js?v=20260602104016"></script>
+<script defer src="dynamic_inn2place.js?v=20260602104016"></script>
+<script defer src="computeScenCombosWithEV.js?v=20260602104016"></script>
 <script defer src="quality_filter_patch.js"></script>
 
 <!-- ══ 管理者認証スクリプト ══ -->
