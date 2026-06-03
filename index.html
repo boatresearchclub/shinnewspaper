@@ -499,7 +499,7 @@
     <!-- 無料ユーザー向けロックバナー -->
     <div id="detail2-lock-banner" class="free-lock-banner">
       <div class="lock-icon">🔒</div>
-      <div class="lock-msg">AI予想（シナリオ・イン鉄板・イン否定・的中重視・回収重視・EV買い）はプレミアム会員限定です</div>
+      <div class="lock-msg">AI予想（シナリオ・イン鉄板・イン否定・的中重視・回収重視）はプレミアム会員限定です</div>
       <div class="lock-plan">👑 プレミアムで解放</div>
     </div>
     <!-- 有料/管理者のみ: AI予想本体 -->
@@ -510,14 +510,7 @@
 
   <!-- 展開分析タブ -->
   <div id="tab-buy" style="display:none">
-    <!-- 無料ユーザー向けロックバナー -->
-    <div id="buy-lock-banner" class="free-lock-banner">
-      <div class="lock-icon">🔒</div>
-      <div class="lock-msg">展開シナリオはプレミアム会員限定です</div>
-      <div class="lock-plan">👑 プレミアムで解放</div>
-    </div>
-    <!-- 有料/管理者のみ: 展開分析本体 -->
-    <div id="buy-panel" class="paid-only">
+    <div id="buy-panel">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
     </div>
   </div>
@@ -733,8 +726,11 @@
 </script>
 
 <!-- ══ paid-only パネル保護パッチ ══
-     sample_obf.js が #buy-panel / #detail2-panel の innerHTML を直接書き換えるため、
-     MutationObserver で監視し、無料モード時は中身を空にして paid-only クラスを維持する。
+     【展開分析タブ】会場平均・独自補正 最終確率は無料でも表示。
+       「展開シナリオ」セクションだけを無料時に隠す。
+     【AI予想タブ】全買い目を無料時に隠す（#detail2-panel 全体）。
+       「EV買い」サブタブ・セクションは管理者のみ表示（有料でも非表示）。
+     sample_obf.js が innerHTML を動的生成するため MutationObserver で監視。
 -->
 <script>
 (function () {
@@ -742,34 +738,141 @@
     return !document.body.classList.contains('paid-mode') &&
            !document.body.classList.contains('admin-mode');
   }
+  function isAdminMode() {
+    return document.body.classList.contains('admin-mode');
+  }
 
-  // ── パネル書き換え後に paid-only クラスを強制再付与 ──────────────
-  function guardPanel(panelId) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
+  // ── ロックバナーを生成して挿入 ────────────────────────────────
+  function makeLockBanner(msg) {
+    const div = document.createElement('div');
+    div.className = 'free-lock-banner scenario-lock-banner';
+    div.innerHTML =
+      '<div class="lock-icon">🔒</div>' +
+      '<div class="lock-msg">' + msg + '</div>' +
+      '<div class="lock-plan">👑 プレミアムで解放</div>';
+    return div;
+  }
 
-    // クラスが外れていたら再付与
-    function reapply() {
-      if (!panel.classList.contains('paid-only')) {
-        panel.classList.add('paid-only');
+  // ── 展開シナリオセクションを隠してバナーを挿入 ──────────────────
+  function patchScenarioSection(buyPanel) {
+    if (!isFreeMode()) return;
+    if (buyPanel.querySelector('.scenario-lock-banner')) return;
+
+    const allEls = buyPanel.querySelectorAll('*');
+    let scenarioRoot = null;
+    for (const el of allEls) {
+      if (el.childNodes && [...el.childNodes].some(n =>
+        n.nodeType === 3 && n.textContent.includes('展開シナリオ')
+      )) {
+        let node = el;
+        while (node.parentElement && node.parentElement !== buyPanel) {
+          node = node.parentElement;
+        }
+        if (node.parentElement === buyPanel) {
+          scenarioRoot = node;
+          break;
+        }
       }
-      // 無料モードなら中身を空にする（JS生成済みHTMLを隠す）
-      if (isFreeMode() && panel.innerHTML.trim() !== '') {
-        panel.innerHTML = '';
+    }
+    if (!scenarioRoot) return;
+
+    let cursor = scenarioRoot;
+    while (cursor) {
+      cursor.style.display = 'none';
+      cursor._hiddenByPatch = true;
+      cursor = cursor.nextElementSibling;
+    }
+    buyPanel.appendChild(makeLockBanner('展開シナリオはプレミアム会員限定です'));
+  }
+
+  // ── AI予想パネル全体を保護（無料時）────────────────────────────
+  function guardDetail2Panel(panel) {
+    if (!panel.classList.contains('paid-only')) {
+      panel.classList.add('paid-only');
+    }
+    if (isFreeMode() && panel.innerHTML.trim() !== '') {
+      panel.innerHTML = '';
+    }
+  }
+
+  // ── EV買いを管理者のみに制限 ────────────────────────────────
+  // sample_obf.js が生成するサブタブ（「EV買い」ボタン）と
+  // 対応するコンテンツセクションを管理者以外では非表示にする。
+  function patchEvBuy(panel) {
+    if (isAdminMode()) return; // 管理者はそのまま表示
+
+    // ── サブタブボタン（「EV買い」テキストを含むボタン/要素）を隠す ──
+    const allEls = panel.querySelectorAll('*');
+    for (const el of allEls) {
+      if (el.textContent.trim().includes('EV買い') && !el._evPatched) {
+        // ボタン自体、またはボタンを含む親タブバー内の該当要素
+        const isBtn = el.tagName === 'BUTTON' || el.tagName === 'LI' ||
+                      el.getAttribute('role') === 'tab' ||
+                      el.classList.contains('sub-tab') ||
+                      el.classList.contains('subtab') ||
+                      el.classList.contains('mode-btn') ||
+                      el.classList.contains('ai-tab');
+        if (isBtn || (el.children.length === 0 && el.parentElement && (
+          el.parentElement.tagName === 'BUTTON' ||
+          el.parentElement.classList.contains('sub-tab') ||
+          el.parentElement.classList.contains('ai-tab')
+        ))) {
+          const target = (el.tagName === 'BUTTON' || el.tagName === 'LI') ? el : el.parentElement;
+          target.style.display = 'none';
+          target._evPatched = true;
+        }
       }
     }
 
-    const obs = new MutationObserver(reapply);
-    obs.observe(panel, { childList: true, subtree: false, attributes: false });
-
-    // 初期適用
-    reapply();
+    // ── EV買いコンテンツセクション（「EV1.1以上」「EV買い」含む領域）を隠す ──
+    for (const el of allEls) {
+      if (!el._evContentPatched &&
+          (el.textContent.includes('EV1.1以上') || el.textContent.includes('EV買い')) &&
+          el.children.length > 0) {
+        // コンテンツ本体（サブタブより深い層）
+        const depth = (function d(n, root) {
+          let c = 0; let cur = n;
+          while (cur && cur !== root) { c++; cur = cur.parentElement; }
+          return c;
+        })(el, panel);
+        if (depth >= 2) {
+          el.style.display = 'none';
+          el._evContentPatched = true;
+        }
+      }
+    }
   }
 
-  // DOM準備後にガードを設置
+  // ── MutationObserver でJS書き換えを検知 ─────────────────────
   function setup() {
-    guardPanel('buy-panel');
-    guardPanel('detail2-panel');
+    // --- 展開分析タブ: シナリオ部分だけ隠す ---
+    const buyPanel = document.getElementById('buy-panel');
+    if (buyPanel) {
+      const buyObs = new MutationObserver(() => {
+        if (isFreeMode()) {
+          if (!buyPanel.querySelector('.scenario-lock-banner')) {
+            patchScenarioSection(buyPanel);
+          }
+        }
+      });
+      buyObs.observe(buyPanel, { childList: true, subtree: false });
+      patchScenarioSection(buyPanel);
+    }
+
+    // --- AI予想タブ: 無料時は全体を隠す / 有料時はEV買いのみ管理者限定 ---
+    const d2Panel = document.getElementById('detail2-panel');
+    if (d2Panel) {
+      const d2Obs = new MutationObserver(() => {
+        guardDetail2Panel(d2Panel);
+        // 有料 or 管理者モードのとき EV買いパッチを適用
+        if (!isFreeMode()) {
+          patchEvBuy(d2Panel);
+        }
+      });
+      d2Obs.observe(d2Panel, { childList: true, subtree: true });
+      guardDetail2Panel(d2Panel);
+      if (!isFreeMode()) patchEvBuy(d2Panel);
+    }
   }
 
   if (document.readyState === 'loading') {
