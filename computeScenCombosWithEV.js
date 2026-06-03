@@ -306,12 +306,6 @@
     //   キャッシュが空の場合（過去日・未表示レース等）は
     //   従来の再計算ロジックにフォールスルーする。
     // ══════════════════════════════════════════════════════════════════════
-    // _scenComboCache ヒット時は combos を確定値として使いつつ、
-    // hitProbEst の計算は続行する（早期 return しない）。
-    // 旧実装: キャッシュヒット時に hitProbEst=null で早期 return していたため
-    //         直近数日分（表示済み = キャッシュあり）の ev がすべて null になり
-    //         EV1.1 フィルタで全件除外されるバグがあった。
-    let _cachedCombos = null;
     try {
       if (venue && vdata?.date && rno != null &&
           typeof _scenComboCache !== 'undefined' &&
@@ -320,14 +314,69 @@
         const _memKey  = `${_slug}_${vdata.date}_${rno}`;
         const _cached  = _scenComboCache[_memKey];
         if (Array.isArray(_cached) && _cached.length > 0) {
-          _cachedCombos = _cached.slice(); // combos はキャッシュ確定値を使う
-          // ここで return せず、hitProbEst 計算のため処理を続行する
+          // キャッシュ命中 → combos は確定値として使い、hitProbEst だけ計算して返す
+          // [2026-06-03 修正] 旧実装は hitProbEst=null で早期 return していたため
+          //   キャッシュあり（直近数日の表示済みレース）の ev がすべて null になり
+          //   EV1.1 フィルタで全件除外されるバグがあった。
+          const _combos = _cached.slice();
+          let _hitProbEst = null;
+          try {
+            const _rd = vdata?.races?.[String(rno)];
+            if (_rd?.boats && typeof window._setDataForCalc === 'function'
+                && typeof calcTenkaiProbs === 'function'
+                && typeof calcScenarioData === 'function'
+                && typeof calcScenarioComboProb === 'function') {
+              const _savedC = window._setDataForCalc(vdata, venue);
+              try {
+                const _arek = (_rd.arek > 0) ? _rd.arek : 54.7;
+                const _ranked = calcTenkaiProbs(_rd.boats, _arek);
+                if (_ranked && _ranked.length >= 2) {
+                  const _probTotal = _ranked.reduce((s,b) => s + b.prob, 0) || 1;
+                  _ranked.forEach(b => { b.final_prob = b.prob / _probTotal; });
+                  const _p2map = calcPlace2Probs(_rd.boats, _ranked);
+                  const _ranked2w = _ranked.map(b => ({...b, place2_prob: _p2map[b.boat] || 0}));
+                  let _tSM = {};
+                  try {
+                    if (typeof _ensureTenjiCache === 'function') _ensureTenjiCache();
+                    const _sl = (typeof SLUG_MAP !== 'undefined' && SLUG_MAP[venue]) || venue;
+                    const _tk = (typeof tenjiKey === 'function') ? tenjiKey(_sl, vdata.date, rno) : null;
+                    if (_tk && typeof _tenjiCache !== 'undefined') _tSM = _tenjiCache[_tk] || {};
+                  } catch(_te) {}
+                  const _sd = calcScenarioData(_ranked2w, _rd.boats, _tSM, venue, vdata);
+                  if (_sd) {
+                    let _raw = 0, _cnt = 0;
+                    _combos.forEach(c => {
+                      const _w = parseInt(c.split('-')[0]);
+                      const _p = calcScenarioComboProb(c, _w, _sd);
+                      if (_p != null && !isNaN(_p)) { _raw += _p; _cnt++; }
+                    });
+                    if (_cnt > 0 && typeof calibrateProb === 'function') {
+                      _hitProbEst = calibrateProb(_raw);
+                    }
+                  }
+                }
+              } finally {
+                window._restoreDataForCalc(_savedC);
+              }
+            }
+          } catch (_ce) { /* hitProbEst 計算失敗時は null のまま返す */ }
+          return {
+            combos      : _combos,
+            hitProbEst  : _hitProbEst,
+            synthOdds   : null,
+            ev          : null,
+            pred2ndRank : null,
+            pred3rdRank : null,
+            weighted2nd : {},
+            weighted3rd : {},
+            _fromCache  : true,
+          };
         }
       }
     } catch (_cacheErr) {
       // キャッシュ参照エラーは無視して再計算にフォールスルー
     }
-    // ── 再計算ロジック（キャッシュありの場合は allCombos を後で差し替え）──
+    // ── キャッシュなし → 従来の再計算ロジック ──
 
     try {
       // ── 引数バリデーション ──
@@ -657,15 +706,10 @@
 
       if (allCombos.length === 0) return _empty;
 
-      // キャッシュヒット時は combos をキャッシュの確定値に差し替え
-      // （買い目は表示画面と同一のものを使う。hitProbEst はこの combos で計算する）
-      const finalCombos = _cachedCombos != null ? _cachedCombos : allCombos;
-      if (finalCombos.length === 0) return _empty;
-
       // ── hitProbEst 算出（各買い目の calcScenarioComboProb を合算）──
       let rawHitProb = 0;
       let knownCount = 0;
-      finalCombos.forEach(c => {
+      allCombos.forEach(c => {
         const winner = parseInt(c.split('-')[0]);
         const p = calcScenarioComboProb(c, winner, sd);
         if (p != null && !isNaN(p)) {
@@ -695,7 +739,7 @@
       const { weighted: weighted3rd, ranked: ranked3rdList } = calcWeighted3rd(sd, fp1st);
 
       return {
-        combos      : finalCombos,  // キャッシュありの場合は確定値、なければ再計算値
+        combos      : allCombos,
         hitProbEst,             // キャリブレーション補正済み
         _rawHitProbEst: rawHitProbEst, // デバッグ用（補正前）
         synthOdds   : null,     // 呼び出し側（top_stats.js）で ODDS_DATA から計算
