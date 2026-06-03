@@ -496,15 +496,28 @@
 
   <!-- AI予想タブ -->
   <div id="tab-detail2" style="display:none">
-    <!-- 有料/管理者に全開放。JS側でも tier チェック可能 -->
-    <div id="detail2-panel">
+    <!-- 無料ユーザー向けロックバナー -->
+    <div id="detail2-lock-banner" class="free-lock-banner">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-msg">AI予想（シナリオ・イン鉄板・イン否定・的中重視・回収重視・EV買い）はプレミアム会員限定です</div>
+      <div class="lock-plan">👑 プレミアムで解放</div>
+    </div>
+    <!-- 有料/管理者のみ: AI予想本体 -->
+    <div id="detail2-panel" class="paid-only">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
     </div>
   </div>
 
   <!-- 展開分析タブ -->
   <div id="tab-buy" style="display:none">
-    <div id="buy-panel">
+    <!-- 無料ユーザー向けロックバナー -->
+    <div id="buy-lock-banner" class="free-lock-banner">
+      <div class="lock-icon">🔒</div>
+      <div class="lock-msg">展開シナリオはプレミアム会員限定です</div>
+      <div class="lock-plan">👑 プレミアムで解放</div>
+    </div>
+    <!-- 有料/管理者のみ: 展開分析本体 -->
+    <div id="buy-panel" class="paid-only">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択すると買い目が表示されます</div>
     </div>
   </div>
@@ -715,6 +728,54 @@
     document.addEventListener('DOMContentLoaded', () => { init(); });
   } else {
     init();
+  }
+})();
+</script>
+
+<!-- ══ paid-only パネル保護パッチ ══
+     sample_obf.js が #buy-panel / #detail2-panel の innerHTML を直接書き換えるため、
+     MutationObserver で監視し、無料モード時は中身を空にして paid-only クラスを維持する。
+-->
+<script>
+(function () {
+  function isFreeMode() {
+    return !document.body.classList.contains('paid-mode') &&
+           !document.body.classList.contains('admin-mode');
+  }
+
+  // ── パネル書き換え後に paid-only クラスを強制再付与 ──────────────
+  function guardPanel(panelId) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+
+    // クラスが外れていたら再付与
+    function reapply() {
+      if (!panel.classList.contains('paid-only')) {
+        panel.classList.add('paid-only');
+      }
+      // 無料モードなら中身を空にする（JS生成済みHTMLを隠す）
+      if (isFreeMode() && panel.innerHTML.trim() !== '') {
+        panel.innerHTML = '';
+      }
+    }
+
+    const obs = new MutationObserver(reapply);
+    obs.observe(panel, { childList: true, subtree: false, attributes: false });
+
+    // 初期適用
+    reapply();
+  }
+
+  // DOM準備後にガードを設置
+  function setup() {
+    guardPanel('buy-panel');
+    guardPanel('detail2-panel');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setup();
   }
 })();
 </script>
