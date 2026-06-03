@@ -306,6 +306,12 @@
     //   キャッシュが空の場合（過去日・未表示レース等）は
     //   従来の再計算ロジックにフォールスルーする。
     // ══════════════════════════════════════════════════════════════════════
+    // _scenComboCache ヒット時は combos を確定値として使いつつ、
+    // hitProbEst の計算は続行する（早期 return しない）。
+    // 旧実装: キャッシュヒット時に hitProbEst=null で早期 return していたため
+    //         直近数日分（表示済み = キャッシュあり）の ev がすべて null になり
+    //         EV1.1 フィルタで全件除外されるバグがあった。
+    let _cachedCombos = null;
     try {
       if (venue && vdata?.date && rno != null &&
           typeof _scenComboCache !== 'undefined' &&
@@ -314,26 +320,14 @@
         const _memKey  = `${_slug}_${vdata.date}_${rno}`;
         const _cached  = _scenComboCache[_memKey];
         if (Array.isArray(_cached) && _cached.length > 0) {
-          // キャッシュ命中 → combos は確定値として返す
-          // hitProbEst は後段の計算が必要なため null を返す
-          // （top_stats.js は hitProbEst が null でも集計上問題ない）
-          return {
-            combos      : _cached.slice(),
-            hitProbEst  : null,   // EV集計は synth × hitProbEst だが combos 命中が最優先
-            synthOdds   : null,
-            ev          : null,
-            pred2ndRank : null,
-            pred3rdRank : null,
-            weighted2nd : {},
-            weighted3rd : {},
-            _fromCache  : true,   // デバッグ用フラグ
-          };
+          _cachedCombos = _cached.slice(); // combos はキャッシュ確定値を使う
+          // ここで return せず、hitProbEst 計算のため処理を続行する
         }
       }
     } catch (_cacheErr) {
       // キャッシュ参照エラーは無視して再計算にフォールスルー
     }
-    // ── キャッシュなし → 従来の再計算ロジック ──
+    // ── 再計算ロジック（キャッシュありの場合は allCombos を後で差し替え）──
 
     try {
       // ── 引数バリデーション ──
@@ -663,10 +657,15 @@
 
       if (allCombos.length === 0) return _empty;
 
+      // キャッシュヒット時は combos をキャッシュの確定値に差し替え
+      // （買い目は表示画面と同一のものを使う。hitProbEst はこの combos で計算する）
+      const finalCombos = _cachedCombos != null ? _cachedCombos : allCombos;
+      if (finalCombos.length === 0) return _empty;
+
       // ── hitProbEst 算出（各買い目の calcScenarioComboProb を合算）──
       let rawHitProb = 0;
       let knownCount = 0;
-      allCombos.forEach(c => {
+      finalCombos.forEach(c => {
         const winner = parseInt(c.split('-')[0]);
         const p = calcScenarioComboProb(c, winner, sd);
         if (p != null && !isNaN(p)) {
@@ -696,7 +695,7 @@
       const { weighted: weighted3rd, ranked: ranked3rdList } = calcWeighted3rd(sd, fp1st);
 
       return {
-        combos      : allCombos,
+        combos      : finalCombos,  // キャッシュありの場合は確定値、なければ再計算値
         hitProbEst,             // キャリブレーション補正済み
         _rawHitProbEst: rawHitProbEst, // デバッグ用（補正前）
         synthOdds   : null,     // 呼び出し側（top_stats.js）で ODDS_DATA から計算
@@ -789,18 +788,12 @@
           // 旧: r.ev を再計算せずに放置 → r.ev = null のままキャッシュに保存され
           //     EV1.1フィルタを通過するレースが過去30日分で0件になるバグ。
           // 新: r.synth が取れていれば ev = synth × 補正後 hitProbEst で上書き。
-          //     r.synth = null（過去日）の場合は ev_alt = hitProbEst を設定。
           if (res.hitProbEst != null) {
             r.hitProbEst = res.hitProbEst;
             r.hitRate    = res.hitProbEst; // hitRate は hitProbEst の別名
             // ★ ev を synth × 補正済み hitProbEst で再計算
             if (r.synth != null) {
-              r.ev     = r.synth * res.hitProbEst;
-              r.ev_alt = null; // synth あり時は ev_alt 不要
-            } else {
-              // synth=null（過去日）: ev_alt に hitProbEst を設定
-              // フィルタ側で EV_MIN / avg_synth_assumed と比較して代替判定する
-              r.ev_alt = res.hitProbEst;
+              r.ev = r.synth * res.hitProbEst;
             }
           }
 
