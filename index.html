@@ -310,9 +310,12 @@
   </div>
 
   <!-- 🌟 プレミアム版案内バナー（無料ユーザー向け） -->
-  <div class="free-only" style="margin-bottom:0.8rem">
+  <div class="free-only" style="margin-bottom:0.8rem;position:relative;z-index:100">
     <a
       href="https://boatresearchclub.github.io/shinnewspaper/#paid=brcpremium"
+      target="_blank"
+      rel="noopener noreferrer"
+      onclick="window.open('https://boatresearchclub.github.io/shinnewspaper/#paid=brcpremium','_blank');return false;"
       style="
         display:flex;
         align-items:center;
@@ -326,10 +329,15 @@
         font-weight:700;
         box-shadow:0 2px 8px rgba(24,95,165,0.35);
         line-height:1.5;
+        position:relative;
+        z-index:100;
+        -webkit-tap-highlight-color:rgba(255,255,255,0.2);
+        touch-action:manipulation;
+        cursor:pointer;
       "
     >
       <span style="font-size:1.4rem;flex-shrink:0">👑</span>
-      <span style="flex:1">展開シナリオ、AI予想買い目を見たい方は、現在無料公開中のプレミアム版をご覧ください</span>
+      <span style="flex:1">展開シナリオ、AI予想買い目を見たい方は、<br>現在無料公開中のプレミアム版をご覧ください。<br>※タップ(クリック)でプレミアム版へ遷移します。</span>
       <span style="font-size:1rem;flex-shrink:0;opacity:0.85">›</span>
     </a>
   </div>
