@@ -789,12 +789,18 @@
           // 旧: r.ev を再計算せずに放置 → r.ev = null のままキャッシュに保存され
           //     EV1.1フィルタを通過するレースが過去30日分で0件になるバグ。
           // 新: r.synth が取れていれば ev = synth × 補正後 hitProbEst で上書き。
+          //     r.synth = null（過去日）の場合は ev_alt = hitProbEst を設定。
           if (res.hitProbEst != null) {
             r.hitProbEst = res.hitProbEst;
             r.hitRate    = res.hitProbEst; // hitRate は hitProbEst の別名
             // ★ ev を synth × 補正済み hitProbEst で再計算
             if (r.synth != null) {
-              r.ev = r.synth * res.hitProbEst;
+              r.ev     = r.synth * res.hitProbEst;
+              r.ev_alt = null; // synth あり時は ev_alt 不要
+            } else {
+              // synth=null（過去日）: ev_alt に hitProbEst を設定
+              // フィルタ側で EV_MIN / avg_synth_assumed と比較して代替判定する
+              r.ev_alt = res.hitProbEst;
             }
           }
 
