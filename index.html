@@ -12,10 +12,82 @@
 <noscript><link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="sample.css?v=20260520214511">
 
-<!-- ══ 管理者認証スタイル ══ -->
+<!-- ══ 認証スタイル（無料 / 有料 / 管理者） ══ -->
 <style>
-  /* 管理者限定要素: デフォルトで非表示 */
+  /* ── 権限別: デフォルト非表示 ── */
   .admin-only { display: none !important; }
+  .paid-only  { display: none !important; }
+
+  /* ── 有料モード時に表示 ── */
+  body.paid-mode  .paid-only  { display: revert !important; }
+  /* 管理者は有料相当なのでpaid-onlyも表示 */
+  body.admin-mode .paid-only  { display: revert !important; }
+
+  /* ── 管理者モード時に表示 ── */
+  body.admin-mode .admin-only { display: revert !important; }
+
+  /* ── 無料限定要素（有料/管理者では非表示）── */
+  .free-only { display: revert; }
+  body.paid-mode  .free-only  { display: none !important; }
+  body.admin-mode .free-only  { display: none !important; }
+
+  /* ── ロックオーバーレイ共通 ── */
+  .lock-overlay {
+    position: relative;
+  }
+  .lock-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--bg1, rgba(255,255,255,0.65));
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 2;
+  }
+  body.paid-mode  .lock-overlay::after { display: none; }
+  body.admin-mode .lock-overlay::after { display: none; }
+
+  /* ── 有料バッジ（ヘッダー内） ── */
+  #paid-badge {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(90deg, #185FA5, #378ADD);
+    border-radius: 4px;
+    padding: 2px 7px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(24,95,165,0.4);
+  }
+  body.paid-mode  #paid-badge  { display: flex; }
+  /* 管理者では有料バッジは出さず管理者バッジのみ */
+
+  /* ── ロックバナー（無料ユーザー向け） ── */
+  .free-lock-banner {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    color: var(--text3, #888);
+  }
+  body.paid-mode  .free-lock-banner { display: none !important; }
+  body.admin-mode .free-lock-banner { display: none !important; }
+  .free-lock-banner .lock-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .free-lock-banner .lock-msg  { font-size: 13px; line-height: 1.6; }
+  .free-lock-banner .lock-plan {
+    display: inline-block;
+    margin-top: 0.8rem;
+    font-size: 11px;
+    font-weight: 700;
+    color: #185FA5;
+    background: rgba(24,95,165,0.10);
+    border: 1px solid rgba(24,95,165,0.30);
+    border-radius: 6px;
+    padding: 4px 14px;
+  }
 
   /* 会場・レース・種別・開催日程バー（進入変更バナーの上） */
   #race-meta-bar {
@@ -50,10 +122,8 @@
     color: var(--text2, #666);
   }
 
-  /* 管理者モード時に表示 */
-  body.admin-mode .admin-only { display: revert !important; }
-
-  /* 非管理者向けロックタブ: 管理者モードで非表示 */
+  /* 非管理者向けロックタブ: 有料/管理者モードで非表示 */
+  body.paid-mode  .user-only-tab { display: none !important; }
   body.admin-mode .user-only-tab { display: none !important; }
 
   /* 管理者モード時にロック画面を非表示 */
@@ -196,6 +266,8 @@
     </div>
     <div class="header-right">
       <div class="header-meta-area">
+        <!-- 有料バッジ -->
+        <div id="paid-badge">👑 プレミアム</div>
         <!-- 管理者バッジ -->
         <div id="admin-badge">🔑 管理者</div>
         <div class="header-meta" id="header-meta"></div>
@@ -381,15 +453,16 @@
   </div>
   <!-- ▲▲▲ CSVダウンロードボタン群 ここまで ▲▲▲ -->
 
-  <!-- 各日詳細: 常時表示、中身は管理者のみ -->
+  <!-- 各日詳細: 常時表示、中身は有料/管理者のみ -->
   <div class="top-section-label" style="margin-top:0.5rem">📅 各日詳細</div>
-  <!-- 非管理者向けロックカード -->
-  <div id="user-lock-ai-stats" class="user-only-tab" style="padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
-    <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
-    <div style="font-size:13px;line-height:1.6">管理者のみ表示されます</div>
+  <!-- 無料ユーザー向けロックカード -->
+  <div id="user-lock-ai-stats" class="user-only-tab free-lock-banner">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-msg">各日の詳細成績はプレミアム会員限定です</div>
+    <div class="lock-plan">👑 プレミアムで解放</div>
   </div>
-  <!-- 管理者のみ: 各日詳細本体 -->
-  <div id="top-ai-stats" class="admin-only">
+  <!-- 有料/管理者: 各日詳細本体 -->
+  <div id="top-ai-stats" class="paid-only admin-only">
     <span style="color:var(--text3);font-size:12px">集計中...</span>
   </div>
 
@@ -423,7 +496,7 @@
 
   <!-- AI予想タブ -->
   <div id="tab-detail2" style="display:none">
-    <!-- 全ユーザーに公開: 的中重視・回収重視のみ管理者限定（JS側で制御） -->
+    <!-- 有料/管理者に全開放。JS側でも tier チェック可能 -->
     <div id="detail2-panel">
       <div style="padding:2rem;text-align:center;color:var(--text3)">レースを選択するとAI予想が表示されます</div>
     </div>
@@ -460,53 +533,66 @@
 <div class="toast" id="toast"></div>
 
 <!-- data.js は同期（グローバル変数を即時定義するため defer 不可） -->
-<script src="data.js?v=20260603224843"></script>
+<script src="data.js?v=20260603234856"></script>
 <!-- 残りのスクリプトは defer で並列ダウンロード・DOMContentLoaded後に順序保証付き実行 -->
 <!-- これによりHTMLパース・初期描画をブロックしなくなる -->
-<script defer src="params_obf.js?v=20260603224843"></script>
-<script defer src="csv_export_obf.js?v=20260603224843"></script>
-<script defer src="sim_obf.js?v=20260603224843"></script>
-<script defer src="backtest_obf.js?v=20260603224843"></script>
-<script defer src="top_page_obf.js?v=20260603224843"></script>
-<script defer src="sample_obf.js?v=20260603224843"></script>
-<script defer src="top_stats_obf.js?v=20260603224843"></script>
-<script defer src="calibration.js?v=20260603224843"></script>
-<script defer src="dynamic_inn2place.js?v=20260603224843"></script>
-<script defer src="computeScenCombosWithEV.js?v=20260603224843"></script>
+<script defer src="params_obf.js?v=20260603234856"></script>
+<script defer src="csv_export_obf.js?v=20260603234856"></script>
+<script defer src="sim_obf.js?v=20260603234856"></script>
+<script defer src="backtest_obf.js?v=20260603234856"></script>
+<script defer src="top_page_obf.js?v=20260603234856"></script>
+<script defer src="sample_obf.js?v=20260603234856"></script>
+<script defer src="top_stats_obf.js?v=20260603234856"></script>
+<script defer src="calibration.js?v=20260603234856"></script>
+<script defer src="dynamic_inn2place.js?v=20260603234856"></script>
+<script defer src="computeScenCombosWithEV.js?v=20260603234856"></script>
 <script defer src="quality_filter_patch.js"></script>
 
-<!-- ══ 管理者認証スクリプト ══ -->
+<!-- ══ 認証スクリプト（無料 / 有料 / 管理者） ══ -->
 <script>
 (function () {
+  // ── トークンハッシュ（SHA-256） ──────────────────────────────
+  // PAID_TOKEN_HASH  : 有料パスワードを sha256hex() した値に差し替えてください
+  // ADMIN_TOKEN_HASH : 既存の管理者パスワードハッシュ（変更不要）
+  const PAID_TOKEN_HASH  = 'PAID_HASH_PLACEHOLDER';  // ← 有料パスワードのハッシュに差し替え
   const ADMIN_TOKEN_HASH = 'd72c16f080bee83fbbc47219c5e2be868364de15163e40d60972f64eceda5468';
 
-  // ── ハッシュ比較（Web Crypto API） ──────────────────────
+  // ── SHA-256 ヘルパー ─────────────────────────────────────────
   async function sha256hex(str) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
     return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2, '0')).join('');
   }
 
-  // ── URLハッシュ（#以降）からトークンを取得 ──────────────
-  // #以降はサーバーに送信されず、iOSホーム画面保存URLにもそのまま残る。
-  function getAdminParam() {
-    const hash = window.location.hash.slice(1); // '#' を除去
-    return new URLSearchParams(hash).get('admin') || '';
+  // ── URLハッシュからパラメータを取得 ─────────────────────────
+  // 例: index.html#admin=xxx&paid=yyy
+  // #以降はサーバーに送信されず、iOSホーム画面ブックマークにも残る。
+  function getHashParam(key) {
+    const hash = window.location.hash.slice(1);
+    return new URLSearchParams(hash).get(key) || '';
   }
 
-  // ── 管理者モードを有効化 ─────────────────────────────────
+  // ── グローバル: 現在のtierを参照できるようにする ────────────
+  // JS側で `window.APP_TIER === 'paid'` 等の条件分岐に使用可能
+  // 値: 'free' | 'paid' | 'admin'
+  window.APP_TIER = 'free';
+
+  // ── 有料モードを有効化 ───────────────────────────────────────
+  function activatePaidMode() {
+    window.APP_TIER = 'paid';
+    document.body.classList.add('paid-mode');
+  }
+
+  // ── 管理者モードを有効化 ─────────────────────────────────────
   function activateAdminMode() {
+    window.APP_TIER = 'admin';
     document.body.classList.add('admin-mode');
 
     // BETTING_PARAMS と FINAL_PROB_WEIGHTS を管理者パネルに表示
     renderAdminParams();
-
-    // #admin=... はURLに残す（ホーム画面ブックマーク維持のため消さない）
   }
 
-  // ── BETTING_PARAMS をパネルに描画 ────────────────────────
+  // ── BETTING_PARAMS をパネルに描画 ────────────────────────────
   function renderAdminParams() {
-    // sample.js / sample_obf.js のグローバル変数を参照
-    // DOMContentLoaded後に呼ぶため、変数が存在しない場合は "未読込" と表示
     const grid = document.getElementById('admin-params-display');
     if (!grid) return;
 
@@ -518,7 +604,6 @@
       return;
     }
 
-    // Set型は配列表示に変換
     function fmt(v) {
       if (v instanceof Set) return [...v].join(', ') || '（なし）';
       if (typeof v === 'number') return v;
@@ -548,7 +633,6 @@
       </div>
     `).join('');
 
-    // FINAL_PROB_WEIGHTS スライダー
     const sliderWrap = document.getElementById('admin-weight-sliders');
     if (!sliderWrap || !fw) return;
 
@@ -579,36 +663,54 @@
     `).join('');
   }
 
-  // ── 認証フロー ────────────────────────────────────────────
-  async function init() {
-    // URLハッシュ #admin=パスワード を毎回検証（localStorageは使わない）
-    const param = getAdminParam();
-    if (param) {
-      const hash = await sha256hex(param);
-      if (hash === ADMIN_TOKEN_HASH) {
-        activateAdminMode();
-      } else {
-        showAuthError();
-      }
-    }
-    // パラメータなし → ユーザーモードのまま
-  }
-
-  function showAuthError() {
-    // toast 関数が存在すればそれを使う、なければ alert
+  // ── トースト表示ヘルパー ─────────────────────────────────────
+  function showMsg(msg) {
     if (typeof showToast === 'function') {
-      showToast('管理者パスワードが違います');
+      showToast(msg);
     } else {
       const t = document.getElementById('toast');
       if (t) {
-        t.textContent = '管理者パスワードが違います';
+        t.textContent = msg;
         t.classList.add('show');
         setTimeout(() => t.classList.remove('show'), 3000);
       }
     }
   }
 
-  // ── DOMロード後に実行 ────────────────────────────────────
+  // ── 認証フロー ────────────────────────────────────────────────
+  // URLハッシュ例:
+  //   有料のみ  : index.html#paid=パスワード
+  //   管理者のみ: index.html#admin=パスワード
+  //   両方同時  : index.html#admin=xxx&paid=yyy（管理者優先）
+  async function init() {
+    const adminParam = getHashParam('admin');
+    const paidParam  = getHashParam('paid');
+
+    // 管理者を先に検証（管理者は有料も兼ねる）
+    if (adminParam) {
+      const hash = await sha256hex(adminParam);
+      if (hash === ADMIN_TOKEN_HASH) {
+        activateAdminMode();
+        return; // 管理者確定→有料チェック不要
+      } else {
+        showMsg('管理者パスワードが違います');
+      }
+    }
+
+    // 有料検証
+    if (paidParam) {
+      const hash = await sha256hex(paidParam);
+      if (hash === PAID_TOKEN_HASH) {
+        activatePaidMode();
+      } else {
+        showMsg('有料パスワードが違います');
+      }
+    }
+
+    // どちらもなし → 無料モードのまま (APP_TIER = 'free')
+  }
+
+  // ── DOMロード後に実行 ─────────────────────────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => { init(); });
   } else {
