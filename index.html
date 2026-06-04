@@ -395,6 +395,45 @@
     </div>
   </div>
 
+  <!-- 💬 LINEオープンチャット案内 -->
+  <a
+    href="https://lin.ee/NSdTldw"
+    target="_blank"
+    rel="noopener noreferrer"
+    style="
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background:var(--bg2,#fff);
+      border:1px solid var(--border,rgba(0,0,0,0.10));
+      border-radius:10px;
+      padding:11px 13px;
+      text-decoration:none;
+      margin-bottom:0.8rem;
+      -webkit-tap-highlight-color:rgba(0,0,0,0.05);
+      touch-action:manipulation;
+    "
+  >
+    <div style="
+      width:32px;height:32px;border-radius:8px;
+      background:rgba(6,199,85,0.12);
+      display:flex;align-items:center;justify-content:center;
+      flex-shrink:0;
+    ">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <path d="M18 5C11.37 5 6 9.59 6 15.2c0 4.94 3.96 9.1 9.5 10.38l.5.12v3.3l4.6-2.54c.46.06.92.1 1.4.1C28.63 26.56 30 21.73 30 15.2 30 9.59 24.63 5 18 5z" fill="#06C755"/>
+        <rect x="11.5" y="14" width="3" height="3" rx="1" fill="#fff"/>
+        <rect x="16.5" y="14" width="3" height="3" rx="1" fill="#fff"/>
+        <rect x="21.5" y="14" width="3" height="3" rx="1" fill="#fff"/>
+      </svg>
+    </div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700;color:var(--text1,#1a1a1a);margin-bottom:3px">承認制オープンチャット（予想コミュニティ）</div>
+      <div style="font-size:11px;color:var(--text2,#666)">公式LINEに <span style="display:inline-block;background:#06C755;color:#fff;font-size:10px;font-weight:700;border-radius:3px;padding:0 5px">オプチャ</span> と送ってください</div>
+    </div>
+    <div style="font-size:16px;color:var(--text3,#aaa)">›</div>
+  </a>
+
   <!-- 🎯 的中速報（top_stats.js の _buildHitSokuhoPanel が書き込む） -->
   <div class="top-section-label">🎯 本日の的中速報</div>
   <div id="top-scen-ev-section" style="margin-bottom:0.8rem"></div>
@@ -572,19 +611,19 @@
 <div class="toast" id="toast"></div>
 
 <!-- data.js は同期（グローバル変数を即時定義するため defer 不可） -->
-<script src="data.js?v=20260604131256"></script>
+<script src="data.js?v=20260604125145"></script>
 <!-- 残りのスクリプトは defer で並列ダウンロード・DOMContentLoaded後に順序保証付き実行 -->
 <!-- これによりHTMLパース・初期描画をブロックしなくなる -->
-<script defer src="params_obf.js?v=20260604131256"></script>
-<script defer src="csv_export_obf.js?v=20260604131256"></script>
-<script defer src="sim_obf.js?v=20260604131256"></script>
-<script defer src="backtest_obf.js?v=20260604131256"></script>
-<script defer src="top_page_obf.js?v=20260604131256"></script>
-<script defer src="sample_obf.js?v=20260604131256"></script>
-<script defer src="top_stats_obf.js?v=20260604131256"></script>
-<script defer src="calibration.js?v=20260604131256"></script>
-<script defer src="dynamic_inn2place.js?v=20260604131256"></script>
-<script defer src="computeScenCombosWithEV.js?v=20260604131256"></script>
+<script defer src="params_obf.js?v=20260604125145"></script>
+<script defer src="csv_export_obf.js?v=20260604125145"></script>
+<script defer src="sim_obf.js?v=20260604125145"></script>
+<script defer src="backtest_obf.js?v=20260604125145"></script>
+<script defer src="top_page_obf.js?v=20260604125145"></script>
+<script defer src="sample_obf.js?v=20260604125145"></script>
+<script defer src="top_stats_obf.js?v=20260604125145"></script>
+<script defer src="calibration.js?v=20260604125145"></script>
+<script defer src="dynamic_inn2place.js?v=20260604125145"></script>
+<script defer src="computeScenCombosWithEV.js?v=20260604125145"></script>
 <script defer src="quality_filter_patch.js"></script>
 
 <!-- ══ 認証スクリプト（無料 / 有料 / 管理者） ══ -->
