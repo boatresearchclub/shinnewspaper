@@ -1,0 +1,121 @@
+{
+  "venue": "多摩川",
+  "venue_slug": "tamagawa",
+  "date": "20260604",
+  "race": 12,
+  "fetched_at": "2026-06-04 17:53:03",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'47\"7",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "三浦永理",
+      "reg_no": "4208",
+      "time": "1'47\"7"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "浜田亜理沙",
+      "reg_no": "4546",
+      "time": "1'49\"6"
+    },
+    {
+      "rank": "3",
+      "boat": 4,
+      "name": "清埜翔子",
+      "reg_no": "4738",
+      "time": "1'51\"2"
+    },
+    {
+      "rank": "4",
+      "boat": 6,
+      "name": "中澤宏奈",
+      "reg_no": "4569",
+      "time": "1'52\"2"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "中里優子",
+      "reg_no": "3579",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 3,
+      "name": "前田紗希",
+      "reg_no": "4845",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.19,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 140,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 160,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 310,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-4",
+      "odds": 860,
+      "ninki": 3
+    }
+  ],
+  "cancelled": false
+}
