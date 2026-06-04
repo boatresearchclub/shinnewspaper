@@ -1,0 +1,126 @@
+{
+  "date": "2026-06-01",
+  "fetched_at": "22:51",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "第３３回桐生タイムス杯",
+      "period": "5/28-6/2",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "01",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "多摩川": {
+      "grade": "G3",
+      "title": "オールレディースリップルカップ",
+      "period": "5/30-6/4",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "05",
+      "is_joshi": true,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "一般",
+      "title": "第９回愛知・名古屋アジア・アジアパラ大会協賛競走",
+      "period": "5/27-6/1",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "08",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "津": {
+      "grade": "G3",
+      "title": "津マスターズリーグ第１戦",
+      "period": "5/29-6/3",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "09",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "びわこ": {
+      "grade": "一般",
+      "title": "デイリースポーツ杯争奪第４１回オールニッポン選抜戦",
+      "period": "5/29-6/3",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "11",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "住之江": {
+      "grade": "一般",
+      "title": "守口市制８０周年記念競走",
+      "period": "5/30-6/3",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "12",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "尼崎": {
+      "grade": "一般",
+      "title": "デイリースポーツ杯争奪　第５８回琴浦賞競走",
+      "period": "5/31-6/5",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "13",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "鳴門": {
+      "grade": "一般",
+      "title": "第１７回鳴門商工会議所会頭杯競走",
+      "period": "5/29-6/2",
+      "day": "４日目",
+      "total_days": 5,
+      "jcd": "14",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "下関": {
+      "grade": "一般",
+      "title": "海響ドリームナイター９周年記念ＣＯＭＥ　ＯＮ！ＦＭ",
+      "period": "6/1-6/5",
+      "day": "初日",
+      "total_days": 5,
+      "jcd": "19",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "若松": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎ若松",
+      "period": "5/31-6/5",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "20",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "唐津": {
+      "grade": "一般",
+      "title": "第１３回見帰りの滝あじさいカップ",
+      "period": "5/29-6/2",
+      "day": "４日目",
+      "total_days": 5,
+      "jcd": "23",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "大村": {
+      "grade": "一般",
+      "title": "ミッドナイトボートレースｉｎ大村　２",
+      "period": "6/1-6/4",
+      "day": "初日",
+      "total_days": 4,
+      "jcd": "24",
+      "is_joshi": false,
+      "race_kinds": {}
+    }
+  }
+}

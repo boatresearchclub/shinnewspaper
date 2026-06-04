@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>展開シナリオ バックテスト</title>
+<style>
+  :root {
+    --bg0: #0d1117;
+    --bg1: #161b22;
+    --bg2: #1c2128;
+    --bg3: #252b33;
+    --border: rgba(255,255,255,0.08);
+    --text1: #e6edf3;
+    --text2: #8b949e;
+    --text3: #484f58;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --mono: 'JetBrains Mono', 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg0);
+    color: var(--text1);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ── ヘッダー ── */
+  header {
+    background: var(--bg1);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+  header .sub { font-size: 11px; color: var(--text2); }
+
+  /* ── メインレイアウト ── */
+  .main { padding: 16px; max-width: 900px; margin: 0 auto; }
+
+  /* ── セクション ── */
+  .section {
+    background: var(--bg1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::before {
+    content: '';
+    display: inline-block;
+    width: 3px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  /* ── コントロールグリッド ── */
+  .ctrl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media(max-width: 500px) { .ctrl-grid { grid-template-columns: 1fr; } }
+
+  .ctrl-item label {
+    display: block;
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 5px;
+  }
+  .ctrl-item select, .ctrl-item input[type=range], .ctrl-item input[type=number] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text1);
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+  }
+  .ctrl-item select:focus, .ctrl-item input:focus {
+    border-color: var(--accent);
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .range-row input[type=range] {
+    flex: 1;
+    padding: 0;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .range-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* 買い方設定 */
+  .bet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  @media(max-width: 500px) { .bet-grid { grid-template-columns: 1fr 1fr; } }
+
+  .bet-type-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    padding: 8px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .bet-type-btn.active {
+    background: rgba(88,166,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* 実行ボタン */
+  #run-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0d1117;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    letter-spacing: 0.04em;
+  }
+  #run-btn:hover { opacity: 0.88; }
+  #run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── 結果サマリー ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  @media(max-width: 600px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .stat-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text1);
+    line-height: 1.2;
+  }
+  .stat-val.good { color: var(--green); }
+  .stat-val.bad  { color: var(--red); }
+  .stat-val.warn { color: var(--orange); }
+  .stat-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── ログテーブル ── */
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .toggle-log {
+    font-size: 11px;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  th {
+    background: var(--bg2);
+    color: var(--text2);
+    padding: 6px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .hit-yes { color: var(--green); font-weight: 700; }
+  .hit-no  { color: var(--text3); }
+
+  /* 艇番バッジ */
+  .bc {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .bc1{background:#fff;color:#333}
+  .bc2{background:#000;color:#fff}
+  .bc3{background:#e74c3c;color:#fff}
+  .bc4{background:#3498db;color:#fff}
+  .bc5{background:#f1c40f;color:#333}
+  .bc6{background:#27ae60;color:#fff}
+
+  /* kimariバッジ */
+  .kim {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(88,166,255,0.15);
+    color: var(--accent);
+  }
+  .kim-makuri { background: rgba(248,81,73,0.15); color: var(--red); }
+  .kim-sashi  { background: rgba(63,185,80,0.15);  color: var(--green); }
+  .kim-ms     { background: rgba(210,153,34,0.15); color: var(--orange); }
+  .kim-nuki   { background: rgba(188,140,255,0.15);color: var(--purple); }
+
+  /* プログレス */
+  #progress-wrap {
+    display: none;
+    margin: 12px 0;
+  }
+  .progress-bar-outer {
+    background: var(--bg3);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.1s;
+    width: 0%;
+  }
+  #progress-txt { font-size: 11px; color: var(--text2); margin-top: 6px; }
+
+  /* 空状態 */
+  .empty {
+    text-align: center;
+    color: var(--text3);
+    padding: 40px 20px;
+    font-size: 12px;
+  }
+
+  /* 回収率グラフ */
+  .roi-bar-wrap { margin: 12px 0; }
+  .roi-bar-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .roi-bar-outer { background: var(--bg3); border-radius: 4px; height: 10px; position: relative; overflow: visible; }
+  .roi-bar-inner { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .roi-line100 { position: absolute; left: 0; top: -3px; height: 16px; width: 1px; background: var(--text3); }
+
+  /* チェックボックス系 */
+  .checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .check-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text2);
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .check-btn.active {
+    background: rgba(88,166,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>📊 展開シナリオ バックテスト</h1>
+    <div class="sub">Boat Research Club — 過去データで買い方を検証</div>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ① 条件設定 -->
+  <div class="section">
+    <div class="section-title">条件設定</div>
+    <div class="ctrl-grid">
+      <div class="ctrl-item">
+        <label>検証期間（開始日）</label>
+        <select id="date-from"></select>
+      </div>
+      <div class="ctrl-item">
+        <label>検証期間（終了日）</label>
+        <select id="date-to"></select>
+      </div>
+    </div>
+
+    <!-- top1/all用共通条件（top2選択時は非表示） -->
+    <div id="common-cond-panel" style="margin-top:12px">
+      <div class="ctrl-grid">
+        <div class="ctrl-item">
+          <label>1着艇の最低確率（final_prob）</label>
+          <div class="range-row">
+            <input type="range" id="prob-min" min="0" max="90" step="5" value="50">
+            <span class="range-val" id="prob-min-val">50%</span>
+          </div>
+        </div>
+        <div class="ctrl-item">
+          <label>1着艇の最高確率（上限なし=100）</label>
+          <div class="range-row">
+            <input type="range" id="prob-max" min="10" max="100" step="5" value="100">
+            <span class="range-val" id="prob-max-val">上限なし</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">1着艇の戦法（複数選択可・未選択=全て）</label>
+        <div class="checkbox-row" id="kimari-filter">
+          <span class="check-btn active" data-val="逃げ">逃げ</span>
+          <span class="check-btn active" data-val="差し">差し</span>
+          <span class="check-btn active" data-val="まくり">まくり</span>
+          <span class="check-btn active" data-val="まくり差し">まくり差し</span>
+          <span class="check-btn active" data-val="抜き">抜き</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">対象会場（複数選択可・未選択=全て）</label>
+      <div class="checkbox-row" id="venue-filter"></div>
+    </div>
+  </div>
+
+  <!-- ② 買い方設定 -->
+  <div class="section">
+    <div class="section-title">買い方設定</div>
+
+    <div style="margin-bottom:10px">
+      <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">舟券種別</label>
+      <div class="bet-grid" id="bet-type">
+        <div class="bet-type-btn active" data-val="sanrentan">3連単</div>
+        <div class="bet-type-btn" data-val="sanrenpuku">3連複</div>
+        <div class="bet-type-btn" data-val="nirentan">2連単</div>
+        <div class="bet-type-btn" data-val="nirenpuku">2連複</div>
+      </div>
+    </div>
+
+    <div class="ctrl-grid" style="margin-bottom:12px">
+      <div class="ctrl-item">
+        <label>1着軸艇の選び方</label>
+        <select id="axis-mode">
+          <option value="top1">1位艇（final_prob最高）を固定</option>
+          <option value="top2">上位2艇をどちらも軸に（個別条件）</option>
+          <option value="all">全シナリオ1着候補を軸に</option>
+        </select>
+      </div>
+      <div class="ctrl-item">
+        <label>1点あたりの購入金額（円）</label>
+        <input type="number" id="unit-bet" value="100" min="100" step="100">
+      </div>
+    </div>
+
+    <!-- top2個別条件パネル -->
+    <div id="top2-panel" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+
+        <!-- 1位条件 -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px">■ 1位艇の条件</div>
+          <div class="ctrl-item" style="margin-bottom:8px">
+            <label>最低確率</label>
+            <div class="range-row">
+              <input type="range" id="prob-min-1" min="0" max="90" step="5" value="50">
+              <span class="range-val" id="prob-min-1-val">50%</span>
+            </div>
+          </div>
+          <div class="ctrl-item" style="margin-bottom:8px">
+            <label>最高確率</label>
+            <div class="range-row">
+              <input type="range" id="prob-max-1" min="10" max="100" step="5" value="100">
+              <span class="range-val" id="prob-max-1-val">上限なし</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px">戦法</label>
+            <div class="checkbox-row" id="kimari-filter-1">
+              <span class="check-btn active" data-val="逃げ">逃げ</span>
+              <span class="check-btn active" data-val="差し">差し</span>
+              <span class="check-btn active" data-val="まくり">まくり</span>
+              <span class="check-btn active" data-val="まくり差し">まくり差し</span>
+              <span class="check-btn active" data-val="抜き">抜き</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2位条件 -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:10px">■ 2位艇の条件</div>
+          <div class="ctrl-item" style="margin-bottom:8px">
+            <label>最低確率</label>
+            <div class="range-row">
+              <input type="range" id="prob-min-2" min="0" max="90" step="5" value="0">
+              <span class="range-val" id="prob-min-2-val">0%</span>
+            </div>
+          </div>
+          <div class="ctrl-item" style="margin-bottom:8px">
+            <label>最高確率</label>
+            <div class="range-row">
+              <input type="range" id="prob-max-2" min="10" max="100" step="5" value="100">
+              <span class="range-val" id="prob-max-2-val">上限なし</span>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px">戦法</label>
+            <div class="checkbox-row" id="kimari-filter-2">
+              <span class="check-btn active" data-val="逃げ">逃げ</span>
+              <span class="check-btn active" data-val="差し">差し</span>
+              <span class="check-btn active" data-val="まくり">まくり</span>
+              <span class="check-btn active" data-val="まくり差し">まくり差し</span>
+              <span class="check-btn active" data-val="抜き">抜き</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctrl-grid">
+      <div class="ctrl-item">
+        <label>2着候補 — 上位N位まで</label>
+        <div class="range-row">
+          <input type="range" id="place2-n" min="1" max="5" step="1" value="3">
+          <span class="range-val" id="place2-n-val">3位</span>
+        </div>
+      </div>
+      <div class="ctrl-item">
+        <label>2着候補 — 確率X%以上</label>
+        <div class="range-row">
+          <input type="range" id="place2-prob" min="0" max="50" step="1" value="0">
+          <span class="range-val" id="place2-prob-val">制限なし</span>
+        </div>
+      </div>
+      <div class="ctrl-item">
+        <label>3着候補 — 上位N位まで（3連のみ）</label>
+        <div class="range-row">
+          <input type="range" id="place3-n" min="1" max="5" step="1" value="3">
+          <span class="range-val" id="place3-n-val">3位</span>
+        </div>
+      </div>
+      <div class="ctrl-item">
+        <label>3着候補 — 確率X%以上（3連のみ）</label>
+        <div class="range-row">
+          <input type="range" id="place3-prob" min="0" max="50" step="1" value="0">
+          <span class="range-val" id="place3-prob-val">制限なし</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 折り返し設定 -->
+    <div style="margin-top:12px">
+      <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px">折り返し設定（3連単・2連単のみ有効）</label>
+      <div class="checkbox-row">
+        <span class="check-btn" id="fold-2nd" data-val="fold-2nd">2着を折り返す<br><span style="font-size:9px;color:var(--text3)">1-2-X と 2-1-X 両方</span></span>
+        <span class="check-btn" id="fold-3rd" data-val="fold-3rd">3着を折り返す<br><span style="font-size:9px;color:var(--text3)">1-2-3 と 1-2-X 逆も</span></span>
+        <span class="check-btn" id="fold-23" data-val="fold-23">2・3着を全折り返し<br><span style="font-size:9px;color:var(--text3)">軸1着固定の全フォーメーション</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 実行 -->
+  <div id="progress-wrap">
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar"></div></div>
+    <div id="progress-txt">読み込み中...</div>
+  </div>
+  <button id="run-btn">▶ バックテスト実行</button>
+
+  <!-- ③ 結果 -->
+  <div id="result-section" style="display:none; margin-top:14px">
+    <div class="section">
+      <div class="section-title">結果サマリー</div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="roi-bar-wrap" id="roi-bar-wrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="log-header">
+        <div class="section-title" style="margin-bottom:0">レース別ログ</div>
+        <button class="toggle-log" id="toggle-log">▼ 展開</button>
+      </div>
+      <div id="log-table-wrap" style="display:none">
+        <table id="log-table">
+          <thead>
+            <tr>
+              <th>日付</th><th>会場</th><th>R</th>
+              <th>1着軸</th><th>戦法</th><th>確率</th>
+              <th>買い目</th><th>結果</th><th>的中</th><th>払戻</th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// グローバル変数
+// ══════════════════════════════════════════════
+let MASTER_EXT = null;
+let INDEX_DATA = null;
+
+const DATA_BASE_URL = (function(){
+  return location.href.replace(/\/[^\/]*$/, '') + '/data';
+})();
+
+// ── 会場名→スラッグ ──
+const VENUE_SLUG_MAP = {
+  "桐生":"kiryu","戸田":"toda","江戸川":"edogawa","平和島":"heiwajima",
+  "多摩川":"tamagawa","浜名湖":"hamanako","蒲郡":"gamagori","常滑":"tokoname",
+  "津":"tsu","三国":"mikuni","びわこ":"biwako","住之江":"suminoe",
+  "尼崎":"amagasaki","鳴門":"naruto","丸亀":"marugame","児島":"kojima",
+  "宮島":"miyajima","徳山":"tokuyama","下関":"shimonoseki","若松":"wakamatsu",
+  "芦屋":"ashiya","福岡":"fukuoka","唐津":"karatsu","大村":"omura"
+};
+const SLUG_VENUE_MAP = Object.fromEntries(Object.entries(VENUE_SLUG_MAP).map(([k,v])=>[v,k]));
+
+// ── 会場別hiKimari強度 ──
+const VENUE_HI_KIMARI_STRENGTH = {
+  "大村":1.5,"常滑":1.5,"丸亀":1.5,"尼崎":1.5,"住之江":1.5,"桐生":1.5,"下関":1.5,
+  "戸田":2.5,"三国":2.5,"平和島":2.5,"浜名湖":2.5,"蒲郡":2.5,
+  "江戸川":2.0, "_default":2.0
+};
+function getHiKimariStrength(venue){
+  return VENUE_HI_KIMARI_STRENGTH[venue] ?? VENUE_HI_KIMARI_STRENGTH["_default"];
+}
+
+// ══════════════════════════════════════════════
+// fetch ヘルパー
+// ══════════════════════════════════════════════
+async function safeFetch(url){
+  try {
+    const res = await fetch(url);
+    if(!res.ok) return null;
+    return await res.json();
+  } catch(e){ return null; }
+}
+
+// ══════════════════════════════════════════════
+// getCourseMaster (sample.jsと同一ロジック)
+// ══════════════════════════════════════════════
+function getCourseMaster(name, course){
+  if(!MASTER_EXT) return undefined;
+  return MASTER_EXT.course_master?.[name]?.[course];
+}
+
+// ══════════════════════════════════════════════
+// calcTenkaiProbs (sample.jsより移植・簡略化)
+// tenjiScoreMapなし前提でfinal_prob = tenkai_prob
+// ══════════════════════════════════════════════
+function calcTenkaiProbs(boats, arek, venue){
+  if(!MASTER_EXT || !MASTER_EXT.venue_kimari){
+    return [...boats].map(b=>({...b, tenkai_prob:b.prob, final_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+  }
+  const vKimari = MASTER_EXT.venue_kimari[venue];
+  if(!vKimari){
+    return [...boats].map(b=>({...b, tenkai_prob:b.prob, final_prob:b.prob})).sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+  }
+
+  const KIMARI_HARD_EXCLUDE = {
+    '逃げ':new Set(['2','3','4','5','6']),
+    '差し':new Set(['1']),
+    'まくり':new Set(['1']),
+    'まくり差し':new Set(['1','2','3']),
+    '抜き':new Set(),
+  };
+  const KIMARI_SOFT_THRESHOLD = {
+    'まくり':{'2':0.05},
+    'まくり差し':{'5':0.05,'6':0.08},
+    '抜き':{'1':0.03},
+  };
+  const RELATIVE_MIN = 0.3;
+  const RELATIVE_MAX = (['戸田','平和島','三国','浜名湖','蒲郡'].includes(venue)) ? 4.5 : 3.0;
+
+  function isValidFirst(boat, kimari){
+    const wc = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;
+    if(exc.has(wc)) return false;
+    const soft = KIMARI_SOFT_THRESHOLD[kimari];
+    if(soft && wc in soft){
+      const personal = getCourseMaster(boat.name, wc)?.kimari?.[kimari] ?? 0;
+      return personal >= soft[wc];
+    }
+    return true;
+  }
+
+  function calcRelativeCoef(winner, kimari, boat1){
+    if(!boat1) return 1.0;
+    const wc = String(winner.boat);
+    if(kimari === '逃げ'){
+      const nigeRate = getCourseMaster(winner.name,'1')?.kimari?.['逃げ'] ?? 0;
+      return nigeRate > 0 ? nigeRate : 1.0;
+    }
+    const kimariMap = { '差し':'差され', 'まくり':'捲られ', 'まくり差し':'捲り差され' };
+    const attackRate = getCourseMaster(winner.name, wc)?.kimari?.[kimari] ?? 0;
+    const defKey = kimariMap[kimari];
+    const defRate = defKey ? (getCourseMaster(boat1.name,'1')?.[`被kimari`]?.[defKey] ?? null) : null;
+    if(defRate === null) return attackRate || 1.0;
+    return attackRate * defRate;
+  }
+
+  const boat1 = boats.find(b=>b.boat===1) || null;
+
+  // 被kimari補正
+  const hiKimariStrength = getHiKimariStrength(venue);
+  let adjustedVKimari = {...vKimari};
+  if(boat1){
+    const hiKimari = getCourseMaster(boat1.name,'1')?.['被kimari'];
+    const boat1Runs = getCourseMaster(boat1.name,'1')?.runs ?? 0;
+    if(hiKimari && boat1Runs >= 20){
+      const hiTrust = Math.min(boat1Runs/100, 1.0);
+      const sasareRate = hiKimari['差され'] ?? null;
+      const makurareRate = hiKimari['捲られ'] ?? null;
+      const makurisasareRate = hiKimari['捲り差され'] ?? null;
+      if(sasareRate !== null) adjustedVKimari['差し'] = (vKimari['差し']||0)*(1+hiTrust*sasareRate*hiKimariStrength);
+      if(makurareRate !== null) adjustedVKimari['まくり'] = (vKimari['まくり']||0)*(1+hiTrust*makurareRate*hiKimariStrength);
+      if(makurisasareRate !== null) adjustedVKimari['まくり差し'] = (vKimari['まくり差し']||0)*(1+hiTrust*makurisasareRate*hiKimariStrength);
+      const totalHiRate = (sasareRate??0)+(makurareRate??0)+(makurisasareRate??0);
+      const nigeRate = getCourseMaster(boat1.name,'1')?.kimari?.['逃げ'] ?? 0;
+      if(nigeRate > 0){
+        const nigeBoost = nigeRate / Math.max(nigeRate+totalHiRate, 0.01);
+        adjustedVKimari['逃げ'] = (vKimari['逃げ']||0)*(0.5+0.5*nigeBoost*2);
+      }
+      const adjTotal = Object.values(adjustedVKimari).reduce((s,v)=>s+v,0);
+      if(adjTotal>0) for(const k of Object.keys(adjustedVKimari)) adjustedVKimari[k]/=adjTotal;
+    }
+  }
+
+  const PERSONAL_BLEND_STRENGTH = 0.7;
+  function blendPersonalKimari(boatObj, baseVKimari){
+    const cm = getCourseMaster(boatObj.name, String(boatObj.boat));
+    if(!cm) return baseVKimari;
+    const runs = cm.runs ?? 0;
+    if(runs < 20) return baseVKimari;
+    const trust = Math.min(runs/100, 1.0)*PERSONAL_BLEND_STRENGTH;
+    const personalKimari = cm.kimari ?? {};
+    const BLEND_TARGETS = ['差し','まくり','まくり差し','抜き'];
+    const personalTotal = BLEND_TARGETS.reduce((s,k)=>s+(personalKimari[k]??0),0);
+    if(personalTotal <= 0) return baseVKimari;
+    const blended = {...baseVKimari};
+    const venueBlendSum = BLEND_TARGETS.reduce((s,kk)=>s+(baseVKimari[kk]??0),0);
+    for(const k of BLEND_TARGETS){
+      if(!(k in blended)) continue;
+      const personalRate = (personalKimari[k]??0)/personalTotal*venueBlendSum;
+      blended[k] = baseVKimari[k]*(1-trust)+personalRate*trust;
+    }
+    const origTotal = Object.values(baseVKimari).reduce((s,v)=>s+v,0);
+    const blendTotal = Object.values(blended).reduce((s,v)=>s+v,0);
+    if(blendTotal>0) for(const k of Object.keys(blended)) blended[k]=blended[k]/blendTotal*origTotal;
+    return blended;
+  }
+
+  const kimariTypes = Object.keys(adjustedVKimari).filter(k=>adjustedVKimari[k]>0&&k in KIMARI_HARD_EXCLUDE);
+  const boatVKimari = {};
+  boats.forEach(b=>{ boatVKimari[b.boat]=blendPersonalKimari(b, adjustedVKimari); });
+
+  const kimariCoefSum = {};
+  boats.forEach(b=>{ kimariCoefSum[b.boat]=0; });
+
+  for(const kimari of kimariTypes){
+    const relCoefs = {};
+    for(const b of boats){
+      if(!isValidFirst(b,kimari)){ relCoefs[b.boat]=0; continue; }
+      const rawCoef = calcRelativeCoef(b, kimari, boat1);
+      const kimariRuns = getCourseMaster(b.name, String(b.boat))?.runs ?? 0;
+      const personalTrust = Math.min(kimariRuns/100, 1.0);
+      relCoefs[b.boat] = rawCoef*personalTrust + 1.0*(1-personalTrust);
+    }
+    const validBoats = boats.filter(b=>isValidFirst(b,kimari));
+    if(validBoats.length===0) continue;
+    const avgCoef = validBoats.reduce((s,b)=>s+relCoefs[b.boat],0)/validBoats.length;
+    if(avgCoef<=0) continue;
+    for(const b of boats){
+      if(!isValidFirst(b,kimari)) continue;
+      const kimariProb = boatVKimari[b.boat][kimari]||0;
+      if(kimariProb<=0) continue;
+      const normalizedCoef = Math.min(RELATIVE_MAX, Math.max(RELATIVE_MIN, relCoefs[b.boat]/avgCoef));
+      kimariCoefSum[b.boat] += kimariProb*normalizedCoef;
+    }
+    for(const b of boats){
+      if(isValidFirst(b,kimari)) continue;
+      kimariCoefSum[b.boat] += (adjustedVKimari[kimari]||0)*RELATIVE_MIN;
+    }
+  }
+
+  const scores = {};
+  boats.forEach(b=>{ scores[b.boat] = b.prob*(kimariCoefSum[b.boat]||RELATIVE_MIN); });
+  const total = Object.values(scores).reduce((a,b)=>a+b,0)||1;
+  return [...boats]
+    .map(b=>({...b, tenkai_prob:scores[b.boat]/total, final_prob:scores[b.boat]/total}))
+    .sort((a,b)=>b.tenkai_prob-a.tenkai_prob);
+}
+
+// ══════════════════════════════════════════════
+// calcScenarioData (sample.jsより移植)
+// ══════════════════════════════════════════════
+function calcScenarioData(ranked2, rawBoats, venue, inn_data){
+  if(!MASTER_EXT || !MASTER_EXT.venue_kimari) return {valid:false};
+  const vKimari = MASTER_EXT.venue_kimari[venue];
+  if(!vKimari) return {valid:false};
+
+  const inn2Place = (() => {
+    const v = (inn_data||{}).inn_2place;
+    if(v && typeof v==='object' && !Array.isArray(v) && Object.keys(v).length>0) return v;
+    return MASTER_EXT?.venue_stats?.[venue]?.inn_2place || {};
+  })();
+
+  const KIMARI_HARD_EXCLUDE = {
+    '逃げ':new Set(['2','3','4','5','6']),
+    '差し':new Set(['1']),
+    'まくり':new Set(['1']),
+    'まくり差し':new Set(['1','2','3']),
+    '抜き':new Set(),
+  };
+  function isValidFirst(boat, kimari){
+    const wc = String(boat.boat);
+    const exc = KIMARI_HARD_EXCLUDE[kimari];
+    if(!exc) return false;
+    return !exc.has(wc);
+  }
+
+  const boat1Scenario = rawBoats.find(b=>b.boat===1)||null;
+  let scenarioVKimari = {...vKimari};
+  if(boat1Scenario){
+    const hiKimari = getCourseMaster(boat1Scenario.name,'1')?.['被kimari'];
+    const boat1Runs = getCourseMaster(boat1Scenario.name,'1')?.runs ?? 0;
+    if(hiKimari && boat1Runs>=20){
+      const hiTrust = Math.min(boat1Runs/100,1.0);
+      const hiStr = getHiKimariStrength(venue);
+      const sasareRate = hiKimari['差され']??null;
+      const makurareRate = hiKimari['捲られ']??null;
+      const makurisasareRate = hiKimari['捲り差され']??null;
+      if(sasareRate!==null) scenarioVKimari['差し']=(vKimari['差し']||0)*(1+hiTrust*sasareRate*hiStr);
+      if(makurareRate!==null) scenarioVKimari['まくり']=(vKimari['まくり']||0)*(1+hiTrust*makurareRate*hiStr);
+      if(makurisasareRate!==null) scenarioVKimari['まくり差し']=(vKimari['まくり差し']||0)*(1+hiTrust*makurisasareRate*hiStr);
+      const totalHiRate=(sasareRate??0)+(makurareRate??0)+(makurisasareRate??0);
+      const nigeRate=getCourseMaster(boat1Scenario.name,'1')?.kimari?.['逃げ']??0;
+      if(nigeRate>0){
+        const nigeBoost=nigeRate/Math.max(nigeRate+totalHiRate,0.01);
+        scenarioVKimari['逃げ']=(vKimari['逃げ']||0)*(0.5+0.5*nigeBoost*2);
+      }
+      const adjTotal=Object.values(scenarioVKimari).reduce((s,v)=>s+v,0);
+      if(adjTotal>0) for(const k of Object.keys(scenarioVKimari)) scenarioVKimari[k]/=adjTotal;
+    }
+  }
+
+  const kimariTypes = Object.keys(scenarioVKimari).filter(k=>scenarioVKimari[k]>0&&k in KIMARI_HARD_EXCLUDE&&k!=='抜き');
+
+  const SCENARIO_BLEND_STRENGTH = 0.7;
+  function blendPersonalKimariScenario(boatObj, baseVKimari){
+    const cm = getCourseMaster(boatObj.name, String(boatObj.boat));
+    if(!cm) return baseVKimari;
+    const runs=cm.runs??0;
+    if(runs<20) return baseVKimari;
+    const trust=Math.min(runs/100,1.0)*SCENARIO_BLEND_STRENGTH;
+    const personalKimari=cm.kimari??{};
+    const BLEND_TARGETS=['差し','まくり','まくり差し','抜き'];
+    const personalTotal=BLEND_TARGETS.reduce((s,k)=>s+(personalKimari[k]??0),0);
+    if(personalTotal<=0) return baseVKimari;
+    const blended={...baseVKimari};
+    const venueBlendSum=BLEND_TARGETS.reduce((s,kk)=>s+(baseVKimari[kk]??0),0);
+    for(const k of BLEND_TARGETS){
+      if(!(k in blended)) continue;
+      const personalRate=(personalKimari[k]??0)/personalTotal*venueBlendSum;
+      blended[k]=baseVKimari[k]*(1-trust)+personalRate*trust;
+    }
+    const origTotal=Object.values(baseVKimari).reduce((s,v)=>s+v,0);
+    const blendTotal=Object.values(blended).reduce((s,v)=>s+v,0);
+    if(blendTotal>0) for(const k of Object.keys(blended)) blended[k]=blended[k]/blendTotal*origTotal;
+    return blended;
+  }
+
+  const scenarioProb = {};
+  for(const winner of ranked2){
+    scenarioProb[winner.boat] = {};
+    const winnerVKimari = blendPersonalKimariScenario(winner, scenarioVKimari);
+    const validKimariTotal = kimariTypes.filter(k=>isValidFirst(winner,k)).reduce((s,k)=>s+(winnerVKimari[k]||0),0);
+    if(validKimariTotal<=0) continue;
+    for(const kimari of kimariTypes){
+      if(!isValidFirst(winner,kimari)) continue;
+      const baseWeight = winner.final_prob ?? winner.tenkai_prob;
+      scenarioProb[winner.boat][kimari] = baseWeight*(winnerVKimari[kimari]/validKimariTotal);
+    }
+  }
+
+  const tenkaiRem = (() => {
+    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
+    if(vLocal && Object.keys(vLocal).length>0) return vLocal;
+    return MASTER_EXT?.tenkai_remaining || {};
+  })();
+  const winnerCO = MASTER_EXT?.winner_course_order || {};
+
+  const scenarioPlace2 = {};
+  for(const winner of ranked2){
+    scenarioPlace2[winner.boat] = {};
+    const wc = String(winner.boat);
+    const othersTotal = ranked2.filter(r=>r.boat!==winner.boat).reduce((s,r)=>s+(r.final_prob??r.tenkai_prob),0)||1;
+    for(const kimari of kimariTypes){
+      if(!(scenarioProb[winner.boat]?.[kimari]>0)) continue;
+      const useInn2 = (kimari==='逃げ'&&winner.boat===1&&Object.keys(inn2Place).length>0);
+      const remForThis = tenkaiRem[kimari]?.[wc]||null;
+      const place2List = rawBoats.filter(b=>b.boat!==winner.boat).map(b=>{
+        const sc = String(b.boat);
+        let p2;
+        if(useInn2){
+          const baseP2 = inn2Place[sc]??null;
+          const personEntry2 = winnerCO[b.name]?.[sc]?.['1'];
+          const personRate2 = personEntry2?.rate2??null;
+          const personTrust2 = personEntry2?.trust??0;
+          if(baseP2!=null&&personRate2!=null&&personTrust2>0.3){
+            p2=personRate2*personTrust2+baseP2*(1-personTrust2);
+          } else { p2=baseP2; }
+          if(p2==null){ const bt=ranked2.find(r=>r.boat===b.boat); p2=bt?(bt.final_prob??bt.tenkai_prob)/othersTotal:0; }
+        } else if(remForThis){
+          const remEntry=remForThis[sc];
+          const baseTR=remEntry?.rate2??null;
+          const personEntry=winnerCO[b.name]?.[sc]?.[wc];
+          const personRate2=personEntry?.rate2??null;
+          const personTrust=personEntry?.trust??0;
+          if(baseTR!=null&&personRate2!=null&&personTrust>0.3){
+            p2=(personRate2*personTrust+baseTR*(1-personTrust));
+          } else if(baseTR!=null){ p2=baseTR; }
+          else { const bt=ranked2.find(r=>r.boat===b.boat); p2=bt?(bt.final_prob??bt.tenkai_prob)/othersTotal:0; }
+        } else { const bt=ranked2.find(r=>r.boat===b.boat); p2=bt?(bt.final_prob??bt.tenkai_prob)/othersTotal:0; }
+        return {boat:b.boat,name:b.name,p2};
+      });
+      const p2Sum = place2List.reduce((s,x)=>s+x.p2,0)||1;
+      place2List.forEach(x=>{x.p2=x.p2/p2Sum;});
+      place2List.sort((a,b)=>b.p2-a.p2);
+      scenarioPlace2[winner.boat][kimari] = place2List;
+    }
+  }
+
+  // 3着候補計算
+  const scenarioPlace3 = {};
+  for(const winner of ranked2){
+    scenarioPlace3[winner.boat] = {};
+    const wc = String(winner.boat);
+    const remForWinner = tenkaiRem;
+    for(const kimari of kimariTypes){
+      if(!(scenarioProb[winner.boat]?.[kimari]>0)) continue;
+      scenarioPlace3[winner.boat][kimari] = {};
+      const place2List = scenarioPlace2[winner.boat][kimari]||[];
+      for(const second of place2List){
+        const sc2 = String(second.boat);
+        const candidates = rawBoats.filter(b=>b.boat!==winner.boat&&b.boat!==second.boat);
+        const candidateTotal = candidates.reduce((s,b)=>s+(b.final_prob??b.tenkai_prob??0),0)||1;
+        const remForThis = remForWinner[kimari]?.[wc]||null;
+        const thirds = candidates.map(b=>{
+          const sc = String(b.boat);
+          const remEntry = remForThis?.[sc];
+          const rawR3i = remEntry?.rate3i??null;
+          const rawR3 = remEntry?.rate3??null;
+          const baseR3 = rawR3i!=null ? rawR3i*0.6+(rawR3??rawR3i)*0.4 : rawR3;
+          const personEntry = winnerCO[b.name]?.[sc]?.[wc];
+          const personR3 = personEntry?.rate3??null;
+          const personTrust = personEntry?.trust??0;
+          let r3;
+          if(baseR3!=null&&personR3!=null&&personTrust>0.3){
+            r3=(personR3*personTrust+baseR3*(1-personTrust));
+          } else if(baseR3!=null){ r3=baseR3; }
+          else if(personR3!=null&&personTrust>0.3){ r3=personR3; }
+          else { r3=(b.final_prob??b.tenkai_prob??0)/candidateTotal; }
+          return {boat:b.boat, score:r3};
+        });
+        const scoreSum = thirds.reduce((s,x)=>s+x.score,0)||1;
+        thirds.forEach(x=>{x.score=x.score/scoreSum;});
+        thirds.sort((a,b)=>b.score-a.score);
+        scenarioPlace3[winner.boat][kimari][second.boat] = thirds;
+      }
+    }
+  }
+
+  return {valid:true, scenarioProb, scenarioPlace2, scenarioPlace3, kimariTypes, scenarioVKimari};
+}
+
+// ══════════════════════════════════════════════
+// 買い目生成（折り返し・重複除外対応）
+// foldMode: 'none'|'2nd'|'3rd'|'23'
+// ══════════════════════════════════════════════
+function generateCombos(sd, ranked2, betType, axisMode, place2N, place3N, foldMode, axisList, place2ProbMin=0, place3ProbMin=0){
+  const {scenarioProb, scenarioPlace2, scenarioPlace3, kimariTypes} = sd;
+
+  // axisList は外から渡す（top2個別条件適用済みリスト）
+  if(!axisList){
+    if(axisMode==='top1') axisList=[ranked2[0]];
+    else if(axisMode==='top2') axisList=ranked2.slice(0,2);
+    else axisList=ranked2.filter(w=>{
+      const total=kimariTypes.reduce((s,k)=>s+(scenarioProb[w.boat]?.[k]??0),0);
+      return total>0.001;
+    }).slice(0,3);
+  }
+
+  const combos = new Set();
+
+  for(const winner of axisList){
+    // 全kimariの2着リストを加重平均で統合
+    const p2Map = {};
+    let totalProb = 0;
+    for(const k of kimariTypes){
+      const prob=scenarioProb[winner.boat]?.[k]??0;
+      if(prob<=0) continue;
+      totalProb+=prob;
+      for(const x of (scenarioPlace2[winner.boat]?.[k]||[])){
+        p2Map[x.boat]=(p2Map[x.boat]||0)+x.p2*prob;
+      }
+    }
+    if(totalProb>0) for(const k of Object.keys(p2Map)) p2Map[k]/=totalProb;
+
+    const place2Boats = Object.entries(p2Map)
+      .sort((a,b)=>b[1]-a[1])
+      .filter(([,p])=>p>=place2ProbMin)
+      .slice(0,place2N).map(([b])=>Number(b));
+
+    if(betType==='nirentan'){
+      for(const b2 of place2Boats){
+        combos.add(`${winner.boat}-${b2}`);
+        // 折り返し（2着を折り返す or 全折り返し）
+        if(foldMode==='2nd'||foldMode==='23') combos.add(`${b2}-${winner.boat}`);
+      }
+    } else if(betType==='nirenpuku'){
+      for(const b2 of place2Boats){
+        const a=Math.min(winner.boat,b2),b=Math.max(winner.boat,b2);
+        combos.add(`${a}=${b}`);
+        // 複式は順不同なので折り返し不要
+      }
+    } else {
+      // 3連単 or 3連複
+      for(const b2 of place2Boats){
+        const p3Map={};
+        for(const k of kimariTypes){
+          const prob=scenarioProb[winner.boat]?.[k]??0;
+          if(prob<=0) continue;
+          for(const x of (scenarioPlace3[winner.boat]?.[k]?.[b2]||[])){
+            p3Map[x.boat]=(p3Map[x.boat]||0)+x.score*prob;
+          }
+        }
+        const place3Boats=Object.entries(p3Map)
+          .sort((a,b)=>b[1]-a[1])
+          .filter(([,p])=>p>=place3ProbMin)
+          .slice(0,place3N).map(([b])=>Number(b));
+
+        for(const b3 of place3Boats){
+          if(betType==='sanrentan'){
+            // 基本目
+            combos.add(`${winner.boat}-${b2}-${b3}`);
+
+            if(foldMode==='2nd'||foldMode==='23'){
+              // 2着折り返し: 1-2-3 → 2-1-3
+              combos.add(`${b2}-${winner.boat}-${b3}`);
+            }
+            if(foldMode==='3rd'||foldMode==='23'){
+              // 3着折り返し: 1-2-3 → 1-3-2
+              combos.add(`${winner.boat}-${b3}-${b2}`);
+            }
+            if(foldMode==='23'){
+              // 全パターン: 2-3-1, 3-1-2, 3-2-1
+              combos.add(`${b2}-${b3}-${winner.boat}`);
+              combos.add(`${b3}-${winner.boat}-${b2}`);
+              combos.add(`${b3}-${b2}-${winner.boat}`);
+            }
+          } else {
+            // 3連複は順不同
+            const sorted=[winner.boat,b2,b3].sort((a,b)=>a-b);
+            combos.add(sorted.join('='));
+          }
+        }
+      }
+    }
+  }
+  return [...combos];
+}
+
+// ══════════════════════════════════════════════
+// 的中判定
+// ══════════════════════════════════════════════
+function checkHit(combos, resultData, betType){
+  if(!resultData||!combos||combos.length===0) return {hit:false,odds:0,hitCombo:null};
+
+  let resultKey, resultList;
+  if(betType==='sanrentan'){ resultKey='sanrentan'; }
+  else if(betType==='sanrenpuku'){ resultKey='sanrenpuku'; }
+  else if(betType==='nirentan'){ resultKey='nirentan'; }
+  else { resultKey='nirenpuku'; }
+
+  resultList = resultData[resultKey]||[];
+  if(resultList.length===0) return {hit:false,odds:0,hitCombo:null};
+
+  const winner = resultList[0]; // 1着組み合わせ
+  if(!winner||!winner.combo) return {hit:false,odds:0,hitCombo:null};
+
+  const winCombo = winner.combo; // 例: "1-4-5" or "1=4=5"
+
+  for(const c of combos){
+    if(c===winCombo){ return {hit:true, odds:winner.odds, hitCombo:c}; }
+  }
+  return {hit:false, odds:0, hitCombo:null};
+}
+
+// ══════════════════════════════════════════════
+// メイン処理
+// ══════════════════════════════════════════════
+async function initialize(){
+  const pw = document.getElementById('progress-wrap');
+  pw.style.display='block';
+  setProgress(5,'index.json を読み込み中...');
+
+  INDEX_DATA = await safeFetch(`${DATA_BASE_URL}/index.json`);
+  if(!INDEX_DATA){ setProgress(0,'index.json の読み込みに失敗しました'); return; }
+
+  setProgress(20,'master_ext.json を読み込み中...');
+  MASTER_EXT = await safeFetch(`${DATA_BASE_URL}/master_ext.json`);
+
+  setProgress(100,'準備完了');
+  setTimeout(()=>{ pw.style.display='none'; },500);
+
+  // 日付セレクト構築
+  const histDates = INDEX_DATA.history_dates||[];
+  const resDates = INDEX_DATA.result_dates||[];
+  // 両方に存在する日付のみ対象
+  const validDates = histDates.filter(d=>resDates.includes(d)).sort();
+
+  const fromSel = document.getElementById('date-from');
+  const toSel   = document.getElementById('date-to');
+  for(const d of validDates){
+    const label = `${d.slice(0,4)}/${d.slice(4,6)}/${d.slice(6,8)}`;
+    fromSel.innerHTML += `<option value="${d}">${label}</option>`;
+    toSel.innerHTML   += `<option value="${d}">${label}</option>`;
+  }
+  // デフォルト: fromは7日前、toは最新
+  if(validDates.length>0){
+    toSel.value = validDates[validDates.length-1];
+    const startIdx = Math.max(0, validDates.length-8);
+    fromSel.value = validDates[startIdx];
+  }
+
+  // 会場フィルター構築（history_datesから実際の会場一覧を取得は重いのでVENUE_SLUG_MAPから）
+  const venueWrap = document.getElementById('venue-filter');
+  const venues = Object.keys(VENUE_SLUG_MAP);
+  venueWrap.innerHTML = venues.map(v=>`<span class="check-btn active" data-val="${v}">${v}</span>`).join('');
+}
+
+function setProgress(pct, txt){
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('progress-txt').textContent = txt;
+}
+
+// ══════════════════════════════════════════════
+// UI インタラクション
+// ══════════════════════════════════════════════
+document.getElementById('prob-min').addEventListener('input',function(){
+  document.getElementById('prob-min-val').textContent=this.value+'%';
+});
+document.getElementById('prob-max').addEventListener('input',function(){
+  document.getElementById('prob-max-val').textContent=this.value==100?'上限なし':this.value+'%';
+});
+document.getElementById('place2-n').addEventListener('input',function(){
+  document.getElementById('place2-n-val').textContent=this.value+'位';
+});
+document.getElementById('place3-n').addEventListener('input',function(){
+  document.getElementById('place3-n-val').textContent=this.value+'位';
+});
+document.getElementById('place2-prob').addEventListener('input',function(){
+  document.getElementById('place2-prob-val').textContent=this.value==0?'制限なし':this.value+'%以上';
+});
+document.getElementById('place3-prob').addEventListener('input',function(){
+  document.getElementById('place3-prob-val').textContent=this.value==0?'制限なし':this.value+'%以上';
+});
+// top2個別スライダー
+['1','2'].forEach(n=>{
+  document.getElementById(`prob-min-${n}`).addEventListener('input',function(){
+    document.getElementById(`prob-min-${n}-val`).textContent=this.value+'%';
+  });
+  document.getElementById(`prob-max-${n}`).addEventListener('input',function(){
+    document.getElementById(`prob-max-${n}-val`).textContent=this.value==100?'上限なし':this.value+'%';
+  });
+});
+
+// axis-mode 切替でtop2パネル表示・共通条件の表示切替
+document.getElementById('axis-mode').addEventListener('change',function(){
+  const isTop2 = this.value==='top2';
+  document.getElementById('top2-panel').style.display = isTop2 ? '' : 'none';
+  document.getElementById('common-cond-panel').style.display = isTop2 ? 'none' : '';
+});
+
+// 舟券種別
+document.getElementById('bet-type').addEventListener('click',e=>{
+  const btn = e.target.closest('.bet-type-btn');
+  if(!btn) return;
+  document.querySelectorAll('#bet-type .bet-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+// チェックボタン（fold-23はfold-2nd/fold-3rdを含むので排他制御）
+document.addEventListener('click',e=>{
+  const btn = e.target.closest('.check-btn');
+  if(!btn) return;
+  if(btn.id==='fold-23'){
+    // fold-23をONにしたらfold-2nd/fold-3rdをOFF
+    btn.classList.toggle('active');
+    if(btn.classList.contains('active')){
+      document.getElementById('fold-2nd')?.classList.remove('active');
+      document.getElementById('fold-3rd')?.classList.remove('active');
+    }
+  } else if(btn.id==='fold-2nd'||btn.id==='fold-3rd'){
+    btn.classList.toggle('active');
+    if(btn.classList.contains('active')){
+      document.getElementById('fold-23')?.classList.remove('active');
+    }
+  } else {
+    btn.classList.toggle('active');
+  }
+});
+
+// ログ折りたたみ
+document.getElementById('toggle-log').addEventListener('click',function(){
+  const w = document.getElementById('log-table-wrap');
+  const open = w.style.display==='none';
+  w.style.display = open?'':'none';
+  this.textContent = open?'▲ 折りたたむ':'▼ 展開';
+});
+
+// ══════════════════════════════════════════════
+// バックテスト実行
+// ══════════════════════════════════════════════
+document.getElementById('run-btn').addEventListener('click', async()=>{
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+
+  const pw = document.getElementById('progress-wrap');
+  pw.style.display = 'block';
+  document.getElementById('result-section').style.display='none';
+
+  // 設定値取得
+  const dateFrom  = document.getElementById('date-from').value;
+  const dateTo    = document.getElementById('date-to').value;
+  const probMin   = Number(document.getElementById('prob-min').value)/100;
+  const probMaxRaw= Number(document.getElementById('prob-max').value);
+  const probMax   = probMaxRaw>=100 ? 1.0 : probMaxRaw/100;
+  const betType   = document.querySelector('#bet-type .bet-type-btn.active')?.dataset.val||'sanrentan';
+  const axisMode  = document.getElementById('axis-mode').value;
+  const place2N   = Number(document.getElementById('place2-n').value);
+  const place3N   = Number(document.getElementById('place3-n').value);
+  const place2ProbMin = Number(document.getElementById('place2-prob').value)/100;
+  const place3ProbMin = Number(document.getElementById('place3-prob').value)/100;
+  const unitBet   = Number(document.getElementById('unit-bet').value)||100;
+
+  // 折り返し設定
+  let foldMode = 'none';
+  if(document.getElementById('fold-23')?.classList.contains('active')) foldMode='23';
+  else if(document.getElementById('fold-2nd')?.classList.contains('active')&&document.getElementById('fold-3rd')?.classList.contains('active')) foldMode='23';
+  else if(document.getElementById('fold-2nd')?.classList.contains('active')) foldMode='2nd';
+  else if(document.getElementById('fold-3rd')?.classList.contains('active')) foldMode='3rd';
+
+  const kimariFilter = [...document.querySelectorAll('#kimari-filter .check-btn.active')].map(b=>b.dataset.val);
+  const venueFilterEls = [...document.querySelectorAll('#venue-filter .check-btn.active')];
+  const allVenues = Object.keys(VENUE_SLUG_MAP);
+  const venueFilter = venueFilterEls.length===allVenues.length ? null : venueFilterEls.map(b=>b.dataset.val);
+
+  // top2個別条件
+  const top2Cond = {
+    1: {
+      probMin: Number(document.getElementById('prob-min-1').value)/100,
+      probMax: (()=>{ const v=Number(document.getElementById('prob-max-1').value); return v>=100?1.0:v/100; })(),
+      kimari: [...document.querySelectorAll('#kimari-filter-1 .check-btn.active')].map(b=>b.dataset.val),
+    },
+    2: {
+      probMin: Number(document.getElementById('prob-min-2').value)/100,
+      probMax: (()=>{ const v=Number(document.getElementById('prob-max-2').value); return v>=100?1.0:v/100; })(),
+      kimari: [...document.querySelectorAll('#kimari-filter-2 .check-btn.active')].map(b=>b.dataset.val),
+    },
+  };
+
+  // 対象日付リスト
+  const histDates = (INDEX_DATA.history_dates||[]).filter(d=>d>=dateFrom&&d<=dateTo).sort();
+
+  if(histDates.length===0){
+    setProgress(0,'対象期間にデータがありません');
+    btn.disabled=false;
+    return;
+  }
+
+  // 集計変数
+  let totalRaces=0, targetRaces=0, hitCount=0;
+  let totalPay=0, totalReturn=0;
+  const logRows=[];
+
+  for(let di=0; di<histDates.length; di++){
+    const nd = histDates[di];
+    const pct = Math.round((di/histDates.length)*90);
+    setProgress(pct, `${nd.slice(4,6)}/${nd.slice(6,8)} を処理中... (${di+1}/${histDates.length}日)`);
+
+    // history fetch
+    const histData = await safeFetch(`${DATA_BASE_URL}/history_${nd}.json`);
+    if(!histData) continue;
+
+    for(const [venue, vdata] of Object.entries(histData)){
+      if(venueFilter && !venueFilter.includes(venue)) continue;
+      const slug = VENUE_SLUG_MAP[venue]||venue;
+
+      for(const [rnoStr, raceData] of Object.entries(vdata.races||{})){
+        const rno = Number(rnoStr);
+        totalRaces++;
+
+        const boats = raceData.boats||[];
+        if(boats.length<3) continue;
+
+        const arek = raceData.arek??54.7;
+
+        // tenkai計算
+        const ranked2 = calcTenkaiProbs(boats, arek, venue);
+
+        // シナリオ計算（条件確認より先に一度だけ実行）
+        const sd = calcScenarioData(ranked2, boats, venue, vdata.inn_data||{});
+        if(!sd.valid) continue;
+        const {scenarioProb, kimariTypes} = sd;
+
+        // ── 代表kimariを取得するヘルパー ──
+        function getBestKimari(boat){
+          let bk=null, bp=0;
+          for(const k of kimariTypes){
+            const p=scenarioProb[boat.boat]?.[k]??0;
+            if(p>bp){ bp=p; bk=k; }
+          }
+          return bk;
+        }
+
+        // ── 軸艇リストを条件で絞り込む ──
+        let axisList = [];
+
+        if(axisMode==='top2'){
+          // 1位・2位それぞれ個別条件で判定
+          const top1 = ranked2[0], top2b = ranked2[1];
+          const check = (boat, cond) => {
+            if(!boat) return false;
+            const fp = boat.final_prob??boat.tenkai_prob??0;
+            if(fp < cond.probMin || fp > cond.probMax) return false;
+            const bk = getBestKimari(boat);
+            if(!bk) return false;
+            if(cond.kimari.length>0 && !cond.kimari.includes(bk)) return false;
+            return true;
+          };
+          if(check(top1, top2Cond[1])) axisList.push(top1);
+          if(check(top2b, top2Cond[2])) axisList.push(top2b);
+        } else if(axisMode==='top1'){
+          const topBoat = ranked2[0];
+          if(!topBoat) continue;
+          const fp = topBoat.final_prob??topBoat.tenkai_prob??0;
+          if(fp < probMin || fp > probMax) continue;
+          const bk = getBestKimari(topBoat);
+          if(!bk) continue;
+          if(kimariFilter.length>0 && !kimariFilter.includes(bk)) continue;
+          axisList = [topBoat];
+        } else {
+          // all: 条件を満たす全艇
+          axisList = ranked2.filter(w=>{
+            const fp = w.final_prob??w.tenkai_prob??0;
+            if(fp < probMin || fp > probMax) return false;
+            const bk = getBestKimari(w);
+            if(!bk) return false;
+            if(kimariFilter.length>0 && !kimariFilter.includes(bk)) return false;
+            return kimariTypes.reduce((s,k)=>s+(scenarioProb[w.boat]?.[k]??0),0)>0.001;
+          }).slice(0,3);
+        }
+
+        if(axisList.length===0) continue;
+
+        // ── ログ用: 代表軸（1位）の情報 ──
+        const topBoat = axisList[0];
+        const fp = topBoat.final_prob??topBoat.tenkai_prob??0;
+        const bestKimari = getBestKimari(topBoat);
+
+        // 買い目生成（axisList渡し・foldMode適用）
+        const combos = generateCombos(sd, ranked2, betType, axisMode, place2N, place3N, foldMode, axisList, place2ProbMin, place3ProbMin);
+        if(combos.length===0) continue;
+
+        targetRaces++;
+        const betAmount = combos.length * unitBet;
+        totalPay += betAmount;
+
+        // result fetch
+        const resultData = await safeFetch(`${DATA_BASE_URL.replace(/\/data$/,'')}/result_data/result_${slug}_${nd}_R${rno}.json`);
+
+        if(!resultData || resultData.order?.length===0){
+          // 未確定（レース未了）はスキップ
+          totalPay -= betAmount;
+          targetRaces--;
+          continue;
+        }
+
+        const {hit, odds, hitCombo} = checkHit(combos, resultData, betType);
+        if(hit){
+          hitCount++;
+          const ret = (odds/100)*unitBet;
+          totalReturn += ret;
+          logRows.push({nd,venue,rno,topBoat:topBoat.boat,fp,kimari:bestKimari,combos,result:resultData,hit:true,ret,hitCombo});
+        } else {
+          logRows.push({nd,venue,rno,topBoat:topBoat.boat,fp,kimari:bestKimari,combos,result:resultData,hit:false,ret:0,hitCombo:null});
+        }
+      }
+    }
+  }
+
+  setProgress(100,'完了');
+  setTimeout(()=>{ pw.style.display='none'; },300);
+
+  renderResults({totalRaces,targetRaces,hitCount,totalPay,totalReturn,logRows,unitBet,betType});
+  btn.disabled=false;
+});
+
+// ══════════════════════════════════════════════
+// 結果描画
+// ══════════════════════════════════════════════
+function renderResults({totalRaces,targetRaces,hitCount,totalPay,totalReturn,logRows,unitBet,betType}){
+  document.getElementById('result-section').style.display='';
+
+  const hitRate = targetRaces>0 ? (hitCount/targetRaces*100) : 0;
+  const roi = totalPay>0 ? (totalReturn/totalPay*100) : 0;
+  const avgReturn = hitCount>0 ? totalReturn/hitCount : 0;
+  const avgPts = targetRaces>0 ? (totalPay/unitBet/targetRaces) : 0;
+
+  const roiCls = roi>=100?'good':roi>=80?'warn':'bad';
+  const hitCls = hitRate>=30?'good':hitRate>=15?'warn':'bad';
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">対象レース数</div>
+      <div class="stat-val">${targetRaces}</div>
+      <div class="stat-sub">全${totalRaces}レース中</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">的中率</div>
+      <div class="stat-val ${hitCls}">${hitRate.toFixed(1)}<span style="font-size:13px">%</span></div>
+      <div class="stat-sub">${hitCount}/${targetRaces}レース</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">回収率</div>
+      <div class="stat-val ${roiCls}">${roi.toFixed(1)}<span style="font-size:13px">%</span></div>
+      <div class="stat-sub">払:${fmtNum(totalPay)} 戻:${fmtNum(Math.round(totalReturn))}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">平均点数</div>
+      <div class="stat-val">${avgPts.toFixed(1)}</div>
+      <div class="stat-sub">平均払戻 ${fmtNum(Math.round(avgReturn))}円</div>
+    </div>
+  `;
+
+  // 回収率バー
+  const barPct = Math.min(roi, 200);
+  const barColor = roi>=100?'var(--green)':roi>=80?'var(--orange)':'var(--red)';
+  const line100Left = Math.min(100/200*100, 100);
+  document.getElementById('roi-bar-wrap').innerHTML = `
+    <div class="roi-bar-label"><span>回収率</span><span style="font-family:var(--mono);color:${barColor}">${roi.toFixed(1)}%</span></div>
+    <div class="roi-bar-outer">
+      <div class="roi-bar-inner" style="width:${barPct/2}%;background:${barColor}"></div>
+      <div class="roi-line100" style="left:50%"></div>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-top:3px;text-align:right">← 100%ライン</div>
+  `;
+
+  // ログ
+  const tbody = document.getElementById('log-tbody');
+  tbody.innerHTML = logRows.slice().reverse().map(r=>{
+    const order = r.result?.order||[];
+    const orderStr = order.length>0 ? order.slice(0,3).join('-') : '未確定';
+    const combosStr = r.combos.length<=4
+      ? r.combos.join('<br>')
+      : r.combos.slice(0,3).join('<br>')+`<br><span style="color:var(--text3)">他${r.combos.length-3}点</span>`;
+    const date = `${r.nd.slice(4,6)}/${r.nd.slice(6,8)}`;
+    return `<tr>
+      <td>${date}</td>
+      <td>${r.venue}</td>
+      <td>${r.rno}R</td>
+      <td><span class="bc bc${r.topBoat}">${r.topBoat}</span> ${(r.fp*100).toFixed(0)}%</td>
+      <td><span class="kim ${kimariCls(r.kimari)}">${r.kimari}</span></td>
+      <td style="font-family:var(--mono);font-size:10px">${r.combos.length}点</td>
+      <td style="font-family:var(--mono);font-size:10px">${combosStr}</td>
+      <td style="font-family:var(--mono)">${orderStr}</td>
+      <td class="${r.hit?'hit-yes':'hit-no'}">${r.hit?'✓ 的中':'—'}</td>
+      <td style="font-family:var(--mono)">${r.hit?fmtNum(Math.round(r.ret))+'円':'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function kimariCls(k){
+  if(k==='まくり') return 'kim-makuri';
+  if(k==='差し')  return 'kim-sashi';
+  if(k==='まくり差し') return 'kim-ms';
+  if(k==='抜き')  return 'kim-nuki';
+  return '';
+}
+function fmtNum(n){ return n.toLocaleString(); }
+
+// 起動
+initialize();
+</script>
+</body>
+</html>

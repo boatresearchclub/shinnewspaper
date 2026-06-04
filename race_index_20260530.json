@@ -1,0 +1,156 @@
+{
+  "date": "2026-05-30",
+  "fetched_at": "23:36",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "第３３回桐生タイムス杯",
+      "period": "5/28-6/2",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "01",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "戸田": {
+      "grade": "一般",
+      "title": "本命バトル祭",
+      "period": "5/28-5/31",
+      "day": "３日目",
+      "total_days": 4,
+      "jcd": "02",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "江戸川": {
+      "grade": "一般",
+      "title": "秋川渓谷カップ・第５１回スポーツニッポン杯",
+      "period": "5/25-5/31",
+      "day": "６日目",
+      "total_days": 7,
+      "jcd": "03",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "多摩川": {
+      "grade": "G3",
+      "title": "オールレディースリップルカップ",
+      "period": "5/30-6/4",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "05",
+      "is_joshi": true,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "SG",
+      "title": "第５３回ボートレースオールスター",
+      "period": "5/26-5/31",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "06",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "蒲郡": {
+      "grade": "一般",
+      "title": "サッポロビールカップ",
+      "period": "5/25-5/31",
+      "day": "６日目",
+      "total_days": 7,
+      "jcd": "07",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "一般",
+      "title": "第９回愛知・名古屋アジア・アジアパラ大会協賛競走",
+      "period": "5/27-6/1",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "08",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "津": {
+      "grade": "G3",
+      "title": "津マスターズリーグ第１戦",
+      "period": "5/29-6/3",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "09",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "びわこ": {
+      "grade": "一般",
+      "title": "デイリースポーツ杯争奪第４１回オールニッポン選抜戦",
+      "period": "5/29-6/3",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "11",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "住之江": {
+      "grade": "一般",
+      "title": "守口市制８０周年記念競走",
+      "period": "5/30-6/3",
+      "day": "初日",
+      "total_days": 5,
+      "jcd": "12",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "鳴門": {
+      "grade": "一般",
+      "title": "第１７回鳴門商工会議所会頭杯競走",
+      "period": "5/29-6/2",
+      "day": "２日目",
+      "total_days": 5,
+      "jcd": "14",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "丸亀": {
+      "grade": "G3",
+      "title": "第１６回琴参バスカップ",
+      "period": "5/26-5/31",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "15",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "宮島": {
+      "grade": "一般",
+      "title": "第２０回日本トーター賞ＢＴＳ安芸高田開設７周年記念",
+      "period": "5/25-5/30",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "17",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "一般",
+      "title": "西部記者クラブ杯争奪戦",
+      "period": "5/27-5/31",
+      "day": "４日目",
+      "total_days": 5,
+      "jcd": "18",
+      "is_joshi": false,
+      "race_kinds": {}
+    },
+    "唐津": {
+      "grade": "一般",
+      "title": "第１３回見帰りの滝あじさいカップ",
+      "period": "5/29-6/2",
+      "day": "２日目",
+      "total_days": 5,
+      "jcd": "23",
+      "is_joshi": false,
+      "race_kinds": {}
+    }
+  }
+}
