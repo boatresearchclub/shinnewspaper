@@ -47,7 +47,7 @@ EXCEL_PATH = os.path.join(BASE_DIR, "ボートリサーチ_マスタ.xlsx")
 # 会場別コースマスタのParquetキャッシュ（load_race.py が高速読み込みに使用）
 VENUE_COURSE_CSV = os.path.join(BASE_DIR, "data", "venue_course_master.parquet")
 # ── グレード別CSVパス（--grade g1 / --grade sg 時に使用）──
-_GRADE_SUFFIX = {"一般": "", "G1": "_g1", "G2": "_g2", "G3": "_g2", "SG": "_g1", "女子": "_joshi"}
+_GRADE_SUFFIX = {"一般": "", "G1": "_g1", "G2": "_g2", "G3": "_g2", "SG": "_g1", "女子": "_joshi", "全種": "_全種", "Grade": "_Grade", "Master": "_Master", "Rookie": "_Rookie"}
 # 【⑤追加】会場別コース距離補正値Parquetキャッシュ（load_race.py の _predict_first_turn で使用）
 VENUE_COURSE_ADJ_CSV = os.path.join(BASE_DIR, "data", "venue_course_adj.parquet")
 # 【FLY後走数】scrape_flying.py が出力する flying_YYYYMMDD.xlsx の保存先
@@ -215,25 +215,33 @@ def load_raw_results():
     _tg = getattr(load_raw_results, "_target_grade", "一般")
     if _tg == "女子":
         ALWAYS_EXCLUDE = {"ルーキーS", "マスターズL"}
+    elif _tg in {"全種", "Grade", "Master", "Rookie"}:
+        ALWAYS_EXCLUDE = set()  # 新種別は個別に絞り込むため除外なし
     else:
         ALWAYS_EXCLUDE = {"女子戦", "ルーキーS", "マスターズL"}
+
+    # 優勝戦等を除外するか（全種類は除外しない）
+    EXCLUDE_RACE_TYPES_FINAL = {"準優勝戦", "優勝戦", "順位決定戦", "Ｓ戦優勝戦", "賞金女王決定"}
 
     if _tg == "一般":
         # 一般戦のみ：グレードレース（SG/G1〜G3）は完全除外
         EXCLUDE_GRADES = {"SG", "G1", "G2", "G3"} | ALWAYS_EXCLUDE
         ippan = raw[~raw["グレード"].isin(EXCLUDE_GRADES)].copy()
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
         _label = "一般戦"
     elif _tg == "G1":
         # G1/SGモード：G1/SG ＋ 一般戦のミックス（データ量確保のため）
         _ippan_base   = raw[~raw["グレード"].isin({"SG", "G1", "G2", "G3"} | ALWAYS_EXCLUDE)].copy()
         _grade_rows   = raw[raw["グレード"].isin({"G1", "SG"})].copy()
         ippan = pd.concat([_ippan_base, _grade_rows], ignore_index=True)
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
         _label = "G1/SG＋一般戦ミックス"
     elif _tg == "G2":
         # G2/G3モード：G2/G3 ＋ 一般戦のミックス（データ量確保のため）
         _ippan_base   = raw[~raw["グレード"].isin({"SG", "G1", "G2", "G3"} | ALWAYS_EXCLUDE)].copy()
         _grade_rows   = raw[raw["グレード"].isin({"G2", "G3"})].copy()
         ippan = pd.concat([_ippan_base, _grade_rows], ignore_index=True)
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
         _label = "G2/G3＋一般戦ミックス"
     elif _tg == "女子":
         # 女子戦モード：グレード「女子戦」のみ抽出（SG/G1〜G3等は除外）
@@ -246,15 +254,36 @@ def load_raw_results():
             }
             ippan = raw[raw["レース種別"].isin(_joshi_types)].copy()
             print("  [INFO] グレード「女子戦」が見つからないため、レース種別で女子レースを抽出しました")
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
         _label = "女子戦"
+    elif _tg == "全種":
+        # 全種類：全グレード・全レース種別を含める（公式サイト準拠・優勝戦も含む）
+        ippan = raw.copy()
+        _label = "全種類（全グレード・全レース種別）"
+    elif _tg == "Grade":
+        # グレード全種：SG+G1+G2+G3のみ
+        ippan = raw[raw["グレード"].isin({"SG", "G1", "G2", "G3"})].copy()
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
+        _label = "グレード全種（SG+G1+G2+G3）"
+    elif _tg == "Master":
+        # マスターズL
+        ippan = raw[raw["グレード"] == "マスターズL"].copy()
+        if len(ippan) == 0 and "レース種別" in raw.columns:
+            ippan = raw[raw["レース種別"].str.contains("マスターズ", na=False)].copy()
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
+        _label = "マスターズL"
+    elif _tg == "Rookie":
+        # ルーキーS
+        ippan = raw[raw["グレード"] == "ルーキーS"].copy()
+        if len(ippan) == 0 and "レース種別" in raw.columns:
+            ippan = raw[raw["レース種別"].str.contains("ルーキー", na=False)].copy()
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
+        _label = "ルーキーS"
     else:
         EXCLUDE_GRADES = {"SG", "G1", "G2", "G3"} | ALWAYS_EXCLUDE
         ippan = raw[~raw["グレード"].isin(EXCLUDE_GRADES)].copy()
+        ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
         _label = "一般戦"
-
-    # 準優勝戦・優勝戦も除外
-    EXCLUDE_RACE_TYPES_FINAL = {"準優勝戦", "優勝戦", "順位決定戦", "Ｓ戦優勝戦", "賞金女王決定"}
-    ippan = ippan[~ippan["レース種別"].isin(EXCLUDE_RACE_TYPES_FINAL)].copy()
 
     print(f"  {_label}のみ: {len(ippan):,}行")
 
@@ -4396,7 +4425,7 @@ def main():
         "--grade",
         type=str,
         default=None,
-        choices=["一般", "G1", "G2", "G3", "SG", "女子"],
+        choices=["一般", "G1", "G2", "G3", "SG", "女子", "全種", "Grade", "Master", "Rookie"],
         help="集計するレースグレード (例: G1 / SG)。省略時は対話式メニューで選択"
     )
     _args = _parser.parse_args()
@@ -4407,12 +4436,16 @@ def main():
     print("=" * 60)
 
     # ── グレード選択 ──────────────────────────────────────────────────
-    _GRADE_MENU = ["一般", "G1", "G2", "女子"]
+    _GRADE_MENU = ["一般", "G1", "G2", "女子", "全種", "Grade", "Master", "Rookie"]
     _GRADE_LABEL = {
-        "一般": "一般戦（デフォルト）",
-        "G1":   "G1 / SG（最高峰グレード・共通マスタ）",
-        "G2":   "G2 / G3（G3はこちらを選択）",
-        "女子": "女子戦（ヴィーナスS・レディース戦等）",
+        "一般":   "一般戦（デフォルト）",
+        "G1":     "G1 / SG（最高峰グレード・共通マスタ）",
+        "G2":     "G2 / G3（G3はこちらを選択）",
+        "女子":   "女子戦（ヴィーナスS・レディース戦等）",
+        "全種":   "全種類（全グレード・全レース種別・公式準拠）",
+        "Grade":  "グレード全種（SG+G1+G2+G3）",
+        "Master": "マスターズL",
+        "Rookie": "ルーキーS",
     }
     if _args.grade:
         target_grade = _args.grade
@@ -4535,7 +4568,7 @@ def main():
     calc_tenkai_survival_master._grade_suffix  = _grade_suffix
 
     # G1/SG モードでは一般戦専用の全国統計・気象統計はスキップ
-    _is_ippan = (_effective_grade in {"一般", "女子"})
+    _is_ippan = (_effective_grade in {"一般", "女子", "全種", "Grade", "Master", "Rookie"})
 
     # ================================================================
     # 【★閾値妥当性チェック】
@@ -4768,6 +4801,7 @@ def main():
     # シート順序を整える
     desired_order = [
         "📊コース別マスタ", "📊コース別マスタ_G1", "📊コース別マスタ_G2", "📊コース別マスタ_女子",
+        "📊コース別マスタ_全種", "📊コース別マスタ_Grade", "📊コース別マスタ_Master", "📊コース別マスタ_Rookie",
         "選手指数マスタ", "会場別コースマスタ",
         "会場統計", "会場統計_G1", "会場統計_G2", "会場統計_女子",
         "イン逃げ分析", "イン逃げ分析_G1", "イン逃げ分析_G2", "イン逃げ分析_女子",

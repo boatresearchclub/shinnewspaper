@@ -68,6 +68,7 @@ COMPUTE_SCEN_JS       = SCRIPTS_DIR / "computeScenCombosWithEV.js"
 DYNAMIC_INN2PLACE_JS  = SCRIPTS_DIR / "dynamic_inn2place.js"
 DATA_JS         = SCRIPTS_DIR / "data.js"
 PLAYER_ID_MAP   = SCRIPTS_DIR / "player_id_map.json"
+VIEWER_HTML         = SCRIPTS_DIR / "展開別残存ビューア.html"
 FETCH_TENJI_PY      = SCRIPTS_DIR / "fetch_tenji.py"
 FETCH_RESULT_PY     = SCRIPTS_DIR / "fetch_result.py"
 FETCH_RACE_INDEX_PY = SCRIPTS_DIR / "fetch_race_index.py"
@@ -165,7 +166,7 @@ def rebuild_master():
     import sys as _sys
     result = subprocess.run(
         [_sys.executable, str(BUILD_MASTER_PY), str(XLSX_PATH), str(MASTER_JSON)],
-        capture_output=True, text=True, encoding="utf-8"
+        capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     if result.returncode != 0:
         log(f"  ✕ 再ビルド失敗: {result.stderr.strip()}")
@@ -1170,15 +1171,12 @@ VENUE_LIST = [
 
 def inject_all_data_to_html():
     """当日CSVを全部parseしてindex.htmlのALL_DATAを書き換える"""
-    today = today_str()
+    # get_today_csvs() を使うことで深夜帯（0〜3時）も正しく当日CSVを取得できる
+    # （today_str() は深夜帯に翌日付を返すため直接使わない）
     all_data = {v: None for v in VENUE_LIST}
     loaded = []
 
-    for csv_path in glob.glob(str(CSV_DIR / "*.csv")):
-        fname = Path(csv_path).name
-        # 当日ファイルのみ対象（ファイル名に今日の日付が含まれるもの）
-        if today not in fname:
-            continue
+    for csv_path in get_today_csvs():
         data = parse_csv(csv_path)
         if data and data.get("venue") in all_data:
             all_data[data["venue"]] = data
@@ -1516,7 +1514,9 @@ def inject_comment_to_html(days_back=HISTORY_DAYS):
 
 def inject_flying_to_html():
     """flying_YYYYMMDD.xlsx を読んで index.html の FLYING_DATA を書き換える"""
-    today = today_str().replace("-", "")
+    # フライングデータは手動管理ファイルのため、today_str()（深夜補正あり）ではなく
+    # 実際の今日の日付を使う
+    today = datetime.now().strftime("%Y%m%d")
     flying_path = SCRIPTS_DIR / f"flying_{today}.xlsx"
     if not flying_path.exists():
         log(f"  ⚠ {flying_path.name} が見つかりません → FLYING_DATA埋め込みスキップ")
@@ -1993,7 +1993,10 @@ def write_all_json_files():
     write_today_json()
     write_history_json()
     write_result_json()
-    write_master_ext_json()
+    try:
+        write_master_ext_json()
+    except Exception as _e:
+        log(f"  ⚠ write_master_ext_json 失敗（スキップして続行）: {_e}")
     write_tenji_json_file()  # data/tenji_YYYYMMDD.json を出力（sample.js の fetch 対象）
     write_data_index()       # 最後にインデックスを更新
 
@@ -2135,6 +2138,9 @@ def inject_history_to_html(days_back=HISTORY_DAYS):
     if re.search(pattern, html_text):
         html_text = re.sub(pattern, new_block, html_text)
         _data_js_write(html_text)
+        # [fix] data.js 書き換え後は index.html の v= も必ず更新する。
+        # しないとブラウザが古い data.js をキャッシュし続け日付が切り替わらない。
+        update_cache_version()
         log(f"  ✓ ALL_DATA_HISTORY埋め込み完了: {len(history)}日分")
         return True
     else:
@@ -2481,8 +2487,21 @@ def _data_js_write(text: str) -> None:
     """ロックを取得してから data.js に書き込む"""
     with _data_js_lock:
         target = DATA_JS if DATA_JS.exists() else INDEX_HTML
-        with open(target, 'w', encoding='utf-8') as _wf:
-            _wf.write(text.replace('\x00', ''))
+        # Windows の OSError: [Errno 22] 対策:
+        # NUL文字(\x00)および他のWindows不正制御文字を除去する
+        # （改行\x0a・タブ\x09・CR\x0dは正常なので残す）
+        cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        try:
+            with open(target, 'w', encoding='utf-8') as _wf:
+                _wf.write(cleaned)
+        except OSError as e:
+            log(f"  [data.js] ✕ 書き込み失敗: {e} → 一時ファイル経由でリトライ")
+            import tempfile, shutil as _shutil
+            with tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False,
+                                            dir=str(target.parent), suffix='.tmp') as tf:
+                tf.write(cleaned)
+                tmp_path = tf.name
+            _shutil.move(tmp_path, str(target))
 
 
 def _check_missing_tenji_and_odds(venues: dict, deadline_map: dict) -> None:
@@ -2723,8 +2742,18 @@ def _start_odds_loop_if_needed() -> None:
     オッズ永続ループスレッドが未起動 or 死亡していれば再起動する。
     メインループから定期的に呼ばれる（死活監視＋自動再起動）。
     全締め切り後に正常終了した場合（_odds_worker_done=True）は再起動しない。
+    ただし日付が変わった場合はフラグをリセットして翌日分を取得できるようにする。
     """
     global _odds_worker_thread, _odds_worker_stop, _odds_worker_done
+
+    # 日付が変わっていたら「正常終了済み」フラグをリセット
+    if not hasattr(_start_odds_loop_if_needed, '_done_date'):
+        _start_odds_loop_if_needed._done_date = None
+    today = today_str()
+    if _odds_worker_done and _start_odds_loop_if_needed._done_date != today:
+        log("  [OddsLoop] 日付変更を検知 → 正常終了フラグをリセット（翌日分取得を開始）")
+        _odds_worker_done = False
+        _start_odds_loop_if_needed._done_date = today
 
     # 正常終了済み（全レース締め切り）なら再起動しない
     if _odds_worker_done:
@@ -2749,6 +2778,102 @@ def _start_odds_loop_if_needed() -> None:
     )
     _odds_worker_thread.start()
     log("  [OddsLoop] 🟢 スレッド起動完了")
+
+
+def inject_race_entry_to_viewer(csv_paths: list) -> bool:
+    """
+    出走表CSV到着時に「展開別残存ビューア.html」の会場名・選手名を書き換える。
+
+    HTMLに以下のマーカーが埋め込まれていること:
+      let raceVenue = venues[0]; // [AUTO_VENUE]
+      // [AUTO_PLAYERS_START]
+      const PLAYER_NAMES = {...};
+      // [AUTO_PLAYERS_END]
+
+    Returns: 書き換えが発生した場合 True
+    """
+    if not VIEWER_HTML.exists():
+        log(f"  [viewer] {VIEWER_HTML.name} が見つかりません → スキップ")
+        return False
+
+    # 対象CSVから会場名・選手名を抽出
+    venue = None
+    players: dict[int, str] = {}
+
+    for csv_path in csv_paths:
+        try:
+            try:
+                df = pd.read_csv(csv_path, encoding="utf-8")
+            except UnicodeDecodeError:
+                df = pd.read_csv(csv_path, encoding="shift_jis")
+        except Exception:
+            continue
+
+        if "会場" not in df.columns:
+            continue
+
+        _venue = str(df.iloc[0]["会場"]).strip()
+
+        # 選手名列を検出（「選手名」列が必須）
+        if "選手名" not in df.columns or "艇番" not in df.columns:
+            log(f"  [viewer] {Path(csv_path).name}: 選手名/艇番列なし → スキップ")
+            continue
+
+        _players: dict[int, str] = {}
+        for _, row in df.iterrows():
+            try:
+                waku = int(row["艇番"])
+                raw  = str(row["選手名"]).strip()
+                # 末尾の登録番号（数字）を除去して名前だけ残す
+                name = re.sub(r'\d+$', '', raw).strip()
+                if 1 <= waku <= 6 and name and name != "nan":
+                    _players[waku] = name
+            except (ValueError, TypeError):
+                continue
+
+        if _venue and _players:
+            venue   = _venue
+            players = _players
+            break  # 最初の有効CSVで確定
+
+    if not venue or not players:
+        log("  [viewer] 有効な会場・選手情報が取得できませんでした → スキップ")
+        return False
+
+    html = VIEWER_HTML.read_text(encoding="utf-8")
+    original = html
+
+    # ── 1. 会場名を書き換え ──────────────────────────────────────────
+    venue_js = venue.replace("'", "\\'")
+    html = re.sub(
+        r"let raceVenue = .*?; // \[AUTO_VENUE\]",
+        f"let raceVenue = '{venue_js}'; // [AUTO_VENUE]",
+        html,
+    )
+
+    # ── 2. 選手名マップを書き換え ─────────────────────────────────────
+    names_entries = ", ".join(
+        f"{waku}:'{players.get(waku, '')}'" for waku in range(1, 7)
+    )
+    new_block = (
+        "// [AUTO_PLAYERS_START]\n"
+        f"const PLAYER_NAMES = {{{names_entries}}};\n"
+        "// [AUTO_PLAYERS_END]"
+    )
+    html = re.sub(
+        r"// \[AUTO_PLAYERS_START\].*?// \[AUTO_PLAYERS_END\]",
+        new_block,
+        html,
+        flags=re.DOTALL,
+    )
+
+    if html == original:
+        log("  [viewer] HTML に変更なし → 書き込みスキップ")
+        return False
+
+    VIEWER_HTML.write_text(html, encoding="utf-8")
+    log(f"  [viewer] ✓ {VIEWER_HTML.name} 更新: 会場={venue}, 選手={players}")
+    return True
 
 
 def fetch_motor_for_csv(csv_paths: list):
@@ -2969,10 +3094,10 @@ def run(cmd):
             if cmd[1] in ("commit", "add"):
                 _clear_git_lock()
             r = subprocess.run(cmd, cwd=str(SCRIPTS_DIR),
-                               capture_output=True, text=True, encoding="utf-8")
+                               capture_output=True, text=True, encoding="utf-8", errors="replace")
             return r.returncode, (r.stdout + r.stderr).strip()
     r = subprocess.run(cmd, cwd=str(SCRIPTS_DIR),
-                       capture_output=True, text=True, encoding="utf-8")
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
     return r.returncode, (r.stdout + r.stderr).strip()
 
 def get_mtimes(pattern):
@@ -3130,7 +3255,7 @@ require('fs').writeFileSync(process.argv[3], result);
     try:
         r = subprocess.run(
             ["node", strip_script_path, str(src_path), str(stripped_path)],
-            capture_output=True, text=True, encoding="utf-8", timeout=30
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30
         )
         if r.returncode != 0:
             raise RuntimeError(f"strip failed: {r.stderr}")
@@ -3157,7 +3282,7 @@ require('fs').writeFileSync(process.argv[3], result);
                 "--dead-code-injection", "false",
                 "--self-defending", "false",
             ],
-            capture_output=True, text=True, encoding="utf-8", timeout=120
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120
         )
         if r.returncode != 0 or not _Path(out_path).exists():
             raise RuntimeError(f"obfuscate failed: {r.stderr}")
@@ -3185,7 +3310,7 @@ def _run_nolock(cmd):
     if cmd[0] == "git" and cmd[1] in ("commit", "add"):
         _clear_git_lock()
     r = subprocess.run(cmd, cwd=str(SCRIPTS_DIR),
-                       capture_output=True, text=True, encoding="utf-8")
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
     return r.returncode, (r.stdout + r.stderr).strip()
 
 def _git_push_locked(changed_files):
@@ -3513,8 +3638,12 @@ def main():
         # 同じになり、BGスレッドのpushが「変更なし」でスキップされていた。
         inject_all_data_to_html()
         inject_master_ext_to_html()  # venue_kimari / tenkai_remaining を埋め込む
-        git_push([Path(p) for p in today_csvs] + [idx, INDEX_HTML])  # [fix] INDEX_HTMLを明示的に含める
-        log("  ✓ 展示・コメント・オッズ・ALL_DATA push完了（公式情報取得はバックグラウンドで実行中）")
+        # [fix] 起動時に ALL_DATA_HISTORY を再注入。
+        # これにより data.js に過去日データが入り、index.html の v= も更新される。
+        # ブラウザリロードだけで日付切り替えが反映される。
+        inject_history_to_html()
+        git_push([Path(p) for p in today_csvs] + [idx, INDEX_HTML, DATA_JS])
+        log("  ✓ 展示・コメント・オッズ・ALL_DATA・ALL_DATA_HISTORY push完了（公式情報取得はバックグラウンドで実行中）")
 
         # ② 重い処理（公式レースインデックス取得・JSON書き出し）はバックグラウンドで実行 → 完了後に追加push
         import threading as _threading
@@ -3565,6 +3694,8 @@ def main():
                     def _bg():
                         fetch_and_inject_race_index()
                         write_all_json_files()
+                        # [fix] 翌日CSV到着=日付切替。ALL_DATA_HISTORY 再注入で v= も更新。
+                        inject_history_to_html()
                         pushed = git_push([INDEX_HTML, DATA_JS])
                         log("  [深夜監視][BG] 公式情報・JSONファイル更新 完了" + (" → push済み" if pushed else "（変更なし）"))
                     _threading.Thread(target=_bg, daemon=True).start()
@@ -3635,6 +3766,9 @@ def main():
                         # ★ 注意: fetch_tenji_for_csv は非同期のため、ここでは prev_tenji を
                         #    更新しない。スレッド完了後に次の10秒ループで変更を検知する。
                         fetch_tenji_for_csv(changed_csv_paths)
+                        # ★ 展開別残存ビューアの会場・選手名を更新
+                        if inject_race_entry_to_viewer(changed_csv_paths):
+                            changed.append(VIEWER_HTML)
                     idx = make_csv_index()
                     changed.append(idx)
                     inject_all_data_to_html()
@@ -3664,6 +3798,10 @@ def main():
                         write_tenji_json_file()
                         for tj in DATA_DIR.glob("tenji_*.json"):
                             _run_nolock(["git", "add", str(tj)])
+                        # [fix] index.html を data.js と同じコミットに含める
+                        # → キャッシュバスターのバージョンずれを防ぐ
+                        update_cache_version()
+                        _run_nolock(["git", "add", str(INDEX_HTML)])
                         code2, out2 = _run_nolock(["git", "status", "--porcelain"])
                         tracked2 = [l for l in out2.strip().splitlines() if not l.startswith("??")]
                         if tracked2:

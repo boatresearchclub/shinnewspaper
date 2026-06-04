@@ -1,8 +1,7 @@
 
 // ── 買い目確率フィルター閾値 ──
-// この確率（3連単推定）を下回る買い目を除外する。
-// スライダーUIから変更可能。単位: % (例: 2.0 → 2%)
-let BUY_PROB_THRESHOLD = 2.0;
+// [削除] 確率フィルターは廃止。オッズ次第で低確率でも買い目に残す。
+// let BUY_PROB_THRESHOLD = 2.0;
 
 // ── 的中重視: 1着軸を1艇固定にするための乖離率閾値 ──
 // final_prob 1位と2位の差がこの値（%）以上のとき、1位艇を1艇固定軸として組み立てる。
@@ -137,7 +136,9 @@ let _tenjiCacheReady = false;
 // レンダーキャッシュ（改善①）
 // renderBuy / renderDetail の計算結果HTMLをメモ化する。
 // キー: "{venue}_{date}_{rno}" — データ更新時に invalidateRenderCache() で一括破棄。
+// _RENDER_CACHE_VER: 表示ロジック変更時にインクリメントしてキャッシュを強制無効化。
 // ══════════════════════════════════════════════════════════════════
+const _RENDER_CACHE_VER = 2; // 買い目昇順ソート・被り目除去対応
 const _renderCache = {};
 
 /**
@@ -207,10 +208,15 @@ function _initScenComboCache() {
 }
 
 // localStorage にシナリオ買い目を保存するヘルパー
+// ── [修正] venue は VENUE_SLUG_MAP でslug変換してからキーに使う ──
+// computeScenCombosWithEV のキャッシュ参照も同一のslug変換を行うため、
+// キーを統一しないとキャッシュが永遠に命中しない問題を修正。
 function _saveScenComboToLS(venue, date, rno, combos) {
   try {
     if (!venue || !date || rno == null || !combos || combos.length === 0) return;
-    const memKey = `${venue}_${date}_${rno}`;
+    const slug   = (typeof VENUE_SLUG_MAP !== 'undefined' && VENUE_SLUG_MAP[venue])
+                   ? VENUE_SLUG_MAP[venue] : venue;
+    const memKey = `${slug}_${date}_${rno}`;
     const lsKey  = `${_SCEN_CACHE_LS_PREFIX}${memKey}`;
     _scenComboCache[memKey] = combos.slice();
     localStorage.setItem(lsKey, combos.join(','));
@@ -1579,7 +1585,9 @@ function calcPlace2Probs(boats, ranked){
   // tenkai_remaining: {決まり手: {1着コース: {進入コース: {rate2, trust}}}}
   // 会場別データ優先、なければ全国実績にフォールバック（calcScenarioData と統一）
   const tenkaiRemaining = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
+    // [2026-06-01 修正] venue はグローバル変数ではなく DATA.venue から取得する
+    const _venueForP2 = DATA?.venue ?? currentVenue ?? null;
+    const vLocal = MASTER_EXT?.venue_stats?.[_venueForP2]?.tenkai_remaining;
     if(vLocal && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || {};
   })();
@@ -1949,8 +1957,12 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdata
 // 3着率: tenkai_remaining.rate3 × winner_course_order.rate3 個人補正ブレンド
 // ── トップレベル関数（buildScenarioSection・renderBuy 両方から参照）──
 function calc3rdScores(ranked2, tenjiScoreMap, winnerBoat, kimari, secondBoat){
+  // [2026-06-01 修正] venue はグローバル変数ではなく DATA.venue から取得する。
+  // computeBuy3 / computeRanked2AndSd などから呼ばれる際、DATA = vdata（venue付き）が
+  // セットされているため DATA.venue が正しい会場名になる。
+  const _venueForCalc3rd = DATA?.venue ?? currentVenue ?? null;
   const tenkaiRem = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
+    const vLocal = MASTER_EXT?.venue_stats?.[_venueForCalc3rd]?.tenkai_remaining;
     if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || null;
   })();
@@ -2180,7 +2192,7 @@ function renderBuy(rno){
   if (DATA && currentVenue) {
     const _ck = _renderCacheKey(rno);
     const _cached = _renderCache[_ck];
-    if (_cached && _cached.buy && _cached.detail2) {
+    if (_cached && _cached.buy && _cached.detail2 && _cached._ver === _RENDER_CACHE_VER) {
       const _buyEl     = document.getElementById('buy-panel');
       const _detail2El = document.getElementById('detail2-panel');
       if (_buyEl)     _buyEl.innerHTML     = _cached.buy;
@@ -2536,7 +2548,9 @@ function renderBuy(rno){
   // rate3 データが全くない場合は final_prob 最下位を除外してフォールバック。
   //
   const tenkaiRem_buy = (() => {
-    const vLocal = MASTER_EXT?.venue_stats?.[venue]?.tenkai_remaining;
+    // [2026-06-01 修正] venue はこのスコープで未定義 → DATA.venue を使用
+    const _venueForRB = DATA?.venue ?? currentVenue ?? null;
+    const vLocal = MASTER_EXT?.venue_stats?.[_venueForRB]?.tenkai_remaining;
     if(vLocal && typeof vLocal === 'object' && Object.keys(vLocal).length > 0) return vLocal;
     return MASTER_EXT?.tenkai_remaining || null;
   })();
@@ -3337,13 +3351,7 @@ function renderBuy(rno){
           </div>
         </div>
       </div>`;
-    // 非管理者向けロック表示（表示/非表示は JS で制御、CSSクラスは付けない）
-    const lockContent = `
-      <div id="user-lock-${modeId}" style="display:none;padding:2.5rem 1.5rem;text-align:center;color:var(--text3)">
-        <div style="font-size:2rem;margin-bottom:0.5rem">🔒</div>
-        <div style="font-size:13px;line-height:1.6">この買い目は管理者限定です。</div>
-      </div>`;
-    return adminContent + lockContent;
+    return adminContent;
   }
 
   const hitPanelHtml = buildModePanel(buy3Hit, buy2Hit, 'buy-mode-hit', hitUnderSynth, HIT_SYNTH_MIN, passReasonHit);
@@ -3470,6 +3478,7 @@ function renderBuy(rno){
     const _detail2El = document.getElementById('detail2-panel');
     _renderCache[_ck].buy     = _buyEl     ? _buyEl.innerHTML     : '';
     _renderCache[_ck].detail2 = _detail2El ? _detail2El.innerHTML : '';
+    _renderCache[_ck]._ver    = _RENDER_CACHE_VER;
   }
 
   // バナーをタブ外の常時表示エリアに更新
@@ -3627,7 +3636,13 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
 
   // ── シナリオ加重2着確率を算出（winner=1号艇） ──
   function getPlace2Ranking2(winnerBoat){
-    if(!scenarioPlace2?.[winnerBoat]) return [];
+    // sd が無効（MASTER_EXT未ロード等）または scenarioPlace2 が存在しない場合は
+    // final_prob 降順でフォールバック（モバイル等でfetchが間に合わない場合も正常表示）
+    if(!sd?.valid || !scenarioPlace2?.[winnerBoat]){
+      return ranked2.filter(r => r.boat !== winnerBoat)
+        .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+        .map(r => r.boat);
+    }
     const totals = {};
     let weightSum = 0;
     for(const [kimari, list] of Object.entries(scenarioPlace2[winnerBoat])){
@@ -3667,11 +3682,21 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
   const p2B = p2rank[1]; // 2着率2位
   const p2C = p2rank[2]; // 2着率3位
 
+  // p2A/p2B が null の場合（MASTER_EXT 未ロード時など）は ranked2 から直接補完
   if(p2A == null || p2B == null){
-    return `<div id="buy-mode-intep" style="display:none">
-      <div style="padding:16px;color:var(--text3);font-size:12px">データ不足のためイン鉄板買い目を生成できません</div>
-    </div>`;
+    const _fb = ranked2
+      .filter(r => r.boat !== 1)
+      .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+      .map(r => r.boat);
+    if(_fb.length < 2){
+      return `<div id="buy-mode-intep" style="display:none">
+        <div style="padding:16px;color:var(--text3);font-size:12px">データ不足のためイン鉄板買い目を生成できません</div>
+      </div>`;
+    }
+    p2rank[0] = _fb[0]; p2rank[1] = _fb[1]; p2rank[2] = _fb[2] ?? null;
   }
+  // p2A/p2B/p2C をフォールバック後の値で再バインド
+  const [p2A_f, p2B_f, p2C_f] = [p2rank[0], p2rank[1], p2rank[2] ?? null];
 
   // ── 買い目生成ロジック ──
   // 1-A-(B or C 3着位2位3位) と その折り返し
@@ -3693,12 +3718,12 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
   }
 
   // グループ1: 1-A-{B,C} と 1-{B,C}-A
-  const thirdsA = [p2B, p2C].filter(b => b != null && b !== 1 && b !== p2A);
-  const blockA = makeInTepBlock(1, p2A, thirdsA);
+  const thirdsA = [p2B_f, p2C_f].filter(b => b != null && b !== 1 && b !== p2A_f);
+  const blockA = makeInTepBlock(1, p2A_f, thirdsA);
 
   // グループ2: 1-B-{A,C} と 1-{A,C}-B
-  const thirdsB = [p2A, p2C].filter(b => b != null && b !== 1 && b !== p2B);
-  const blockB = makeInTepBlock(1, p2B, thirdsB);
+  const thirdsB = [p2A_f, p2C_f].filter(b => b != null && b !== 1 && b !== p2B_f);
+  const blockB = makeInTepBlock(1, p2B_f, thirdsB);
 
   // 全体で重複除去
   const allSet = new Set();
@@ -3736,14 +3761,29 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
   }, 0);
   const _synthCnt2 = allCombos.filter(c => (raceOdds3tEv?.[normalizeCombo(c)] ?? null) != null).length;
   const itSynth = (_synthCnt2 > 0 && _synthDenom2 > 0) ? 1 / _synthDenom2 : null;
-  const itSynthColor = itSynth == null ? 'var(--text3)' : itSynth >= 3.0 ? 'var(--green)' : itSynth >= 1.5 ? 'var(--text2)' : 'var(--red)';
-  const itSynthHtml = itSynth != null
-    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${itSynthColor}">合成${itSynth.toFixed(2)}倍</span>`
-    : '';
 
-  // 2着ラベル（艇番バッジ表示）
-  const p2Label = [p2A, p2B].filter(Boolean).map(b => boatBadge(b)).join(' ');
-  const p3Label = [p2A, p2B, p2C].filter(Boolean).map(b => boatBadge(b)).join(' ');
+  // 想定的中率
+  let _itHitSum = 0, _itHitKnown = 0;
+  allCombos.forEach(c => {
+    const winner = parseInt(c.split('-')[0]);
+    const p = calcScenarioComboProb(c, winner, sd);
+    if(p != null){ _itHitSum += p; _itHitKnown++; }
+  });
+  const itHitRate = _itHitKnown > 0 ? _itHitSum : null;
+
+  // 期待値
+  const itEV = (itSynth != null && itHitRate != null) ? itSynth * itHitRate : null;
+
+  // 統計バッジHTML
+  const _itSynthColor = itSynth == null ? 'var(--text3)' : itSynth >= 3.0 ? 'var(--green)' : itSynth >= 1.5 ? 'var(--text2)' : 'var(--red)';
+  const _itHitColor   = itHitRate == null ? 'var(--text3)' : itHitRate >= 0.30 ? 'var(--green)' : itHitRate >= 0.20 ? 'var(--orange)' : 'var(--red)';
+  const _itEVColor    = itEV == null ? 'var(--text3)' : itEV >= 1.3 ? 'var(--green)' : itEV >= 1.1 ? 'var(--orange)' : 'var(--text3)';
+  const itStatsHtml = `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 0 4px">
+      ${itHitRate != null ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_itHitColor}">的中率${(itHitRate*100).toFixed(1)}%</span>` : ''}
+      ${itSynth   != null ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_itSynthColor}">合成${itSynth.toFixed(2)}倍</span>` : ''}
+      ${itEV      != null ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_itEVColor}">EV${itEV.toFixed(2)}</span>` : ''}
+    </div>`;
 
   let rowsHtml = allCombos.map(c => buyRowIT(c)).join('');
 
@@ -3754,13 +3794,8 @@ function buildInTepBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBadges
           <div class="buy-card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
             <span>🔒 イン鉄板（3連単）</span>
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${allCombos.length}点</span>
-            ${itSynthHtml}
           </div>
-          <div style="background:rgba(0,120,255,0.08);border:1px solid rgba(0,120,255,0.25);border-radius:6px;padding:7px 10px;margin-bottom:8px;font-size:11px;line-height:1.8">
-            <div style="font-weight:700;color:var(--accent2);margin-bottom:2px">🔒 イン鉄板モード <span style="font-size:10px;font-weight:400;color:var(--text3)">（1号艇 ${(fp1*100).toFixed(1)}%）</span></div>
-            <div style="color:var(--text2)">2着率上位: ${p2Label}</div>
-            <div style="color:var(--text2)">3着候補: ${p3Label}</div>
-          </div>
+          ${itStatsHtml}
           ${rowsHtml || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目を生成できませんでした</div>'}
         </div>
       </div>
@@ -4125,22 +4160,31 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   const _hhi = calcHHI(_fp1stTmp);
 
   // 確信度ランク判定（通常モードのみ適用。鉄板/否定はそれぞれ固定ルール）
-  const SCEN_CONF_HIGH_HHI  = 0.55;  // HHI閾値（高確信）
-  const SCEN_CONF_HIGH_PROB = 0.50;  // 1着確率閾値（高確信）
-  const SCEN_CONF_MID_HHI   = 0.35;  // HHI閾値（中確信）
-  const SCEN_CONF_MID_PROB  = 0.40;  // 1着確率閾値（中確信）
+  const SCEN_CONF_HIGH_HHI       = 0.55;  // HHI閾値（高確信）
+  // [変更] 1着確率閾値を艇番で分岐
+  //   1号艇軸: 75%以上（イン鉄板と同等の根拠が必要）
+  //   2〜6号艇軸: 50%以上（従来通り）
+  const SCEN_CONF_HIGH_PROB_INN  = 0.75;  // 1号艇軸のHIGH閾値
+  const SCEN_CONF_HIGH_PROB_OUT  = 0.50;  // 2〜6号艇軸のHIGH閾値
+  const SCEN_CONF_MID_HHI        = 0.35;  // HHI閾値（中確信）
+  // [変更] MID_PROB廃止 → HIGH未満はすべてMID（2軸展開）
+  // 旧: SCEN_CONF_MID_PROB = 0.40
+  // 新: HIGHに満たない場合はMIDとして2軸展開
   // [2026-05-31 変更] fp差ゲート廃止 → fp2nd絶対値ベース
   // 旧: SCEN_AXIS2_FP_GAP = 15.0 (%pt差が15以下なら2軸)
   // 新: FP2ND_MIN_FOR_2AXIS = 0.20 (fp2ndが20%以上なら2軸)
   const FP2ND_MIN_FOR_2AXIS = 0.20;
 
+  // 軸艇が1号艇かどうかで HIGH の確率閾値を切り替える
+  const _highProbThreshold = (_fp1stTmp === 1) ? SCEN_CONF_HIGH_PROB_INN : SCEN_CONF_HIGH_PROB_OUT;
+
   let _confRank;  // 'HIGH' | 'MID' | 'LOW'
   if(isInTep || isInNeg){
     // 鉄板・否定は独自ルールで制御するためHHI判定を経由しない
     _confRank = 'MID';
-  } else if(_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= SCEN_CONF_HIGH_PROB){
+  } else if(_hhi >= SCEN_CONF_HIGH_HHI && _fp1stProb >= _highProbThreshold){
     _confRank = 'HIGH';
-  } else if(_hhi >= SCEN_CONF_MID_HHI || _fp1stProb >= SCEN_CONF_MID_PROB){
+  } else if(_hhi >= SCEN_CONF_MID_HHI || _fp1stProb < _highProbThreshold){
     _confRank = 'MID';
   } else {
     _confRank = 'LOW';
@@ -4293,13 +4337,34 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
     }
   }
 
-  // 重複除去しつつ順番を保持
+  // ── 各ブロック内を 2着→3着 の艇番昇順にソート ──
+  // "1着-2着-3着" 形式で split('-') → [1着, 2着, 3着] の数値比較
+  function sortBlockAsc(block) {
+    return [...block].sort((a, b) => {
+      const [, a2, a3] = a.split('-').map(Number);
+      const [, b2, b3] = b.split('-').map(Number);
+      if (a2 !== b2) return a2 - b2;
+      return a3 - b3;
+    });
+  }
+  block1 = sortBlockAsc(block1);
+  block2 = sortBlockAsc(block2);
+  block3 = sortBlockAsc(block3);
+
+  // 重複除去 → 全体を 1着固定・2着昇順・3着昇順でソート
   const allCombosSet = new Set();
-  const allCombos = [];
+  const allCombosRaw = [];
   [block1, block2, block3].forEach(block => {
     block.forEach(c => {
-      if(!allCombosSet.has(c)){ allCombosSet.add(c); allCombos.push(c); }
+      if(!allCombosSet.has(c)){ allCombosSet.add(c); allCombosRaw.push(c); }
     });
+  });
+  const allCombos = allCombosRaw.slice().sort((a, b) => {
+    const [a1, a2, a3] = a.split('-').map(Number);
+    const [b1, b2, b3] = b.split('-').map(Number);
+    if (a1 !== b1) return a1 - b1;
+    if (a2 !== b2) return a2 - b2;
+    return a3 - b3;
   });
 
   // ── キャッシュ保存（メモリ + localStorage）──
@@ -4340,22 +4405,8 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
     </div>`;
   }
 
-  let rowsHtml = '';
-
-  // グループ①
-  rowsHtml += blockHeader('①', fp1st, second_A);
-  block1.forEach(c => { rowsHtml += buyRow(c); });
-
-  // グループ②
-  rowsHtml += blockHeader('②', fp1st, second_B);
-  block2.forEach(c => { rowsHtml += buyRow(c); });
-
-  // グループ③（イン逃げ鉄板モードでは block3 は空）
-  if(block3.length > 0){
-    const g3Axis = isInNeg ? fp2nd : fp2nd;
-    rowsHtml += blockHeader('③', g3Axis, second_C);
-    block3.forEach(c => { rowsHtml += buyRow(c); });
-  }
+  // ── 重複除去済み allCombos から一括生成（被り目を表示しない）──
+  let rowsHtml = allCombos.map(c => buyRow(c)).join('');
 
   const totalPts = allCombos.length;
 
@@ -4372,11 +4423,8 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
   const _hitRateColor = _hitRatePct >= 30 ? 'var(--green)'
                       : _hitRatePct >= 20 ? 'var(--orange)'
                       : 'var(--red)';
-  const _hitRateNote  = _hitRateKnown < allCombos.length
-    ? `<span style="font-size:9px;color:var(--text3)">※${allCombos.length - _hitRateKnown}点は確率不明</span>`
-    : '';
   const hitRateHtml = _hitRateKnown > 0
-    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_hitRateColor}">的中率${_hitRateStr}</span>${_hitRateNote}`
+    ? `<span style="font-size:11px;font-family:var(--mono);font-weight:700;color:${_hitRateColor}">的中率${_hitRateStr}</span>`
     : '';
 
   // 合成オッズ計算
@@ -4475,6 +4523,10 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
     ? `外軸: ${boatBadge(fp1st)} / ${fp2nd!=null?boatBadge(fp2nd):''}`
     : `最終確率1位: ${boatBadge(fp1st)} 　2位: ${boatBadge(fp2nd!=null?fp2nd:'')}`;
 
+  // 管理者のみ表示する説明バナー
+  const _isAdminScen = document.body.classList.contains('admin-mode');
+  const _modeDescAdminHtml = modeDescHtml && _isAdminScen ? modeDescHtml : '';
+
   return `
     <div id="buy-mode-scen" style="display:none">
       <div class="buy-grid">
@@ -4484,11 +4536,11 @@ function buildScenarioBuyPanel(ranked2, sd, resultSan3, raceOdds3tEv, comboToBad
             <span style="font-weight:400;color:var(--text3);font-size:10px;">${totalPts}点</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;font-size:11px">
-            ${scenSynthHtml}
             ${hitRateHtml}
+            ${scenSynthHtml}
             ${evBadgeHtml}
           </div>
-          ${modeDescHtml}
+          ${_modeDescAdminHtml}
           ${rowsHtml || '<div style="padding:8px;color:var(--text3);font-size:12px">買い目を生成できませんでした</div>'}
         </div>
       </div>
@@ -4859,9 +4911,21 @@ function updateAlertStrip(){
   const hits = [];
   const dataForDate = getDataForDate(viewDate);
 
+  // 当日かどうかを判定
+  const _alertDates   = getAvailableDates();
+  const _alertToday   = _alertDates[_alertDates.length - 1];
+  const _alertIsToday = (viewDate || _alertToday) === _alertToday;
+
   VENUE_LIST.forEach(venue => {
     const vdata = dataForDate[venue];
     if(!vdata || !vdata.races) return;
+    // 中止・取消・中止順延の会場はアラート対象外
+    const _alertInfo = _alertIsToday
+      ? ((RACE_INDEX_DATA && RACE_INDEX_DATA.venues && RACE_INDEX_DATA.venues[venue])
+          ? RACE_INDEX_DATA.venues[venue]
+          : (vdata.race_info || null))
+      : (vdata.race_info || null);
+    if (_alertInfo && _alertInfo.cancel_status) return;
     Object.entries(vdata.races).forEach(([rno, rd]) => {
       if(!rd || !rd.time) return;
       const t = String(rd.time).trim();
@@ -5608,6 +5672,7 @@ function updateEV(){
   // 失敗しても埋め込みデータで動作継続（フォールバック保証）。
   fetchAndMergeJsonData()
     .then(() => {
+      invalidateRenderCache(); // MASTER_EXT ロード後にキャッシュを破棄（スマホ遅延対応）
       autoRefreshCurrentView();
       // 起動時バックグラウンド事前計算（fetchAndMergeJsonData 完了後）
       _triggerPrefill();
@@ -5730,11 +5795,26 @@ function prefillScenEVCache(dateStr) {
       // ── オッズ参照（現時点の ODDS_DATA）──
       const raceOdds3t = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
       function _normCombo(c){ return (c||'').replace(/[－−\-]/g,'-'); }
+      // RESULT_DATA.sanrentan からフォールバック用オッズマップを構築
+      // （確定済みレース・ODDS_DATA未取得レースで ev が null になるのを防ぐ）
+      const _rSlug   = SLUG_MAP[venue] || venue;
+      const _rDateNd = (vdata.date || '').replace(/-/g, '');
+      const _rKey    = `${_rSlug}_${_rDateNd}_${rno}`;
+      const _resultOdds3t = (() => {
+        const map = {};
+        (RESULT_DATA?.[_rKey]?.sanrentan || []).forEach(s => {
+          if (s?.combo && s?.odds != null && s.odds > 0) {
+            map[_normCombo(s.combo)] = s.odds >= 100 ? s.odds / 100 : s.odds;
+          }
+        });
+        return map;
+      })();
+      const _oddsSource = Object.keys(raceOdds3t).length > 0 ? raceOdds3t : _resultOdds3t;
       function _synthOdds(combos){
         if (!combos || combos.length === 0) return null;
         let denom = 0, cnt = 0;
         combos.forEach(c => {
-          const ov = raceOdds3t[_normCombo(c)] ?? null;
+          const ov = _oddsSource[_normCombo(c)] ?? null;
           if (ov != null && ov > 0) { denom += 1/ov; cnt++; }
         });
         return (cnt > 0 && denom > 0) ? 1/denom : null;

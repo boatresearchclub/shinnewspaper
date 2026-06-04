@@ -2,8 +2,7 @@
 fetch_race_index.py  —  ボートレース公式サイトから本日の開催情報を取得
 ========================================================================
 【出力】
-  このスクリプトと同じフォルダに race_index.json を保存する。
-  （--out 引数は日本語パスの文字化けを避けるため廃止）
+  このスクリプトと同じフォルダに race_index_YYYYMMDD.json を保存する。
 
 【使い方】
   python fetch_race_index.py
@@ -16,6 +15,11 @@ fetch_race_index.py  —  ボートレース公式サイトから本日の開催
   - race_kinds取得を並列化（ThreadPoolExecutor）→ タイムアウト対策
   - グレード検出をテーブル全体スキャン方式に変更（rowspan対応）
   - GRADE_CLASS_RE を [a-z] サフィックス対応に修正（is-G3b 等を正しく検出）
+  - 中止・中止順延・取消 ステータスを取得する cancel_status フィールドを追加
+    "cancel_status": null         → 通常開催（中止情報なし）
+    "cancel_status": "中止"       → 当日全レース中止
+    "cancel_status": "中止順延"   → 中止順延（翌日以降に順延）
+    "cancel_status": "取消"       → 開催自体が取消
 """
 
 import argparse, json, re, sys
@@ -44,7 +48,48 @@ SCRIPTS_DIR = Path(__file__).parent
 
 GRADE_CLASS_RE = re.compile(r"\bis-(SG|PG1|G1|G2|G3)[a-z]\b", re.IGNORECASE)
 
-# 女子戦判定キーワード（タイトルに含まれていれば is_joshi: true）
+# ── 中止ステータス検出 ────────────────────────────────────────────────────
+# 公式サイトの進行状況セルに含まれるテキスト/クラスで中止を判定する。
+# クラスベース検出（is-cancel / is-stop 等）とテキストベース検出を併用し
+# どちらか一方でもヒットすれば cancel_status を設定する。
+
+# テキストマッチ: 優先度順に並べる（より具体的なものを先に）
+CANCEL_TEXT_MAP = [
+    ("中止順延", "中止順延"),
+    ("中止",     "中止"),
+    ("取消",     "取消"),
+    ("CANCEL",   "中止"),   # 英語表記も一応カバー
+]
+
+# CSSクラスマッチ（公式は is-cancel / is-cancelDelay 等が多い）
+CANCEL_CLASS_RE = re.compile(
+    r"\bis-(cancel|stop|closed|delay)[a-zA-Z]*\b",
+    re.IGNORECASE,
+)
+
+def _detect_cancel_status(cell_text: str, cell_classes: list[str]) -> str | None:
+    """
+    進行状況セルのテキストとCSSクラスから中止ステータスを返す。
+    中止なし → None
+    """
+    # 1) テキストベース（最優先・確実）
+    for keyword, status in CANCEL_TEXT_MAP:
+        if keyword in cell_text:
+            return status
+
+    # 2) CSSクラスベース（クラス名だけで判断できる場合）
+    for cls in cell_classes:
+        if CANCEL_CLASS_RE.search(cls):
+            # クラス名から種別を推定
+            lc = cls.lower()
+            if "delay" in lc or "jun" in lc:
+                return "中止順延"
+            return "中止"
+
+    return None
+
+
+# ── 女子戦判定 ───────────────────────────────────────────────────────────
 JOSHI_KEYWORDS = {
     "ヴィーナス", "レディース", "女子", "クイーン", "プリンセス",
     "VENUS", "LADIES", "LADY", "PRINCESS",
@@ -75,8 +120,7 @@ def build_grade_map(soup):
 def fetch_race_kinds(jcd, hd):
     """
     会場の raceindex ページから各レース番号→種別名を取得する。
-    例: {12: "優勝戦", 11: "準優勝戦", 10: "準優勝戦", ...}
-    取得できなかった場合は空dict を返す。
+    中止会場はスキップ（呼び出し側で cancel_status をチェック）。
     """
     try:
         resp = requests.get(
@@ -110,7 +154,6 @@ def fetch_race_kinds(jcd, hd):
     return kinds
 
 def fetch(date_str=None):
-    # date_str が未指定の場合は今日の日付を明示的に使う（キャッシュ防止）
     today = datetime.now().strftime("%Y%m%d")
     hd = date_str if date_str else today
     params = {"hd": hd}
@@ -124,10 +167,7 @@ def fetch(date_str=None):
 
     soup = BeautifulSoup(resp.text, "html.parser")
 
-    # 日付：リクエストした hd を正とする（HTMLパースに頼らない）
     date_label = f"{hd[:4]}-{hd[4:6]}-{hd[6:]}"
-
-    # テーブル全体からグレードマップを先に構築（rowspan対応）
     grade_map = build_grade_map(soup)
 
     venues = {}
@@ -136,6 +176,7 @@ def fetch(date_str=None):
         if not cells:
             continue
 
+        # ── 会場名 ──────────────────────────────────────────────────────
         venue = ""
         for img in cells[0].find_all("img"):
             alt = img.get("alt","").strip()
@@ -147,6 +188,19 @@ def fetch(date_str=None):
 
         grade = grade_map.get(i, "一般")
 
+        # ── 中止ステータス検出 ──────────────────────────────────────────
+        # 進行状況セル（通常は cells[1]）を主要チェック対象とするが、
+        # 念のため全セルを走査してヒットしたものを採用する。
+        cancel_status = None
+        for td in cells:
+            td_text   = td.get_text(separator=" ", strip=True)
+            td_classes = td.get("class", [])
+            cs = _detect_cancel_status(td_text, td_classes)
+            if cs:
+                cancel_status = cs
+                break
+
+        # ── タイトル・jcd ────────────────────────────────────────────────
         title = ""
         jcd   = ""
         for td in cells:
@@ -160,6 +214,7 @@ def fetch(date_str=None):
             if title:
                 break
 
+        # ── 開催期間・日目 ───────────────────────────────────────────────
         period = ""
         day    = ""
         for td in cells:
@@ -175,7 +230,7 @@ def fetch(date_str=None):
             if period and day:
                 break
 
-        # 総日数: period "M/D-M/D" から計算
+        # ── 総日数 ───────────────────────────────────────────────────────
         total_days = None
         if period:
             m_pd = re.match(r"(\d{1,2})/(\d{1,2})[-–](\d{1,2})/(\d{1,2})", period)
@@ -192,20 +247,28 @@ def fetch(date_str=None):
                     pass
 
         venues[venue] = {
-            "grade":      grade,
-            "title":      title,
-            "period":     period,
-            "day":        day,
-            "total_days": total_days,
-            "jcd":        jcd,
-            "is_joshi":   any(kw in title for kw in JOSHI_KEYWORDS),
-            "race_kinds": {},
+            "grade":         grade,
+            "title":         title,
+            "period":        period,
+            "day":           day,
+            "total_days":    total_days,
+            "jcd":           jcd,
+            "is_joshi":      any(kw in title for kw in JOSHI_KEYWORDS),
+            "cancel_status": cancel_status,   # ★ 新フィールド
+            "race_kinds":    {},
         }
 
-    # ── 各会場の raceindex を並列取得（直列→並列化でタイムアウト対策）──
+        if cancel_status:
+            print(f"  {venue}: 【{cancel_status}】検出", flush=True)
+
+    # ── 各会場の raceindex を並列取得 ────────────────────────────────────
+    # 中止会場は race_kinds 取得をスキップする
     def _fetch_kinds_task(venue_info):
         venue, info = venue_info
         if not info["jcd"]:
+            return venue, {}
+        # 中止・取消の場合はスキップ（どうせデータがない）
+        if info["cancel_status"] in ("中止", "取消"):
             return venue, {}
         kinds = fetch_race_kinds(info["jcd"], hd)
         if kinds:
@@ -239,8 +302,15 @@ if __name__ == "__main__":
         print("取得失敗（会場数0）", flush=True)
         sys.exit(1)
 
-    # 日付別ファイルに保存（race_index_YYYYMMDD.json）
     hd = args.date if args.date else datetime.now().strftime("%Y%m%d")
     out_path = SCRIPTS_DIR / f"race_index_{hd}.json"
     out_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # サマリー表示
+    cancel_venues = [v for v, info in data["venues"].items() if info["cancel_status"]]
+    normal_venues = [v for v, info in data["venues"].items() if not info["cancel_status"]]
     print(f"OK {len(data['venues'])}会場 -> {out_path}", flush=True)
+    if cancel_venues:
+        details = ", ".join(f"{v}({data['venues'][v]['cancel_status']})" for v in cancel_venues)
+        print(f"  ※中止/順延: {details}", flush=True)
+    print(f"  通常開催: {len(normal_venues)}会場 / 中止等: {len(cancel_venues)}会場", flush=True)

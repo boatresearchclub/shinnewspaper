@@ -28,6 +28,12 @@ build_master_json.py  (v3.3 — winner_course_order に3着率を追加)
 
 import sys
 import json
+
+# ── Windows CP932 対策: stdout/stderr を UTF-8 に強制 ──────────────
+if sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
+    sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
+if sys.stderr.encoding and sys.stderr.encoding.lower() not in ("utf-8", "utf8"):
+    sys.stderr = open(sys.stderr.fileno(), mode="w", encoding="utf-8", buffering=1)
 import time
 import statistics
 from pathlib import Path
@@ -923,11 +929,28 @@ def main():
     )
 
     # G1/SG戦コースマスタ（シートが存在する場合のみ）
-    # is_joshi=False のまま reliable 閾値は is_reliable_course の player_type="グレードメイン" で緩和済み
-    # ── 着手前提条件: update_master.py --grade G1 が実行され
-    #    "📊コース別マスタ_G1" シートが存在すること ──
     course_master_g1 = build_course_master(
         wb, player_index, sheet_name="📊コース別マスタ_G1", is_joshi=False
+    )
+
+    # 全種類コースマスタ（全グレード・全レース種別・公式準拠）
+    course_master_全種 = build_course_master(
+        wb, player_index, sheet_name="📊コース別マスタ_全種", is_joshi=False
+    )
+
+    # グレード全種コースマスタ（SG+G1+G2+G3）
+    course_master_grade = build_course_master(
+        wb, player_index, sheet_name="📊コース別マスタ_Grade", is_joshi=False
+    )
+
+    # マスターズLコースマスタ
+    course_master_master = build_course_master(
+        wb, player_index, sheet_name="📊コース別マスタ_Master", is_joshi=True
+    )
+
+    # ルーキーSコースマスタ
+    course_master_rookie = build_course_master(
+        wb, player_index, sheet_name="📊コース別マスタ_Rookie", is_joshi=True
     )
 
     # composite_win_rate を後付けで付与
@@ -945,7 +968,7 @@ def main():
     # ── メタ情報 ─────────────────────────────────────────────────
     arek_scores = [v["arek_score"] for v in venue_stats.values()]
     meta = {
-        "version": "3.3",
+        "version": "3.4",
         "built_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "parameters": {
             "venue_course_min_runs":    VENUE_COURSE_MIN_RUNS,
@@ -971,8 +994,12 @@ def main():
         "venue_course_min_runs": VENUE_COURSE_MIN_RUNS,
         "course_master_min_runs": COURSE_MIN_RUNS["1"],
         "course_master":         course_master,
-        "course_master_joshi":   course_master_joshi,  # 女子戦コースマスタ（空の場合は{}）
-        "course_master_g1":      course_master_g1,      # G1/SG戦コースマスタ（空の場合は{}）
+        "course_master_joshi":   course_master_joshi,   # 女子戦コースマスタ（空の場合は{}）
+        "course_master_g1":      course_master_g1,       # G1/SG戦コースマスタ（空の場合は{}）
+        "course_master_全種":    course_master_全種,     # 全種類コースマスタ（空の場合は{}）
+        "course_master_grade":   course_master_grade,    # グレード全種コースマスタ（空の場合は{}）
+        "course_master_master":  course_master_master,   # マスターズLコースマスタ（空の場合は{}）
+        "course_master_rookie":  course_master_rookie,   # ルーキーSコースマスタ（空の場合は{}）
         "venue_course_master":   venue_course_master,
         "venue_stats":           venue_stats,
         "player_index":          player_index,

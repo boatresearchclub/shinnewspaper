@@ -628,22 +628,39 @@ function buildTopVenueChips() {
   const gradeClass = { SG: 'cg-sg', G1: 'cg-g1', G2: 'cg-g2', G3: 'cg-g3' };
   area.innerHTML = venues.map(v => {
     const finished = isVenueFinished(dataForDate[v]);
-    const style = finished
-      ? 'opacity:0.4;filter:grayscale(0.6);'
-      : '';
     // 当日はRACE_INDEX_DATA、過去日はhistoryデータのrace_infoを使用
     const _dates2 = getAvailableDates();
     const _todayDate2 = _dates2[_dates2.length - 1];
     const _isToday2 = (viewDate || _todayDate2) === _todayDate2;
     const info = _isToday2
-      ? ((RACE_INDEX_DATA && RACE_INDEX_DATA.venues) ? (RACE_INDEX_DATA.venues[v] || null) : null)
+      ? ((RACE_INDEX_DATA && RACE_INDEX_DATA.venues && RACE_INDEX_DATA.venues[v])
+          ? RACE_INDEX_DATA.venues[v]
+          : (dataForDate[v] ? (dataForDate[v].race_info || null) : null))  // RACE_INDEX_DATA に未登録の場合は vdata にフォールバック
       : (dataForDate[v] ? (dataForDate[v].race_info || null) : null);
-    const grade      = info ? (info.grade || '') : '';
-    const isJoshi    = !!(info && info.is_joshi);
-    const day        = info ? (info.day || '') : '';
-    const totalDays  = info ? (info.total_days ?? null) : null;
+    const grade        = info ? (info.grade || '') : '';
+    const isJoshi      = !!(info && info.is_joshi);
+    const day          = info ? (info.day || '') : '';
+    const totalDays    = info ? (info.total_days ?? null) : null;
+    const cancelStatus = info ? (info.cancel_status || null) : null;
+
+    // ── 中止ステータスによるスタイル分岐 ──
+    // 「中止」「取消」: 完全グレーアウト＋クリック無効
+    // 「中止順延」: 薄いグレーアウト（翌日以降の可能性があるためクリック無効だが存在は示す）
+    // 通常終了（finished）: 既存の薄いグレーアウト
+    const isHardCancel = cancelStatus === '中止' || cancelStatus === '取消';
+    const isDelay      = cancelStatus === '中止順延';
+    const style = isHardCancel ? 'opacity:0.45;filter:grayscale(0.8);pointer-events:none;cursor:default;'
+                : isDelay      ? 'opacity:0.55;filter:grayscale(0.4);pointer-events:none;cursor:default;'
+                : finished     ? 'opacity:0.4;filter:grayscale(0.6);'
+                : '';
 
     // ── バッジ構築 ──
+    // 中止系バッジ（cancel_statusがある場合はグレード系より優先して先頭に表示）
+    const cancelBadge = isHardCancel
+      ? `<span class="chip-grade" style="background:#FCEBEB;color:#A32D2D">中止</span>`
+      : isDelay
+      ? `<span class="chip-grade" style="background:#FAEEDA;color:#854F0B">中止順延</span>`
+      : '';
     // グレードバッジ（G1/G2/G3/SG）
     const gcls = gradeClass[grade] || '';
     const gradeBadge = gcls
@@ -653,19 +670,22 @@ function buildTopVenueChips() {
     const joshiBadge = isJoshi
       ? `<span class="chip-grade cg-joshi">女子</span>`
       : '';
-    // 一般バッジ（グレードなし・女子なし の場合のみ）
-    const ippanBadge = (!gcls && !isJoshi)
+    // 一般バッジ（グレードなし・女子なし・中止なし の場合のみ）
+    const ippanBadge = (!gcls && !isJoshi && !cancelBadge)
       ? `<span class="chip-grade cg-ippan">一般</span>`
       : '';
 
-    const badgesHtml  = `<span class="chip-badges">${gradeBadge}${joshiBadge}${ippanBadge}</span>`;
+    const badgesHtml  = `<span class="chip-badges">${cancelBadge}${gradeBadge}${joshiBadge}${ippanBadge}</span>`;
     const nameHtml    = `<span class="chip-name">${v}</span>`;
     const totalStr    = totalDays ? `${totalDays}日間開催` : '';
     const dayHtml     = (day || totalStr)
       ? `<span class="chip-day" style="display:block;text-align:center;font-size:10px;color:var(--text3);line-height:1.6;margin-top:1px">${[day, totalStr].filter(Boolean).join('<br>')}</span>`
       : '';
 
-    return `<span class="top-venue-chip" onclick="jumpToVenueForDate('${v}')" style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
+    // 中止系チップはクリック不可（style に pointer-events:none 設定済み）なので
+    // onclick は付けたままでも発火しないが、明示的に空にして意図を示す
+    const onclick = (isHardCancel || isDelay) ? '' : `onclick="jumpToVenueForDate('${v}')"`;
+    return `<span class="top-venue-chip" ${onclick} style="${style}">${badgesHtml}${nameHtml}${dayHtml}</span>`;
   }).join('');
 }
 
@@ -722,6 +742,16 @@ function updateTopAlertStrip(){
   VENUE_LIST.forEach(venue => {
     const vdata = dataForDate[venue];
     if(!vdata || !vdata.races) return;
+    // 中止・中止順延・取消の会場はアラート対象外
+    const _alertDates = getAvailableDates();
+    const _alertToday = _alertDates[_alertDates.length - 1];
+    const _alertIsToday = (viewDate || _alertToday) === _alertToday;
+    const _alertInfo = _alertIsToday
+      ? ((RACE_INDEX_DATA && RACE_INDEX_DATA.venues && RACE_INDEX_DATA.venues[venue])
+          ? RACE_INDEX_DATA.venues[venue]
+          : (vdata.race_info || null))  // RACE_INDEX_DATA に未登録の場合は vdata にフォールバック
+      : (vdata.race_info || null);
+    if (_alertInfo && _alertInfo.cancel_status) return;
     Object.entries(vdata.races).forEach(([rno, rd]) => {
       if(!rd || !rd.time) return;
       const t = String(rd.time).trim();

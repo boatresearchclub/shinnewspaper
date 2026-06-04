@@ -1,5 +1,20 @@
 // top_stats.js — TOP PAGE AI予想成績（sample.js から分離）
 // ── TOP PAGE: AI予想成績計算 ──
+
+// ── DATA / currentVenue セット/リストアヘルパー ──
+// sample_obf.js 内の DATA 変数はローカルスコープのため window.DATA では書き換えられない。
+// top_stats.js（obf化後も同スコープ）経由でセット/リストアすることで
+// computeScenCombosWithEV.js 等の外部スクリプトから DATA を操作できるようにする。
+window._setDataForCalc = function(vdata, venue) {
+  const saved = { DATA: DATA, venue: currentVenue };
+  DATA = Object.assign({}, vdata, { venue: venue });
+  currentVenue = venue;
+  return saved;
+};
+window._restoreDataForCalc = function(saved) {
+  DATA = saved.DATA;
+  currentVenue = saved.venue;
+};
 //
 // 集計ロジック:
 //   ① RESULT_DATA が存在するレースのみ対象（未確定レースは除外）
@@ -103,7 +118,11 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
     // 一時的に DATA / currentVenue をセットして calcTenkaiProbs 等を利用
     const savedDATA  = DATA;
     const savedVenue = currentVenue;
-    DATA = vdata;
+    // [2026-06-01 修正] vdata は ALL_DATA_HISTORY[date][venue] の値で .venue を持たない。
+    // calc3rdScores / calcPlace2Probs が DATA.venue をグローバル参照するため
+    // DATA = vdata 前に venue を付与しておく（元の vdata は変更しない）。
+    const _vdataWithVenue = (vdata.venue === venue) ? vdata : Object.assign({}, vdata, { venue });
+    DATA = _vdataWithVenue;
     currentVenue = venue;
 
     // 買い目上限（バックテスト用）: buyMode 別に opt_points_hit/rec を参照
@@ -127,7 +146,6 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       const probTotal = ranked.reduce((s, b) => s + b.prob, 0) || 1;
       const useMaster = hasMasterExt() && !!(MASTER_EXT.venue_kimari && MASTER_EXT.venue_kimari[venue]);
       // arek連動動的重みを取得（renderBuy と同一ロジック）
-      const { wBase: _wBase, wTenkai: _wTenkai, wTenji: _wTenji } = calcDynamicWeights(arek);
       const tenkaiOnlyTotal = ranked.reduce((s, x) => s + (x.tenkai_score ?? x.tenkai_prob), 0) || 1;
       // 前コース参照マップ（renderBuy と同一）
       const boatByNo_bt = {};
@@ -140,10 +158,24 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
           if (entry && typeof entry.tenji === 'number') tenjiRawMap_bt[parseInt(k)] = entry.tenji;
         });
       }
+      // ── [2026-05-31 修正] renderBuy と完全同一の加算ボーナス方式 2パス ──
+      // 旧: Math.pow 乗算方式（指数重み）→ prob が低い外枠艇への補正が死んでいた
+      // 新: baseNorm + tenkaiBonus + tenjiBonus + slitBonus - slitPenalty
+      //     スリット補正（slitBonus/slitPenalty）も追加
+      // wSlit を calcDynamicWeights から受け取る
+      const { wBase: _wBase, wTenkai: _wTenkai, wTenji: _wTenji, wSlit: _wSlit } = calcDynamicWeights(arek);
+      const BONUS_BASE_TENKAI_BT = 0.15;
+      const BONUS_BASE_TENJI_BT  = 0.15;
+      const SLIT_BONUS_BASE_BT   = 0.15;
+      const MAKURI_ALERT_BONUS_BT = 0.20;
+      const hasTenji_bt = !!tenjiData;
+
+      // 1パス目: 各係数と baseNorm を保存
       ranked.forEach(b => {
         const baseNorm = b.prob / probTotal;
         const prevBoat = boatByNo_bt[b.boat - 1] || null;
-        // 展開補正 + ST順位相対差補正（renderBuy と同一）
+
+        // 展開補正 + ST順位相対差補正
         let tenkaiCoef = 1.0;
         if (useMaster && baseNorm > 0) {
           const tenkaiNorm = (b.tenkai_score ?? b.tenkai_prob) / tenkaiOnlyTotal;
@@ -156,22 +188,95 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
             tenkaiCoef = Math.min(3.0, Math.max(0.3, tenkaiCoef + (prevStRank - myStRank) * 0.10));
           }
         }
-        // 展示補正 + 展示タイム相対差補正（renderBuy と同一）
+
+        // 展示補正 + 展示タイム相対差補正
         let tenjiCoef = 1.0;
         if (tenjiScoreMap) tenjiCoef = tenjiScoreMap[`__coef_${b.boat}`] ?? 1.0;
-        if (prevBoat && tenjiData) {
+        if (prevBoat && hasTenji_bt) {
           const myTenji   = tenjiRawMap_bt[b.boat]        ?? null;
           const prevTenji = tenjiRawMap_bt[prevBoat.boat] ?? null;
           if (myTenji != null && prevTenji != null) {
             tenjiCoef = Math.min(2.0, Math.max(0.5, tenjiCoef + (prevTenji - myTenji) * 0.50));
           }
         }
-        // [2026-05-18 修正] TENJI_WEIGHT_BY_COURSE 廃止 → コース別感度は calcTenjiScore 内で処理済み
-        const _wTenjiCourse = _wTenji;
-        b._multi_score = Math.pow(baseNorm, _wBase) *
-                         Math.pow(tenkaiCoef, _wTenkai) *
-                         Math.pow(tenjiCoef,  _wTenjiCourse);
+
+        // スリット補正（1パス目）
+        let slitCoef = 1.0;
+        if (prevBoat && hasTenji_bt && _wSlit > 0) {
+          const myTenji    = tenjiRawMap_bt[b.boat]          ?? null;
+          const prevTenji  = tenjiRawMap_bt[prevBoat.boat]   ?? null;
+          const myStRank   = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank         ?? null;
+          const prevStRank = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null;
+          let slitDiff = null;
+          if (myTenji != null && prevTenji != null && myStRank != null && prevStRank != null) {
+            slitDiff = (prevTenji - myTenji) + (prevStRank - myStRank) * 0.02;
+          } else if (myTenji != null && prevTenji != null) {
+            slitDiff = prevTenji - myTenji;
+          } else if (myStRank != null && prevStRank != null) {
+            slitDiff = (prevStRank - myStRank) * 0.02;
+          }
+          if (slitDiff !== null) {
+            const found   = SLIT_LAP_THRESHOLDS.find(t => slitDiff >= t.min);
+            const rawCoef = found ? found.coef : 1.0;
+            slitCoef = 1.0 + (rawCoef - 1.0) * _wSlit;
+          }
+          // まくりアラートボーナス
+          const tenjiAlertDiff = (tenjiRawMap_bt[b.boat] != null && tenjiRawMap_bt[prevBoat.boat] != null)
+            ? Math.round((tenjiRawMap_bt[prevBoat.boat] - tenjiRawMap_bt[b.boat]) * 100) / 100 : null;
+          const tenjiAlertOk = tenjiAlertDiff != null && tenjiAlertDiff >= 0.10;
+          const myStRankA  = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null;
+          const preStRankA = MASTER_EXT?.course_master?.[prevBoat.name]?.[String(prevBoat.boat)]?.st_rank ?? null;
+          const stAlertOk = myStRankA != null && preStRankA != null && (preStRankA - myStRankA >= 0.5);
+          if (tenjiAlertOk && stAlertOk) slitCoef += MAKURI_ALERT_BONUS_BT;
+          slitCoef = Math.min(2.0, Math.max(0.5, slitCoef));
+        }
+
+        b._baseNorm   = baseNorm;
+        b._tenkaiCoef = tenkaiCoef;
+        b._tenjiCoef  = tenjiCoef;
+        b._slitCoef   = slitCoef;
+        b._wTenjiCourse = _wTenji;
       });
+
+      // 2パス目: 加算ボーナス方式 + 後艇スリットペナルティ
+      ranked.forEach(b => {
+        const nextBoat = boatByNo_bt[b.boat + 1] || null;
+        const tenkaiBonus = BONUS_BASE_TENKAI_BT * (b._tenkaiCoef - 1.0) * _wTenkai;
+        const tenjiBonus  = BONUS_BASE_TENJI_BT  * (b._tenjiCoef  - 1.0) * b._wTenjiCourse;
+        const slitBonus   = SLIT_BONUS_BASE_BT   * (b._slitCoef   - 1.0) * _wSlit;
+
+        let slitPenalty = 0;
+        if (nextBoat && hasTenji_bt && _wSlit > 0) {
+          const myTenjiN  = tenjiRawMap_bt[b.boat]          ?? null;
+          const nextTenji = tenjiRawMap_bt[nextBoat.boat]   ?? null;
+          const myStRankN = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank              ?? null;
+          const nextStRank = MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank ?? null;
+          let nextDiff = null;
+          if (myTenjiN != null && nextTenji != null && myStRankN != null && nextStRank != null) {
+            nextDiff = (myTenjiN - nextTenji) + (myStRankN - nextStRank) * 0.02;
+          } else if (myTenjiN != null && nextTenji != null) {
+            nextDiff = myTenjiN - nextTenji;
+          } else if (myStRankN != null && nextStRank != null) {
+            nextDiff = (myStRankN - nextStRank) * 0.02;
+          }
+          if (nextDiff !== null && nextDiff > 0) {
+            const found    = SLIT_LAP_THRESHOLDS.find(t => nextDiff >= t.min);
+            const nextCoef = found ? found.coef : 1.0;
+            slitPenalty = SLIT_BONUS_BASE_BT * (nextCoef - 1.0) * _wSlit;
+          }
+          // まくりアラート追加ペナルティ
+          const nextTenjiAlertOk = myTenjiN != null && nextTenji != null && (nextTenji - myTenjiN <= -0.10);
+          const nxtStRankA = MASTER_EXT?.course_master?.[nextBoat.name]?.[String(nextBoat.boat)]?.st_rank ?? null;
+          const myStRankA2 = MASTER_EXT?.course_master?.[b.name]?.[String(b.boat)]?.st_rank ?? null;
+          const nextStAlertOk = myStRankA2 != null && nxtStRankA != null && (nxtStRankA - myStRankA2 <= -0.5);
+          if (nextTenjiAlertOk && nextStAlertOk) slitPenalty += SLIT_BONUS_BASE_BT * 0.20 * _wSlit;
+        }
+
+        b._multi_score = Math.max(0.001,
+          b._baseNorm + tenkaiBonus + tenjiBonus + slitBonus - slitPenalty
+        );
+      });
+
       const multiTotal = ranked.reduce((s, b) => s + b._multi_score, 0) || 1;
       ranked.forEach(b => { b.final_prob = b._multi_score / multiTotal; });
       ranked.sort((a, b) => b.final_prob - a.final_prob);
@@ -180,8 +285,8 @@ function computeBuy3(venue, vdata, rno, buyMode = 'hit') {
       const place2Map = calcPlace2Probs(rawBoats, ranked);
       const ranked2 = ranked.map(b => ({ ...b, place2_prob: place2Map[b.boat] || 0 }));
 
-      // シナリオ計算
-      const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap);
+      // シナリオ計算（venueOverride を明示渡し: DATA.venue が正しくセットされていても二重保険）
+      const sd = calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venue, _vdataWithVenue);
 
       // 以下 renderBuy と同じ buy3 生成ロジック
       const cRates_buy = (vdata.inn_data || {}).course_rates || [];
@@ -443,7 +548,9 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
   const results = [];
 
   // コンボ正規化（区切り文字を統一）
-  function _normC(c) { return (c || '').replace(/[－−\-]/g, '-'); }
+  // U+FF0D 全角ハイフン、U+2212 MINUS SIGN、U+2013 EN DASH、U+2014 EM DASH、
+  // U+2015 HORIZONTAL BAR、U+2010 HYPHEN、U+002D HYPHEN-MINUS すべて半角ハイフンに統一
+  function _normC(c) { return (c || '').replace(/[－−–—―‐‑‒\-]/g, '-'); }
 
   // 合成オッズ計算ヘルパー
   function _calcSynth(comboStrs, oddsMap) {
@@ -471,6 +578,7 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
       if (!rd || !rd.boats || rd.boats.length < 2) return;
 
       // RESULT_DATA が存在しないレースは未確定 → スキップ
+      // キー形式は resultKey() と同一: "{slug}_{YYYYMMDD}_{rno}"（アンダースコア区切り）
       const rKey   = `${slug}_${dateNd}_${rno}`;
       const result = RESULT_DATA?.[rKey];
       if (!result || !result.sanrentan || result.sanrentan.length === 0) return;
@@ -494,33 +602,81 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
         } else if (typeof computeScenCombos === 'function') {
           combos = computeScenCombos(venue, vdata, rno);
         }
-      } catch(e) { return; }
+      } catch(e) {
+        console.warn('[collectResultsForDateScen] combos取得エラー', venue, rno, e);
+        return;
+      }
 
-      if (combos.length === 0) return;
+      if (combos.length === 0) {
+        if (typeof window._scenDebugCount === 'undefined') window._scenDebugCount = 0;
+        if (window._scenDebugCount < 5) {
+          console.warn('[collectResultsForDateScen] combos空', venue, vdata.date, rno,
+            'computeScenCombosWithEV定義:', typeof computeScenCombosWithEV);
+          window._scenDebugCount++;
+        }
+        return;
+      }
 
       // combos は {c: "1-2-3"} オブジェクト配列 or 文字列配列の両対応
       const comboStrs = combos.map(c => _normC(typeof c === 'object' ? c.c : c));
 
       // ── 合成オッズ計算 ──
-      const raceOdds3t = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
+      // [修正] ODDS_DATA は過去日付分が存在しない。RESULT_DATA.sanrentan をフォールバックに使う。
+      const raceOdds3t_live = ODDS_DATA?.[vdata.date]?.[venue]?.[String(rno)]?.['3t'] || {};
+      const raceOdds3t_result = (() => {
+        const map = {};
+        (result?.sanrentan || []).forEach(s => {
+          if (s?.combo && s?.odds != null && s.odds > 0) {
+            map[_normC(s.combo)] = s.odds >= 100 ? s.odds / 100 : s.odds;
+          }
+        });
+        return map;
+      })();
+      const raceOdds3t = Object.keys(raceOdds3t_live).length > 0 ? raceOdds3t_live : raceOdds3t_result;
       const synth = _calcSynth(comboStrs, raceOdds3t);
 
+      if (synth == null) {
+        if (typeof window._scenSynthDebugCount === 'undefined') window._scenSynthDebugCount = 0;
+        if (window._scenSynthDebugCount < 5) {
+          console.warn('[collectResultsForDateScen] synth=null', venue, vdata.date, rno,
+            'liveKeys:', Object.keys(raceOdds3t_live).length,
+            'resultKeys:', Object.keys(raceOdds3t_result).length,
+            'combos:', comboStrs.slice(0,3));
+          window._scenSynthDebugCount++;
+        }
+      }
+
       // includeAll=false のとき合成オッズ2.0未満は除外
-      if (!includeAll && (synth == null || synth < SCEN_SYNTH_MIN)) return;
+      // ただし synth=null（過去日はODDS_DATAなしのため計算不可）は除外しない
+      // → シナリオ買いパネルは synth 不問で集計し、EV は hitProbEst で代替
+      if (!includeAll && synth != null && synth < SCEN_SYNTH_MIN) return;
 
       // ── 的中チェック ──
       // sanrentan[0] が1着−2着−3着の確定結果
       const actualRaw    = result.sanrentan[0]?.combo ?? null;
       const actualResult = actualRaw ? _normC(actualRaw) : null;
       const resultSet    = actualResult ? new Set([actualResult]) : null;
-      const isHit        = !!(resultSet && comboStrs.some(c => resultSet.has(c)));
+      // 数字列に変換した正規化（例: '3-1-4' → '314'）で照合するフォールバックを追加
+      // 区切り文字の取りこぼしによる isHit ミスを防ぐ
+      const _digitsOnly  = s => (s || '').replace(/[^1-6]/g, '');
+      const actualDigits = actualResult ? _digitsOnly(actualResult) : null;
+      const isHit        = !!(resultSet && (
+        comboStrs.some(c => resultSet.has(c)) ||
+        (actualDigits && actualDigits.length === 3 &&
+          comboStrs.some(c => _digitsOnly(c) === actualDigits))
+      ));
 
       // 的中配当（単位: 円 = collectResultsForDate と同一）
       // RESULT_DATA の sanrentan[0].odds は「倍率」→ ×100 で円換算
       // ただし既に円単位で入っている場合もあるため、100以上の場合はそのまま使う
       let hitOddsVal = 0;
       if (isHit) {
-        const rdOdds = result.sanrentan[0]?.odds ?? null;
+        // sanrentan 全体から actualResult に一致するオッズを探す
+        // （sanrentan[0] が確定1位とは限らないケースへの保険）
+        const _matchedSan = (result?.sanrentan || []).find(s =>
+          s?.combo && _normC(s.combo) === actualResult
+        ) || result.sanrentan[0];
+        const rdOdds = _matchedSan?.odds ?? null;
         if (rdOdds != null && rdOdds > 0) {
           // odds が 100 未満なら「倍率」として扱い ×100、以上なら円単位とみなす
           hitOddsVal = rdOdds < 100 ? Math.round(rdOdds * 100) : rdOdds;
@@ -532,19 +688,15 @@ function collectResultsForDateScen(dateStr, includeAll = false) {
       }
 
       // ── EV 計算（期待値 = 合成オッズ × 想定的中率）──
-      // _scenEVCache は当日分のみ充填されるため、過去30日分は直接計算する
+      // synth が取れた場合: synth × hitProbEst
+      // synth=null（過去日はODDS_DATAなし）の場合:
+      //   的中配当(円)÷100 を合成オッズ代替として使用（1点買い相当の概算）
+      //   → 厳密ではないが EV1.1フィルタの参考値として機能する
       let ev = null;
       if (synth != null && hitProbEst != null) {
         ev = synth * hitProbEst;
-      } else {
-        // hitProbEst が取れない場合は _scenEVCache を参照（当日分のみ有効）
-        const _rDateRaw = vdata.date || '';
-        const _rDateNorm = (_rDateRaw.length === 8 && !_rDateRaw.includes('-'))
-          ? `${_rDateRaw.slice(0,4)}-${_rDateRaw.slice(4,6)}-${_rDateRaw.slice(6,8)}`
-          : _rDateRaw;
-        const _cache = _scenEVCache?.[venue + '_' + _rDateNorm + '_' + rno] ?? null;
-        ev = _cache?.ev ?? null;
       }
+      // ※ _scenEVCache 参照は削除: 当日分のみ有効でバックテスト用途では常に null
 
       // ── 2着・3着 calibration 用フィールド ──
       // actualResult = "1-2-3" 形式。split('-')[1] が2着、[2] が3着の枠番
@@ -1423,7 +1575,7 @@ function buildDateCard(dateStr, label) {
         ${_buildScenEVPanel_dateCard(resultsScenAll)}
         ${_buildScenPanel_dateCard(resultsScen, resultsScenAll)}
         ${resultsInTep.length > 0 ? _buildCondBuyPanel_dateCard(resultsInTep, '🔒 イン鉄板', '1号艇確率75%以上') : ''}
-        ${resultsInNeg.length > 0 ? _buildCondBuyPanel_dateCard(resultsInNeg, '⚡ イン否定', '1号艇確率が場平均-10%以下') : ''}
+        ${resultsInNeg.length > 0 ? _buildCondBuyPanel_dateCard(resultsInNeg, '⚡ イン否定', '1号艇確率が場平均-Nσ以下（σなし時:10%pt固定）') : ''}
         ${modePanel(resultsHit, '🎯 的中重視', 2.0)}
         ${modePanel(resultsRec, '💰 回収重視', 4.0)}
       </div>
@@ -1485,7 +1637,8 @@ function calcTopAIStats() {
       let allResultsInTep = [];
       let allResultsInNeg = [];
 
-      const _cacheKey = 'aiStats30_' + todayDate + '_' + past30[0] + '_' + past30[past30.length - 1] + '_' + past30.length + '_v5';
+      // [2026-06-01] v6→v7: ev=null が混入したキャッシュを自動破棄するためバージョン更新
+      const _cacheKey = 'aiStats30_' + todayDate + '_' + past30[0] + '_' + past30[past30.length - 1] + '_' + past30.length + '_v10';
       let _cacheHit = false;
       try {
         const _cached = sessionStorage.getItem(_cacheKey);
@@ -1533,17 +1686,24 @@ function calcTopAIStats() {
               allResultsInNeg.push(...rIn);
             }
             try {
-              Object.keys(sessionStorage)
-                .filter(k => k.startsWith('aiStats30_'))
-                .forEach(k => sessionStorage.removeItem(k));
-              sessionStorage.setItem(_cacheKey, JSON.stringify({
-                hit: allResultsHit,
-                rec: allResultsRec,
-                scen: allResultsScen,
-                scenAll: allResultsScenAll,
-                inTep: allResultsInTep,
-                inNeg: allResultsInNeg
-              }));
+              // [2026-06-01 修正] 全30日の計算が完了した場合のみキャッシュ保存する。
+              // 途中でページ離脱・例外が起きた場合は for ループが完走しないため
+              // ここには到達しない → 空/途中データがキャッシュされるバグを防止。
+              // さらに scenAll が空の場合も保存しない（データ取得失敗の可能性）。
+              const _isComplete = allResultsScenAll.length > 0 || allResultsHit.length > 0;
+              if (_isComplete) {
+                Object.keys(sessionStorage)
+                  .filter(k => k.startsWith('aiStats30_'))
+                  .forEach(k => sessionStorage.removeItem(k));
+                sessionStorage.setItem(_cacheKey, JSON.stringify({
+                  hit: allResultsHit,
+                  rec: allResultsRec,
+                  scen: allResultsScen,
+                  scenAll: allResultsScenAll,
+                  inTep: allResultsInTep,
+                  inNeg: allResultsInNeg
+                }));
+              }
             } catch(e) { /* sessionStorage 書き込み失敗（容量超過等）は無視 */ }
             _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResultsScenAll, allResultsInTep, allResultsInNeg);
           } catch(e) { console.warn('[calcTopAIStats] 30日集計エラー:', e); }
@@ -1675,8 +1835,18 @@ function _buildHitSokuhoPanel(dateStr) {
         } catch(_e) {}
       }
 
-      // 合成オッズ 2.0倍以上 → 「シナリオ買い」
-      if (synth != null && synth >= SCEN_SYNTH_MIN) {
+      // synth=null（確定後はODDS_DATA消滅）の場合: hitOdds÷100÷買い目数 で合成オッズを概算
+      if (synth == null && r.buy3cnt > 0) {
+        const hitOddsVal = r.hitOdds ?? 0;
+        if (hitOddsVal > 0) synth = (hitOddsVal / 100) / r.buy3cnt;
+      }
+      // ev=null かつ hitRate があれば再計算
+      if (ev == null && synth != null && r.hitRate != null) {
+        ev = synth * r.hitRate;
+      }
+
+      // 合成オッズ 2.0倍以上 or synth不明 → 「シナリオ買い」
+      if (synth == null || synth >= SCEN_SYNTH_MIN) {
         labeledResults.push({ ...r, _sokuhoLabel: '🎲 シナリオ買い' });
       }
       // EV 1.1以上 → 「期待値1.1」
@@ -1784,7 +1954,9 @@ function _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResul
     el.textContent = `更新：${mm}/${dd} ${hh}:${min}`;
   }
 
-  if (allResultsHit.length === 0 && allResultsRec.length === 0) {
+  if (allResultsHit.length === 0 && allResultsRec.length === 0
+      && allResultsScen.length === 0 && allResultsScenAll.length === 0
+      && allResultsInTep.length === 0 && allResultsInNeg.length === 0) {
     elHistory.innerHTML = `<div class="ai-stats-card"><div style="color:var(--text3);font-size:12px;text-align:center;padding:0.5rem 0">確定レースがありません</div></div>`;
     updateHistoryTimestamp();
     return;
@@ -1884,7 +2056,11 @@ function _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResul
   _renderCalibrationPanel(allResultsScenAll);
 
   // ── 直近3日集計用データ生成 ──
-  const _recentDates3 = [...new Set(allResultsScenAll.map(r => r.date).filter(Boolean))]
+  const _allDatesPool3 = [
+    ...allResultsScenAll, ...allResultsHit, ...allResultsRec,
+    ...allResultsInTep, ...allResultsInNeg
+  ];
+  const _recentDates3 = [...new Set(_allDatesPool3.map(r => r.date).filter(Boolean))]
     .sort().slice(-3);
   const _filter3 = arr => arr.filter(r => _recentDates3.includes(r.date));
   const _scenAll3 = _filter3(allResultsScenAll);
@@ -1898,7 +2074,7 @@ function _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResul
     : '直近3日';
 
   // ── 日別集計カード生成（直近7日） ──
-  const _recentDates7 = [...new Set(allResultsScenAll.map(r => r.date).filter(Boolean))]
+  const _recentDates7 = [...new Set(_allDatesPool3.map(r => r.date).filter(Boolean))]
     .sort().slice(-7).reverse();
   const _dailyCards = _recentDates7.map(d => {
     const _d3    = allResultsScenAll.filter(r => r.date === d);
@@ -1938,7 +2114,8 @@ function _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResul
     </div>`;
   }).join('');
 
-  elHistory.innerHTML = `
+  const _isAdminStats = document.body.classList.contains('admin-mode');
+  const _adminOnlyBlocks = _isAdminStats ? `
     <div class="ai-stats-card" style="margin-bottom:0.6rem">
       <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;margin-bottom:0.5rem">📅 日別集計（直近7日 / EV1.1+）</div>
       <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;-webkit-overflow-scrolling:touch">
@@ -1951,18 +2128,19 @@ function _renderHistory30(allResultsHit, allResultsRec, allResultsScen, allResul
         ${_buildScenEV30Panel(_scenAll3)}
         ${_buildScen30Panel(_scen3, _scenAll3)}
         ${_inTep3.length > 0 ? _buildCondBuyPanel30(_inTep3, '🔒 イン鉄板', '1号艇確率75%以上') : ''}
-        ${_inNeg3.length > 0 ? _buildCondBuyPanel30(_inNeg3, '⚡ イン否定', '1号艇確率が場平均-10%以下') : ''}
+        ${_inNeg3.length > 0 ? _buildCondBuyPanel30(_inNeg3, '⚡ イン否定', '1号艇確率が場平均-Nσ以下（σなし時:10%pt固定）') : ''}
         ${mode30Panel(_hit3, '🎯 的中重視', 2.0)}
         ${mode30Panel(_rec3, '💰 回収重視', 4.0)}
       </div>
-    </div>
+    </div>` : '';
+  elHistory.innerHTML = _adminOnlyBlocks + `
     <div class="ai-stats-card" style="margin-bottom:0.6rem">
       <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;margin-bottom:0.5rem">📈 過去30日集計</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
         ${_buildScenEV30Panel(allResultsScenAll)}
         ${_buildScen30Panel(allResultsScen, allResultsScenAll)}
         ${allResultsInTep.length > 0 ? _buildCondBuyPanel30(allResultsInTep, '🔒 イン鉄板', '1号艇確率75%以上') : ''}
-        ${allResultsInNeg.length > 0 ? _buildCondBuyPanel30(allResultsInNeg, '⚡ イン否定', '1号艇確率が場平均-10%以下') : ''}
+        ${allResultsInNeg.length > 0 ? _buildCondBuyPanel30(allResultsInNeg, '⚡ イン否定', '1号艇確率が場平均-Nσ以下（σなし時:10%pt固定）') : ''}
         ${mode30Panel(allResultsHit, '🎯 的中重視', 2.0)}
         ${mode30Panel(allResultsRec, '💰 回収重視', 4.0)}
       </div>

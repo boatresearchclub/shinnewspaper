@@ -140,7 +140,7 @@ async def _fetch_race_async(
     fpath = ODDS_DIR / f"odds_{slug}_{date_nd}_R{rno:02d}.json"
 
     # 既存ファイルスキップ
-    if not overwrite and fpath.exists():
+    if not overwrite and fpath.exists() and fpath.stat().st_size > 100:
         counter["skip"] += 1
         return True, True
 
@@ -197,7 +197,7 @@ def collect_venue_dates(days: int) -> list[tuple[str, str]]:
     today = datetime.now().date()
     target_dates = {
         (today - timedelta(days=d)).strftime("%Y-%m-%d")
-        for d in range(1, days + 1)
+        for d in range(0, days + 1)  # 0を含めて当日分も対象
     }
 
     found: list[tuple[str, str]] = []
@@ -239,6 +239,50 @@ def collect_venue_dates(days: int) -> list[tuple[str, str]]:
             print(f"  ⚠ CSV読込スキップ {fname}: {e}", flush=True)
 
     return found
+
+
+def collect_today_deadlines() -> dict:
+    """
+    今日のCSVから締切済みレース番号を取得する。
+    戻り値: {(venue_name, date_str): {締め切り済みrno, ...}}
+    今日以外の日付は対象外（過去日は全レース対象のため不要）。
+    """
+    today_str = datetime.now().date().strftime("%Y-%m-%d")
+    now_time  = datetime.now().strftime("%H:%M")
+    result = {}
+
+    for csv_path in sorted(glob.glob(str(CSV_DIR / "*.csv"))):
+        if today_str not in Path(csv_path).name:
+            continue
+        try:
+            try:
+                df = pd.read_csv(csv_path, encoding="utf-8")
+            except UnicodeDecodeError:
+                df = pd.read_csv(csv_path, encoding="shift_jis")
+
+            if "会場" not in df.columns or "締切時刻" not in df.columns:
+                continue
+
+            vname = str(df.iloc[0]["会場"]).strip()
+            if vname not in VENUE_SLUG:
+                continue
+
+            closed = set()
+            for _, row in df.iterrows():
+                rno_raw = row.get("レース", "")
+                dl_raw  = str(row.get("締切時刻", "")).strip()
+                if not str(rno_raw).isdigit() or not dl_raw or dl_raw == "nan":
+                    continue
+                dl = dl_raw[:5]  # "HH:MM" に正規化
+                if dl <= now_time:
+                    closed.add(int(rno_raw))
+
+            result[(vname, today_str)] = closed
+
+        except Exception as e:
+            print(f"  ⚠ 締切時刻CSV読込スキップ {Path(csv_path).name}: {e}", flush=True)
+
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -289,12 +333,26 @@ async def fetch_history_async(
 
     venue_dates.sort(key=lambda x: x[1], reverse=True)
 
+    # 今日分は締め切り済みレースのみ対象（未来レースは auto_push.py に任せる）
+    today_str     = datetime.now().date().strftime("%Y-%m-%d")
+    today_closed  = collect_today_deadlines()  # {(venue, date): {rno, ...}}
+
     tasks_info: list[tuple[str, str, str, int]] = []
+    skipped_future = 0
     for venue_name, date_str in venue_dates:
         slug    = VENUE_SLUG[venue_name]
         date_nd = date_str.replace("-", "")
         for rno in range(1, 13):
+            # 今日分：締め切り済みレースのみ追加
+            if date_str == today_str:
+                closed = today_closed.get((venue_name, today_str), set())
+                if rno not in closed:
+                    skipped_future += 1
+                    continue
             tasks_info.append((venue_name, slug, date_nd, rno))
+
+    if skipped_future:
+        print(f"  ℹ 今日の未締切レース {skipped_future}件はスキップ（締切後に自動取得されます）")
 
     total    = len(tasks_info)
     existing = sum(
