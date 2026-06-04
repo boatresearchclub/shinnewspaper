@@ -595,30 +595,89 @@
       }
 
       // ── inn_2place ベース（イン鉄板時）──
+      // 場平均乖離率フィルタ付き: シナリオ加重2着確率 / inn_2place[boat] >= 1.2 の艇を優先。
+      // inn_2place 未取得・乖離率フィルタで0艇になった場合は乖離率1位にフォールバック。
+      const _IT_P2_DIVERGE_MIN = 1.2; // buildInTepBuyPanel の IT_P2_DIVERGE_MIN と同値
       function getInnTepP2Ranking() {
-        const inn2p = sd.inn2Place || {};
-        const sorted = Object.entries(inn2p)
+        // シナリオ加重2着確率マップを算出（getP2Ranking と同一ロジック）
+        const wMap = {};
+        if (sd.scenarioPlace2?.[1]) {
+          let ws = 0;
+          for (const [kimari, list] of Object.entries(sd.scenarioPlace2[1])) {
+            const sp = sd.scenarioProb?.[1]?.[kimari] ?? 0;
+            ws += sp;
+            (list || []).forEach(x => {
+              wMap[x.boat] = (wMap[x.boat] ?? 0) + x.p2 * sp;
+            });
+          }
+          if (ws > 0) Object.keys(wMap).forEach(k => { wMap[k] /= ws; });
+        }
+
+        // inn_2place 取得（vdata 優先 → MASTER_EXT フォールバック）
+        const inn2p = (() => {
+          const v = (vdata.inn_data || {}).inn_2place;
+          if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
+          return (typeof MASTER_EXT !== 'undefined') ? MASTER_EXT?.venue_stats?.[venue]?.inn_2place || null : null;
+        })();
+
+        // 加重確率降順リスト（1号艇除く）
+        const boats = Object.entries(Object.keys(wMap).length > 0 ? wMap : {})
+          .map(([b, w]) => ({ boat: parseInt(b), w }))
+          .filter(x => x.boat !== 1 && !isNaN(x.boat))
+          .sort((a, b) => b.w - a.w);
+
+        if (boats.length === 0) return getP2Ranking(1).filter(b => b !== 1);
+
+        if (inn2p) {
+          // 乖離率フィルタ適用
+          const diverged = boats.filter(x => {
+            const avg = inn2p[String(x.boat)] ?? inn2p[x.boat] ?? null;
+            if (avg == null || avg <= 0) return true; // 場平均データなし → 通過
+            return (x.w / avg) >= _IT_P2_DIVERGE_MIN;
+          });
+          // 0艇になったら乖離率1位（boats[0]）のみ採用
+          return (diverged.length > 0 ? diverged : boats.slice(0, 1)).map(x => x.boat);
+        }
+
+        // inn_2place なし → 従来の inn2Place ベース or 加重確率順
+        const inn2pLegacy = sd.inn2Place || {};
+        const legacySorted = Object.entries(inn2pLegacy)
           .map(([k, v]) => ({ boat: parseInt(k), rate: v }))
           .filter(x => !isNaN(x.boat) && x.boat !== 1)
           .sort((a, b) => b.rate - a.rate)
           .map(x => x.boat);
-        return sorted.length > 0 ? sorted : getP2Ranking(1);
+        return legacySorted.length > 0 ? legacySorted : boats.map(x => x.boat);
       }
 
-      // ── 3着確率上位リスト ──
+      // ── 3着確率上位リスト（最下位カット付き）──
+      // AND条件: 平均×0.5未満 かつ 絶対値0.10未満 を満たす最下位艇をカット。
+      // buildInTepBuyPanel の IT_P3_TAIL_RATIO / IT_P3_ABS_MIN と同値。
+      const _IT_P3_TAIL_RATIO = 0.5;
+      const _IT_P3_ABS_MIN    = 0.10;
       function getP3Ranking(winnerBoat, secondBoat) {
+        let list;
         const thirdAll = sd.merged3rdMap?.[winnerBoat]?.[secondBoat] || [];
         if (thirdAll.length > 0) {
-          return thirdAll
+          list = thirdAll
             .filter(x => x.boat !== winnerBoat && x.boat !== secondBoat)
-            .slice(0, 3)
-            .map(x => x.boat);
+            .map(x => ({ boat: x.boat, r3: x.r3 ?? 0 }));
+        } else {
+          list = ranked2
+            .filter(r => r.boat !== winnerBoat && r.boat !== secondBoat)
+            .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+            .map(r => ({ boat: r.boat, r3: r.final_prob ?? 0 }));
         }
-        return ranked2
-          .filter(r => r.boat !== winnerBoat && r.boat !== secondBoat)
-          .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
-          .map(r => r.boat)
-          .slice(0, 3);
+
+        // 最下位カット（2艇以上のときのみ）
+        if (list.length >= 2) {
+          const avg = list.reduce((s, x) => s + x.r3, 0) / list.length;
+          const tail = list[list.length - 1];
+          if (tail.r3 < avg * _IT_P3_TAIL_RATIO && tail.r3 < _IT_P3_ABS_MIN) {
+            list = list.slice(0, -1);
+          }
+        }
+
+        return list.map(x => x.boat).slice(0, 3);
       }
 
       // ── makeBlock（forward + backward）──
