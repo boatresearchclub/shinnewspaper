@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>宮島G1 チャンピオンカップ 2026 ｜ 分析ダッシュボード</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6fb;
+  --bg2:#ffffff;
+  --bg3:#eef1f8;
+  --bg4:#e4e9f4;
+  --bd:rgba(0,0,0,.08);
+  --bd2:rgba(0,0,0,.14);
+  --tx:#0f172a;
+  --mu:#64748b;
+  --ac:#0ea5e9;
+  --ac2:#f59e0b;
+  --ac3:#10b981;
+  --rd:#ef4444;
+  --pu:#8b5cf6;
+  --tl:#14b8a6;
+  --nav-h:56px;
+  --filter-h:52px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--bg);
+  color:var(--tx);
+  font-size:14px;
+  min-height:100vh;
+}
+
+/* ===== HEADER ===== */
+.hd{
+  background:linear-gradient(135deg,#07090f 0%,#0a1220 50%,#0d1a2e 100%);
+  border-bottom:1px solid rgba(56,189,248,.15);
+  padding:14px 16px;
+  position:sticky;
+  top:0;
+  z-index:200;
+}
+.hd-inner{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{
+  background:linear-gradient(135deg,var(--ac),#0ea5e9);
+  color:#000;
+  font-family:'Oswald',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  padding:3px 10px;
+  border-radius:20px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.hd-title{
+  font-family:'Oswald',sans-serif;
+  font-size:clamp(15px,4vw,20px);
+  font-weight:700;
+  color:#fff;
+  line-height:1.2;
+}
+.hd-sub{font-size:10px;color:var(--mu);margin-top:2px}
+.hd-stats{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  overflow-x:auto;
+  padding-bottom:2px;
+  -webkit-overflow-scrolling:touch;
+}
+.stat-pill{
+  background:var(--bg3);
+  border:1px solid var(--bd2);
+  border-radius:8px;
+  padding:6px 12px;
+  text-align:center;
+  flex-shrink:0;
+}
+.stat-num{font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;color:var(--ac);line-height:1}
+.stat-lbl{font-size:9px;color:var(--mu);margin-top:2px;white-space:nowrap}
+
+/* ===== 初心者向けガイド ===== */
+.beginner-banner{
+  margin:12px 12px 0;
+  background:linear-gradient(135deg,rgba(56,189,248,.08),rgba(167,139,250,.06));
+  border:1px solid rgba(56,189,248,.2);
+  border-radius:12px;
+  padding:12px 14px;
+}
+.bb-title{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--ac);
+  margin-bottom:8px;
+}
+.bb-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.bb-item{
+  background:rgba(255,255,255,.04);
+  border-radius:8px;
+  padding:8px 10px;
+  font-size:11px;
+  line-height:1.6;
+  color:var(--mu);
+}
+.bb-item strong{display:block;color:var(--tx);font-size:11px;margin-bottom:2px}
+
+/* ===== NAV TABS ===== */
+.nav{
+  background:var(--bg2);
+  border-bottom:1px solid var(--bd);
+  padding:0 12px;
+  overflow-x:auto;
+  display:flex;
+  gap:0;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  position:sticky;
+  top:var(--nav-h);
+  z-index:190;
+}
+.nav::-webkit-scrollbar{display:none}
+.nt{
+  padding:12px 14px;
+  font-size:12px;
+  color:var(--mu);
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  white-space:nowrap;
+  font-weight:500;
+  transition:.2s;
+  flex-shrink:0;
+}
+.nt:hover{color:var(--tx)}
+.nt.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+/* ===== FILTER BAR ===== */
+.fb{
+  background:var(--bg2);
+  border-bottom:1px solid var(--bd);
+  padding:8px 12px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  position:sticky;
+  top:calc(var(--nav-h) + 44px);
+  z-index:180;
+}
+.fb::-webkit-scrollbar{display:none}
+.fl{font-size:11px;color:var(--mu);flex-shrink:0}
+.ch{
+  font-size:11px;
+  padding:5px 12px;
+  border-radius:20px;
+  border:1px solid var(--bd2);
+  color:var(--mu);
+  cursor:pointer;
+  transition:.2s;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.ch:active{transform:scale(.96)}
+.ch.on{background:rgba(56,189,248,.12);border-color:var(--ac);color:var(--ac)}
+.sb{
+  background:var(--bg3);
+  border:1px solid var(--bd2);
+  border-radius:20px;
+  padding:5px 12px;
+  color:var(--tx);
+  font-size:12px;
+  min-width:120px;
+  outline:none;
+  font-family:'Noto Sans JP',sans-serif;
+  flex-shrink:0;
+}
+.sb:focus{border-color:var(--ac)}
+
+/* ===== MAIN ===== */
+.mn{padding:12px}
+
+/* ===== PICKS HERO ===== */
+.picks-hero{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+@media(max-width:500px){
+  .picks-hero{grid-template-columns:1fr}
+}
+.ph-card{
+  border-radius:14px;
+  padding:14px;
+  position:relative;
+  overflow:hidden;
+}
+.ph1{background:linear-gradient(135deg,rgba(52,211,153,.1),rgba(52,211,153,.03));border:1px solid rgba(52,211,153,.25)}
+.ph2{background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(251,191,36,.03));border:1px solid rgba(251,191,36,.25)}
+.ph3{background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(167,139,250,.03));border:1px solid rgba(167,139,250,.25)}
+.ph-label{font-size:11px;font-weight:700;margin-bottom:4px}
+.ph1 .ph-label{color:var(--ac3)}.ph2 .ph-label{color:var(--ac2)}.ph3 .ph-label{color:var(--pu)}
+.ph-name{font-size:16px;font-weight:900;color:#fff;margin-bottom:6px}
+.ph-reason{font-size:10px;color:var(--mu);line-height:1.6}
+
+/* ===== KPI CARDS ===== */
+.kpi-row{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
+  gap:8px;
+  margin-bottom:12px;
+}
+.kc{
+  background:var(--bg3);
+  border:1px solid var(--bd);
+  border-radius:12px;
+  padding:12px 14px;
+  position:relative;
+  overflow:hidden;
+}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:12px 12px 0 0}
+.kc.bl::before{background:linear-gradient(90deg,var(--ac),#0ea5e9)}
+.kc.am::before{background:linear-gradient(90deg,var(--ac2),#f59e0b)}
+.kc.gr::before{background:linear-gradient(90deg,var(--ac3),#10b981)}
+.kc.pu::before{background:linear-gradient(90deg,var(--pu),#8b5cf6)}
+.kc.rd::before{background:linear-gradient(90deg,var(--rd),#ef4444)}
+.kl{font-size:10px;color:var(--mu);margin-bottom:4px}
+.kn{font-family:'Oswald',sans-serif;font-size:24px;font-weight:700;line-height:1}
+.kc.bl .kn{color:var(--ac)}.kc.am .kn{color:var(--ac2)}.kc.gr .kn{color:var(--ac3)}.kc.pu .kn{color:var(--pu)}.kc.rd .kn{color:var(--rd)}
+.ks{font-size:10px;color:var(--mu);margin-top:4px}
+
+/* ===== PANEL ===== */
+.pn{
+  background:var(--bg2);
+  border:1px solid var(--bd);
+  border-radius:14px;
+  padding:14px;
+  margin-bottom:10px;
+}
+.pt{
+  font-size:12px;
+  font-weight:700;
+  color:var(--mu);
+  letter-spacing:.05em;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.pt .accent{color:var(--ac)}
+.pt-help{
+  margin-left:auto;
+  font-size:10px;
+  color:var(--mu);
+  background:var(--bg3);
+  border:1px solid var(--bd);
+  padding:2px 8px;
+  border-radius:20px;
+  cursor:pointer;
+  font-weight:400;
+}
+
+/* ===== TABLE ===== */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px}
+.tb{width:100%;border-collapse:collapse;font-size:12px}
+.tb th{
+  padding:8px 8px;
+  text-align:left;
+  color:var(--mu);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.04em;
+  border-bottom:1px solid var(--bd2);
+  cursor:pointer;
+  white-space:nowrap;
+  user-select:none;
+  background:var(--bg3);
+  position:sticky;
+  top:0;
+}
+.tb th:hover,.tb th.on{color:var(--ac)}
+.tb td{padding:8px 8px;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap}
+.tb tr:last-child td{border-bottom:none}
+.tb tr:hover td{background:rgba(56,189,248,.04)}
+
+/* ===== SCORE BADGE ===== */
+.rb{
+  width:22px;height:22px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-family:'Oswald',sans-serif;font-size:10px;font-weight:700;
+  flex-shrink:0;
+}
+.r1{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#000;box-shadow:0 0 8px rgba(251,191,36,.4)}
+.r2{background:linear-gradient(135deg,#94a3b8,#64748b);color:#000}
+.r3{background:linear-gradient(135deg,#b45309,#92400e);color:#fff}
+.rn{background:var(--bg3);color:var(--mu)}
+
+/* ===== TAGS ===== */
+.nm{font-weight:700;color:var(--tx)}
+.tg{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700;margin-left:3px;vertical-align:middle}
+.tga{background:rgba(251,191,36,.2);color:var(--ac2)}
+.tgs{background:rgba(56,189,248,.15);color:var(--ac)}
+.tgst{background:rgba(167,139,250,.2);color:var(--pu)}
+.tgf{background:rgba(52,211,153,.2);color:var(--ac3)}
+.tgr{background:rgba(248,113,113,.2);color:var(--rd)}
+
+/* ===== SCORE PILL ===== */
+.ps{display:inline-block;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700}
+.phi{background:rgba(52,211,153,.12);color:var(--ac3);border:1px solid rgba(52,211,153,.25)}
+.pmd{background:rgba(251,191,36,.12);color:var(--ac2);border:1px solid rgba(251,191,36,.25)}
+.plo{background:rgba(107,122,149,.1);color:var(--mu);border:1px solid var(--bd)}
+.pbl{background:rgba(56,189,248,.12);color:var(--ac);border:1px solid rgba(56,189,248,.25)}
+.ppu{background:rgba(167,139,250,.12);color:var(--pu);border:1px solid rgba(167,139,250,.25)}
+
+/* ===== LEGEND ===== */
+.lg{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--mu);margin-bottom:10px;padding:10px;background:var(--bg3);border-radius:8px}
+.lgi{display:flex;align-items:center;gap:4px}
+.lgd{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+/* ===== TABS ===== */
+.tc{display:none}
+.tc.on{display:block}
+
+/* ===== BAR / CHART ===== */
+.bar-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 0;
+  border-bottom:1px solid rgba(255,255,255,.03);
+}
+.bar-row:last-child{border-bottom:none}
+.bar-name{width:80px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)}
+.bar-name-sm{width:28px;font-size:11px;color:var(--mu)}
+.bar-track{flex:1;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .4s ease}
+.bar-val{font-family:'Oswald',sans-serif;font-size:12px;min-width:40px;text-align:right}
+.mini-bar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;background:var(--bg3);border:1px solid var(--bd2);color:var(--mu);flex-shrink:0}
+.mini-bar.ace{background:rgba(251,191,36,.12);border-color:var(--ac2);color:var(--ac2)}
+.player-bar-row{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.player-bar-row:last-child{border-bottom:none}
+.pbar-track{width:70px;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.pbar-fill{height:100%;border-radius:3px}
+.pbar-val{font-family:'Oswald',sans-serif;font-size:12px;min-width:36px;text-align:right}
+.ts{font-family:'Oswald',sans-serif;font-size:15px;font-weight:700}
+
+/* ===== COURSE GRID ===== */
+.course-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px}
+.course-card{
+  background:var(--bg3);
+  border:1px solid var(--bd);
+  border-radius:10px;
+  padding:8px 4px;
+  text-align:center;
+}
+.cc-num{font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;margin-bottom:2px}
+.cc-val{font-family:'Oswald',sans-serif;font-size:16px;font-weight:700}
+.cc-lbl{font-size:9px;color:var(--mu);margin-top:2px}
+
+/* ===== PICKS DETAIL ===== */
+.pick-card{
+  background:var(--bg3);
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:10px;
+  border-left:3px solid transparent;
+}
+.pick-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.pick-label{font-size:11px;font-weight:700;margin-bottom:3px}
+.pick-name{font-size:18px;font-weight:900;color:#fff}
+.pick-score{text-align:right}
+.pick-score-num{font-family:'Oswald',sans-serif;font-size:24px;font-weight:700;line-height:1}
+.pick-score-lbl{font-size:10px;color:var(--mu);margin-top:2px}
+.pick-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.pick-points{list-style:none;font-size:12px;line-height:2;color:var(--mu)}
+.pick-points li{display:flex;gap:6px;align-items:flex-start}
+.pick-points li::before{content:'▸';flex-shrink:0;margin-top:2px}
+
+/* ===== BETTING TIPS ===== */
+.bet-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:480px){.bet-grid{grid-template-columns:1fr}}
+.bet-card{background:var(--bg3);border-radius:10px;padding:12px}
+.bet-type{font-size:12px;font-weight:700;margin-bottom:6px}
+.bet-desc{font-size:10px;color:var(--mu);margin-bottom:6px}
+.bet-combos{font-size:13px;font-weight:700;line-height:2;color:var(--tx)}
+.bet-note{margin-top:6px;font-size:10px;color:var(--mu)}
+
+/* ===== TOOLTIP / HELP ===== */
+.help-box{
+  display:none;
+  background:var(--bg4);
+  border:1px solid rgba(56,189,248,.2);
+  border-radius:10px;
+  padding:12px;
+  font-size:11px;
+  color:var(--mu);
+  line-height:1.8;
+  margin-top:8px;
+}
+.help-box.show{display:block}
+.help-box strong{color:var(--tx)}
+
+/* ===== TABLE FOOTER ===== */
+.tf2{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 0 0;
+  font-size:11px;
+  color:var(--mu);
+  flex-wrap:wrap;
+  gap:4px;
+}
+
+/* ===== SCORE BAR ===== */
+.score-bar{display:flex;height:7px;border-radius:4px;overflow:hidden;gap:1px;width:72px}
+
+/* ===== MOBILE SCORE CARD ===== */
+.score-card-mobile{
+  display:none;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:12px;
+}
+@media(max-width:600px){
+  .score-card-mobile{display:flex}
+  .tbl-wrap .desktop-table{display:none}
+}
+.smc{
+  background:var(--bg3);
+  border:1px solid var(--bd);
+  border-radius:12px;
+  padding:12px;
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+}
+.smc-rank{flex-shrink:0}
+.smc-body{flex:1;min-width:0}
+.smc-name{font-size:15px;font-weight:900;color:#fff;margin-bottom:4px}
+.smc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.smc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.smc-stat{background:var(--bg4);border-radius:6px;padding:5px 7px;text-align:center}
+.smc-stat-val{font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;line-height:1}
+.smc-stat-lbl{font-size:9px;color:var(--mu);margin-top:2px}
+.smc-score{text-align:right;flex-shrink:0}
+.smc-score-num{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700;line-height:1}
+.smc-score-lbl{font-size:9px;color:var(--mu);margin-top:2px}
+.smc-bar{width:100%;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:6px}
+.smc-bar-fill{height:100%;border-radius:3px}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:600px){
+  .bb-grid{grid-template-columns:1fr}
+  .picks-hero{grid-template-columns:1fr 1fr}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .course-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:380px){
+  .picks-hero{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hd">
+  <div class="hd-inner">
+    <span class="badge">宮島 G1</span>
+    <div>
+      <div class="hd-title">チャンピオンカップ 開設72周年記念</div>
+      <div class="hd-sub">2026年6月5〜10日 ／ 実データ分析版（2026-06-04更新）</div>
+    </div>
+  </div>
+  <div class="hd-stats">
+    <div class="stat-pill"><div class="stat-num">52</div><div class="stat-lbl">出場選手</div></div>
+    <div class="stat-pill"><div class="stat-num">1,560</div><div class="stat-lbl">宮島G1レース数</div></div>
+    <div class="stat-pill"><div class="stat-num" style="color:var(--ac2)">56.6%</div><div class="stat-lbl">イン逃げ率（実測）</div></div>
+    <div class="stat-pill" style="border-color:rgba(52,211,153,.3)"><div class="stat-num" style="font-size:10px;color:var(--ac3)">実データ反映済</div><div class="stat-lbl">フォーム×ST実測</div></div>
+  </div>
+</div>
+
+<!-- BEGINNER GUIDE -->
+<div class="beginner-banner">
+  <div class="bb-title">
+    <span>🔰</span> はじめての方向け：見方ガイド
+    <span style="margin-left:auto;cursor:pointer;font-size:11px;color:var(--mu)" onclick="toggleGuide()">▼ 開閉</span>
+  </div>
+  <div id="beginner-guide" class="bb-grid">
+    <div class="bb-item"><strong>🏅 総合スコア（pt）</strong>モーター性能・前検タイム・スタート安定性・直近成績を合算した「買いやすさ指数」。高いほど注目。</div>
+    <div class="bb-item"><strong>🚀 フォーム指数</strong>直近のレース成績をもとにした「今の調子」スコア。10以上なら超好調！</div>
+    <div class="bb-item"><strong>⚡ M2連対率（モーター）</strong>乗っているモーターの勝率。40%以上はエース格の強いモーター。</div>
+    <div class="bb-item"><strong>⏱ スタート安定スコア</strong>フライング（早すぎ）やスタート遅れが少ない選手ほど高い。80点以上なら超安定。</div>
+    <div class="bb-item"><strong>⛵ 前検タイム（秒）</strong>本番前の練習タイム。数値が小さいほど艇の動きが速い。6.75以下が目安。</div>
+    <div class="bb-item"><strong>🎯 宮島1C実績</strong>この会場のインコース（1番枠）での勝率。1コースの選手が重要！</div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nt on" onclick="tab('score')">📊 総合スコア</div>
+  <div class="nt" onclick="tab('picks')">⭐ 注目PICKS</div>
+  <div class="nt" onclick="tab('motor')">⚙️ モーター</div>
+  <div class="nt" onclick="tab('time')">⏱ 前検タイム</div>
+  <div class="nt" onclick="tab('st')">📈 ST・フォーム</div>
+  <div class="nt" onclick="tab('venue')">🗾 会場傾向</div>
+</div>
+
+<!-- FILTER -->
+<div class="fb">
+  <span class="fl">絞込：</span>
+  <span class="ch on" onclick="flt('all',this)">全選手</span>
+  <span class="ch" onclick="flt('motor-hi',this)">M40%↑</span>
+  <span class="ch" onclick="flt('time-hi',this)">前検速い</span>
+  <span class="ch" onclick="flt('ace',this)">エース機</span>
+  <span class="ch" onclick="flt('form-hi',this)">好調</span>
+  <span class="ch" onclick="flt('st-hi',this)">ST安定</span>
+  <span class="ch" onclick="flt('triple',this)">三拍子</span>
+  <input class="sb" type="text" placeholder="🔍 選手名..." oninput="srch(this.value)">
+</div>
+
+<div class="mn">
+
+  <!-- ===== TAB: SCORE ===== -->
+  <div id="tab-score" class="tc on">
+
+    <!-- KPI Cards -->
+    <div class="kpi-row">
+      <div class="kc bl"><div class="kl">フォーム指数 1位</div><div class="kn">16.76</div><div class="ks">馬場貴也（直近3走全勝）</div></div>
+      <div class="kc am"><div class="kl">M最高2連対率</div><div class="kn">50.3%</div><div class="ks">太田和美 / 38号機</div></div>
+      <div class="kc gr"><div class="kl">ST安定スコア 1位</div><div class="kn">84.8</div><div class="ks">菊地孝平（σ=0.044）</div></div>
+      <div class="kc pu"><div class="kl">前検最速</div><div class="kn">6.66</div><div class="ks">常住蓮 / 53号機</div></div>
+      <div class="kc rd"><div class="kl">宮島1C全勝(実績)</div><div class="kn">3人</div><div class="ks">岩瀬・馬場・久田</div></div>
+    </div>
+
+    <!-- Score Legend -->
+    <div class="lg">
+      <span style="font-size:10px;color:var(--mu);width:100%;font-weight:700">スコア内訳（各項目の最大点）</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac2)"></span>M2連対率 35pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac)"></span>前検タイム 25pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac3)"></span>B2連対率 15pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--pu)"></span>ST安定 15pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--rd)"></span>宮島実績 10pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--tl)"></span>× フォーム指数乗算</span>
+    </div>
+
+    <!-- Mobile Cards (shown on mobile) -->
+    <div id="score-cards-mobile" class="score-card-mobile"></div>
+
+    <!-- Desktop Table (hidden on mobile) -->
+    <div class="pn">
+      <div class="pt">
+        <span class="accent">▮</span> 選手スコアカード（列タップでソート）
+        <span class="pt-help" onclick="toggleHelp('help-score')">? 見方</span>
+      </div>
+      <div id="help-score" class="help-box">
+        <strong>M2連対率</strong>: モーターの勝率。40%↑＝エース<br>
+        <strong>前検T</strong>: 練習タイム。小さいほど速い<br>
+        <strong>ST安定</strong>: スタートの安定度スコア<br>
+        <strong>フォーム指数</strong>: 最近の調子（10↑＝超好調）<br>
+        <strong>総合スコア</strong>: 全指標を合算した注目度
+      </div>
+      <div class="tbl-wrap desktop-table">
+        <table class="tb" id="mt">
+          <thead><tr>
+            <th onclick="srt(0)" style="width:30px">順</th>
+            <th onclick="srt(1)">選手名</th>
+            <th onclick="srt(3)" class="on">M2連対率▼</th>
+            <th onclick="srt(5)">前検T</th>
+            <th onclick="srt(6)">ST安定</th>
+            <th onclick="srt(7)">フォーム</th>
+            <th onclick="srt(8)">直近3走</th>
+            <th onclick="srt(9)">宮島1C</th>
+            <th onclick="srt(10)">スコア</th>
+            <th>内訳</th>
+          </tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+      <div class="tf2">
+        <span id="cnt">52選手表示中</span>
+        <span>フォーム指数＝直近成績の複合スコア（最高16.76）</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: PICKS ===== -->
+  <div id="tab-picks" class="tc">
+    <!-- Hero picks -->
+    <div class="picks-hero">
+      <div class="ph-card ph1">
+        <div class="ph-label">◎ 本命</div>
+        <div class="ph-name">岩瀬 裕亮</div>
+        <div class="ph-reason">エースM72×前検6.67×宮島1C全勝(3/3)×イン勝率81.7%</div>
+      </div>
+      <div class="ph-card ph2">
+        <div class="ph-label">〇 対抗</div>
+        <div class="ph-name">馬場 貴也</div>
+        <div class="ph-reason">フォーム指数1位16.76×直近3走全勝×直近10走8割勝率</div>
+      </div>
+      <div class="ph-card ph3">
+        <div class="ph-label">▲ 穴</div>
+        <div class="ph-name">常住 蓮</div>
+        <div class="ph-reason">前検1位6.66×平均着順2.5×低人気M→高配当狙い</div>
+      </div>
+    </div>
+
+    <!-- Picks Detail -->
+    <div id="picks-detail"></div>
+
+    <!-- Betting Tips -->
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 舟券フォーメーション（実データから）
+        <span class="pt-help" onclick="toggleHelp('help-bet')">? 舟券とは</span>
+      </div>
+      <div id="help-bet" class="help-box">
+        <strong>3連単</strong>：1〜3着を着順通りに当てる。難しいが高配当。<br>
+        <strong>1-2-3</strong>：1コースが1着、2コースが2着、3コースが3着の意味。<br>
+        <strong>荒れスコア</strong>：高いほど波乱が起きやすいレース。穴狙いに向く。
+      </div>
+      <div class="bet-grid">
+        <div class="bet-card">
+          <div class="bet-type" style="color:var(--ac)">🔵 堅め / 3連単</div>
+          <div class="bet-desc">イン逃げ58.8%信頼</div>
+          <div class="bet-combos">1-2-3 / 1-3-2<br>1-2-4 / 1-3-4</div>
+          <div class="bet-note">2コース差し33.1%の対抗</div>
+        </div>
+        <div class="bet-card">
+          <div class="bet-type" style="color:var(--ac2)">🟡 中穴 / 3コース軸</div>
+          <div class="bet-desc">3C1着率13.0%（全国比高め）</div>
+          <div class="bet-combos">3-1-2 / 3-2-1<br>3-4-1 / 3-1-4</div>
+          <div class="bet-note">7R（荒54.9pt）狙い</div>
+        </div>
+        <div class="bet-card">
+          <div class="bet-type" style="color:var(--pu)">🟣 大穴 / 常住軸</div>
+          <div class="bet-desc">前検1位×低人気モーター</div>
+          <div class="bet-combos">常住-岩瀬-馬場<br>常住-太田-高橋</div>
+          <div class="bet-note">高配当狙い 3R（荒51.2pt）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: MOTOR ===== -->
+  <div id="tab-motor" class="tc">
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> エース・準エース格モーター
+        <span class="pt-help" onclick="toggleHelp('help-motor')">? モーターとは</span>
+      </div>
+      <div id="help-motor" class="help-box">
+        <strong>モーター</strong>：競艇では選手が自分でモーターを選びます。出力が高い「エース機」を引いた選手は大幅に有利。2連対率40%以上がエース格の目安です。
+      </div>
+      <div id="ace-list"></div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> M2連対率 分布</div>
+      <div id="m-dist"></div>
+      <div style="margin-top:10px;font-size:11px;color:var(--mu);line-height:1.8;background:var(--bg3);padding:10px;border-radius:8px">
+        エース格：<strong style="color:var(--ac2)">72号（岩瀬）・38号（太田）</strong><br>
+        準エース：17・21・37・54・66・71・79号機
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 全選手モーター一覧（M2連対率順）</div>
+      <div class="tbl-wrap">
+        <table class="tb"><thead><tr>
+          <th>M番</th><th>選手名</th><th>M2連対率</th><th>前検T</th><th>評価</th>
+        </tr></thead><tbody id="m-full"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: TIME ===== -->
+  <div id="tab-time" class="tc">
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 前検タイムランキング TOP20（速い順）
+        <span class="pt-help" onclick="toggleHelp('help-time')">? 読み方</span>
+      </div>
+      <div id="help-time" class="help-box">
+        <strong>前検タイム</strong>：本番前日の練習タイム（秒）。数値が小さいほど速い。ただし初日は調整途中なので参考値。<span style="color:var(--ac)">6.75以下</span>が速い目安。
+      </div>
+      <div id="time-chart"></div>
+    </div>
+    <div style="padding:12px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:14px;font-size:12px;color:var(--mu);line-height:2">
+      <strong style="color:var(--tx)">⚠ 注目選手のタイム解説</strong><br>
+      <span style="color:var(--ac)">常住蓮（6.66）</span> — 全体1位！M実績は薄いが平均着順2.5と実力あり<br>
+      <span style="color:var(--ac2)">岩瀬裕亮（6.67）</span> — エース機72号との最強タッグ。宮島1C 3走全勝の裏付けも<br>
+      <span style="color:var(--tl)">井上忠政（6.69）</span> — フォーム指数8.55・直近3走67%。前検3位の動きは本物
+    </div>
+  </div>
+
+  <!-- ===== TAB: ST ===== -->
+  <div id="tab-st" class="tc">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="pn">
+        <div class="pt" style="font-size:11px"><span class="accent">▮</span> ST安定スコアTOP</div>
+        <div id="st-rank"></div>
+      </div>
+      <div class="pn">
+        <div class="pt" style="font-size:11px"><span class="accent">▮</span> フォーム指数TOP</div>
+        <div id="form-rank"></div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 直近3走1着率 TOP10</div>
+      <div id="r3-rank"></div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> ST指数詳細
+        <span class="pt-help" onclick="toggleHelp('help-st')">? 指標の見方</span>
+      </div>
+      <div id="help-st" class="help-box">
+        <strong>平均ST</strong>：スタート時刻の平均。小さいほど早めのスタート。<br>
+        <strong>ST安定スコア</strong>：ムラが少ないほど高い。フライングリスクが低い安定型選手。<br>
+        <strong>フォーム指数</strong>：直近レースの複合スコア。高いほど今が旬。
+      </div>
+      <div class="tbl-wrap">
+        <table class="tb"><thead><tr>
+          <th>選手名</th><th>平均ST</th><th>1C ST</th><th>ST安定</th><th>フォーム</th><th>タイプ</th>
+        </tr></thead><tbody id="st-full"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB: VENUE ===== -->
+  <div id="tab-venue" class="tc">
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 宮島コース別1着率（G1実測 1,560レース）
+        <span class="pt-help" onclick="toggleHelp('help-venue')">? コースとは</span>
+      </div>
+      <div id="help-venue" class="help-box">
+        <strong>1コース（イン）</strong>：最内枠。最も有利で1着率が最高。「イン逃げ」と呼ぶ。<br>
+        <strong>3コース</strong>：宮島はなぜか2コースより3コースの方が1着が出やすい特徴的な会場。
+      </div>
+      <div class="course-grid">
+        <div class="course-card"><div class="cc-num" style="color:var(--ac)">1C</div><div class="cc-val" style="color:var(--ac)">58.8%</div><div class="cc-lbl">逃げ</div></div>
+        <div class="course-card"><div class="cc-num" style="color:var(--ac2)">2C</div><div class="cc-val" style="color:var(--ac2)">11.4%</div><div class="cc-lbl">差し</div></div>
+        <div class="course-card"><div class="cc-num" style="color:var(--pu)">3C</div><div class="cc-val" style="color:var(--pu)">13.0%</div><div class="cc-lbl">捲り</div></div>
+        <div class="course-card"><div class="cc-num" style="color:var(--mu)">4C</div><div class="cc-val" style="color:var(--mu)">9.2%</div><div class="cc-lbl">捲差</div></div>
+        <div class="course-card"><div class="cc-num" style="color:var(--mu)">5C</div><div class="cc-val" style="color:var(--mu)">5.7%</div><div class="cc-lbl">抜き</div></div>
+        <div class="course-card"><div class="cc-num" style="color:var(--mu)">6C</div><div class="cc-val" style="color:var(--mu)">1.9%</div><div class="cc-lbl">抜き</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--mu);line-height:1.8;padding:10px;background:var(--bg3);border-radius:8px">
+        宮島G1のイン逃げ率は<strong style="color:var(--ac)">56.6%</strong>（全国平均より若干高め）。<br>
+        3コースが2コースより高い特徴的な傾向。イン逃げ後の2着は<strong style="color:var(--ac2)">33.1%</strong>が2コース。
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div class="pn">
+        <div class="pt" style="font-size:11px"><span class="accent">▮</span> R番別 荒れスコア</div>
+        <div id="r-areyasusa"></div>
+        <div style="margin-top:8px;font-size:10px;color:var(--mu)">高→荒れやすい。7R(54.9)・3R(51.2)は波乱含み</div>
+      </div>
+      <div class="pn">
+        <div class="pt" style="font-size:11px"><span class="accent">▮</span> イン逃げ後 枠別2着率</div>
+        <div id="innige-2nd"></div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span class="accent">▮</span> 選手 宮島実績一覧（コース別実測）</div>
+      <div class="tbl-wrap">
+        <table class="tb"><thead><tr>
+          <th>選手名</th><th>総走数</th><th>1C実績</th><th>2C実績</th><th>1C ST</th>
+        </tr></thead><tbody id="venue-tb"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const RACERS = [{"name": "岩瀬裕亮", "mno": 72, "mpct": 48.3, "bno": 62, "bpct": 39.2, "time": 6.67, "ace": true, "stScore": 75.5, "stStd": 0.0545, "avgST": 0.1412, "avgST1c": 0.1192, "form": 3.58, "recent3": 0.333, "recent5": 0.4, "recent10": 0.2, "avgRank10": 3.2, "inWin": 0.8165, "win3_1y": 0.7137, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.0867}, "2": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.14}, "3": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.13}, "4": {"runs": 4, "win1": 0.25, "ewma": 0.0597, "avg_st": 0.1225}, "5": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.2033}}, "score": 78, "scoreM": 32.3, "scoreT": 24.0, "scoreB": 7.5, "scoreST": 9.2, "scoreV": 10.0, "formMul": 0.942}, {"name": "永井彪也", "mno": 79, "mpct": 36.3, "bno": 19, "bpct": 40.2, "time": 6.73, "ace": true, "stScore": 79.0, "stStd": 0.051, "avgST": 0.1332, "avgST1c": 0.1381, "form": 8.73, "recent3": 0.667, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.6863, "win3_1y": 0.6278, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9492, "avg_st": 0.1567}, "3": {"runs": 5, "win1": 0.4, "ewma": 0.3356, "avg_st": 0.14}, "4": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.15}, "5": {"runs": 4, "win1": 0.5, "ewma": 0.1235, "avg_st": 0.0925}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.15}}, "score": 65, "scoreM": 15.9, "scoreT": 18.3, "scoreB": 8.1, "scoreST": 11.4, "scoreV": 10.0, "formMul": 1.014}, {"name": "高橋竜矢", "mno": 37, "mpct": 44.8, "bno": 12, "bpct": 36.7, "time": 6.73, "ace": false, "stScore": 68.3, "stStd": 0.0617, "avgST": 0.1402, "avgST1c": 0.1143, "form": 5.22, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.2, "inWin": 0.8158, "win3_1y": 0.6829, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 13, "win1": 0.6154, "ewma": 0.56, "avg_st": 0.1285}, "2": {"runs": 6, "win1": 0.6667, "ewma": 0.9909, "avg_st": 0.1083}, "3": {"runs": 11, "win1": 0.2727, "ewma": 0.1166, "avg_st": 0.1527}}, "score": 64, "scoreM": 27.5, "scoreT": 18.3, "scoreB": 5.9, "scoreST": 4.6, "scoreV": 9.5, "formMul": 0.973}, {"name": "高憧四季", "mno": 58, "mpct": 44.2, "bno": 78, "bpct": 40.2, "time": 6.72, "ace": false, "stScore": 63.5, "stStd": 0.0665, "avgST": 0.1584, "avgST1c": 0.1491, "form": 8.31, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.7315, "win3_1y": 0.7045, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 5, "win1": 0.2, "ewma": 0.3104, "avg_st": 0.17}}, "score": 62, "scoreM": 26.7, "scoreT": 19.2, "scoreB": 8.1, "scoreST": 1.6, "scoreV": 7.5, "formMul": 0.974}, {"name": "山崎郡", "mno": 65, "mpct": 41.5, "bno": 59, "bpct": 34.7, "time": 6.75, "ace": false, "stScore": 78.1, "stStd": 0.0519, "avgST": 0.1319, "avgST1c": 0.1344, "form": 7.38, "recent3": 0.333, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.0, "inWin": 0.813, "win3_1y": 0.7066, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 4, "win1": 0.5, "ewma": 0.4981, "avg_st": 0.1325}}, "score": 62, "scoreM": 23.0, "scoreT": 16.3, "scoreB": 4.6, "scoreST": 10.8, "scoreV": 9.0, "formMul": 0.979}, {"name": "井上忠政", "mno": 61, "mpct": 39.6, "bno": 39, "bpct": 32.3, "time": 6.69, "ace": false, "stScore": 72.2, "stStd": 0.0578, "avgST": 0.1534, "avgST1c": 0.142, "form": 8.55, "recent3": 0.667, "recent5": 0.6, "recent10": 0.6, "avgRank10": 2.1, "inWin": 0.8261, "win3_1y": 0.6974, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 60, "scoreM": 20.4, "scoreT": 22.1, "scoreB": 3.0, "scoreST": 7.1, "scoreV": 5.0, "formMul": 1.038}, {"name": "桑原悠", "mno": 32, "mpct": 42.9, "bno": 17, "bpct": 41.9, "time": 6.81, "ace": false, "stScore": 71.0, "stStd": 0.059, "avgST": 0.1321, "avgST1c": 0.1201, "form": 6.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.9, "inWin": 0.7619, "win3_1y": 0.6307, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9513, "avg_st": 0.1433}}, "score": 59, "scoreM": 24.9, "scoreT": 10.6, "scoreB": 9.2, "scoreST": 6.3, "scoreV": 10.0, "formMul": 0.959}, {"name": "磯部誠", "mno": 21, "mpct": 42.9, "bno": 65, "bpct": 34.1, "time": 6.72, "ace": true, "stScore": 79.6, "stStd": 0.0504, "avgST": 0.1256, "avgST1c": 0.1101, "form": 1.4, "recent3": 0, "recent5": 0, "recent10": 0.1, "avgRank10": 3.3, "inWin": 0.8, "win3_1y": 0.6256, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 58, "scoreM": 24.9, "scoreT": 19.2, "scoreB": 4.2, "scoreST": 11.7, "scoreV": 5.0, "formMul": 0.888}, {"name": "羽野直也", "mno": 60, "mpct": 36.4, "bno": 57, "bpct": 38.0, "time": 6.77, "ace": false, "stScore": 76.4, "stStd": 0.0536, "avgST": 0.1345, "avgST1c": 0.1266, "form": 10.98, "recent3": 1.0, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.3, "inWin": 0.7045, "win3_1y": 0.6552, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 55, "scoreM": 16.1, "scoreT": 14.4, "scoreB": 6.7, "scoreST": 9.7, "scoreV": 5.0, "formMul": 1.062}, {"name": "太田和美", "mno": 38, "mpct": 50.3, "bno": 14, "bpct": 32.1, "time": 6.81, "ace": true, "stScore": 65.8, "stStd": 0.0642, "avgST": 0.1522, "avgST1c": 0.1474, "form": 0.35, "recent3": 0, "recent5": 0, "recent10": 0, "avgRank10": 4.4, "inWin": 0.6429, "win3_1y": 0.6772, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 49, "scoreM": 35.0, "scoreT": 10.6, "scoreB": 2.9, "scoreST": 3.1, "scoreV": 5.0, "formMul": 0.867}, {"name": "馬場貴也", "mno": 15, "mpct": 34.3, "bno": 22, "bpct": 34.7, "time": 6.84, "ace": false, "stScore": 73.4, "stStd": 0.0566, "avgST": 0.135, "avgST1c": 0.1197, "form": 16.76, "recent3": 1.0, "recent5": 1.0, "recent10": 0.8, "avgRank10": 1.6, "inWin": 0.7603, "win3_1y": 0.6422, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.1567}}, "score": 48, "scoreM": 13.2, "scoreT": 7.7, "scoreB": 4.6, "scoreST": 7.8, "scoreV": 10.0, "formMul": 1.116}, {"name": "菊地孝平", "mno": 31, "mpct": 29.2, "bno": 68, "bpct": 38.7, "time": 6.77, "ace": false, "stScore": 84.8, "stStd": 0.0437, "avgST": 0.108, "avgST1c": 0.1067, "form": 5.09, "recent3": 0, "recent5": 0.4, "recent10": 0.3, "avgRank10": 3.1, "inWin": 0.7018, "win3_1y": 0.6347, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "ewma": 0.9894, "avg_st": 0.12}}, "score": 48, "scoreM": 6.3, "scoreT": 14.4, "scoreB": 7.2, "scoreST": 15.0, "scoreV": 10.0, "formMul": 0.915}, {"name": "平本真之", "mno": 23, "mpct": 33.1, "bno": 18, "bpct": 35.0, "time": 6.86, "ace": false, "stScore": 75.4, "stStd": 0.0546, "avgST": 0.1296, "avgST1c": 0.1298, "form": 13.53, "recent3": 0.667, "recent5": 0.8, "recent10": 0.8, "avgRank10": 1.2, "inWin": 0.6455, "win3_1y": 0.6457, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 39, "scoreM": 11.6, "scoreT": 5.8, "scoreB": 4.8, "scoreST": 9.1, "scoreV": 5.0, "formMul": 1.074}, {"name": "常住蓮", "mno": 53, "mpct": 29.2, "bno": 76, "bpct": 32.7, "time": 6.66, "ace": false, "stScore": 69.1, "stStd": 0.0609, "avgST": 0.1433, "avgST1c": 0.1328, "form": 2.76, "recent3": 0, "recent5": 0.2, "recent10": 0.1, "avgRank10": 2.5, "inWin": 0.7664, "win3_1y": 0.7733, "flyImpact": null, "playerType": "混合", "miyajima": {"2": {"runs": 3, "win1": 0.3333, "ewma": 0.0231, "avg_st": 0.1767}}, "score": 40, "scoreM": 6.3, "scoreT": 25.0, "scoreB": 3.3, "scoreST": 5.1, "scoreV": 5.0, "formMul": 0.899}, {"name": "羽野直也", "mno": 60, "mpct": 36.4, "bno": 57, "bpct": 38.0, "time": 6.77, "ace": false, "stScore": 76.4, "stStd": 0.0536, "avgST": 0.1345, "avgST1c": 0.1266, "form": 10.98, "recent3": 1.0, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.3, "inWin": 0.7045, "win3_1y": 0.6552, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 55, "scoreM": 16.1, "scoreT": 14.4, "scoreB": 6.7, "scoreST": 9.7, "scoreV": 5.0, "formMul": 1.062}];
+
+// Deduplicate by name
+const seen = new Set();
+const RACERS_ALL = [{"name": "岩瀬裕亮", "mno": 72, "mpct": 48.3, "bno": 62, "bpct": 39.2, "time": 6.67, "ace": true, "stScore": 75.5, "stStd": 0.0545, "avgST": 0.1412, "avgST1c": 0.1192, "form": 3.58, "recent3": 0.333, "recent5": 0.4, "recent10": 0.2, "avgRank10": 3.2, "inWin": 0.8165, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 1.0, "avg_st": 0.0867}}, "score": 78, "scoreM": 32.3, "scoreT": 24.0, "scoreB": 7.5, "scoreST": 9.2, "scoreV": 10.0, "formMul": 0.942}, {"name": "永井彪也", "mno": 79, "mpct": 36.3, "bno": 19, "bpct": 40.2, "time": 6.73, "ace": true, "stScore": 79.0, "stStd": 0.051, "avgST": 0.1332, "avgST1c": 0.1381, "form": 8.73, "recent3": 0.667, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.6863, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "avg_st": 0.1567}}, "score": 65, "scoreM": 15.9, "scoreT": 18.3, "scoreB": 8.1, "scoreST": 11.4, "scoreV": 10.0, "formMul": 1.014}, {"name": "高橋竜矢", "mno": 37, "mpct": 44.8, "bno": 12, "bpct": 36.7, "time": 6.73, "ace": false, "stScore": 68.3, "stStd": 0.0617, "avgST": 0.1402, "avgST1c": 0.1143, "form": 5.22, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.2, "inWin": 0.8158, "playerType": "混合", "miyajima": {"1": {"runs": 13, "win1": 0.6154, "avg_st": 0.1285}}, "score": 64, "scoreM": 27.5, "scoreT": 18.3, "scoreB": 5.9, "scoreST": 4.6, "scoreV": 9.5, "formMul": 0.973}, {"name": "高憧四季", "mno": 58, "mpct": 44.2, "bno": 78, "bpct": 40.2, "time": 6.72, "ace": false, "stScore": 63.5, "stStd": 0.0665, "avgST": 0.1584, "avgST1c": 0.1491, "form": 8.31, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.7315, "playerType": "混合", "miyajima": {}, "score": 62, "scoreM": 26.7, "scoreT": 19.2, "scoreB": 8.1, "scoreST": 1.6, "scoreV": 7.5, "formMul": 0.974}, {"name": "山崎郡", "mno": 65, "mpct": 41.5, "bno": 59, "bpct": 34.7, "time": 6.75, "ace": false, "stScore": 78.1, "stStd": 0.0519, "avgST": 0.1319, "avgST1c": 0.1344, "form": 7.38, "recent3": 0.333, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.0, "inWin": 0.813, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 4, "win1": 0.5, "avg_st": 0.1325}}, "score": 62, "scoreM": 23.0, "scoreT": 16.3, "scoreB": 4.6, "scoreST": 10.8, "scoreV": 9.0, "formMul": 0.979}, {"name": "井上忠政", "mno": 61, "mpct": 39.6, "bno": 39, "bpct": 32.3, "time": 6.69, "ace": false, "stScore": 72.2, "stStd": 0.0578, "avgST": 0.1534, "avgST1c": 0.142, "form": 8.55, "recent3": 0.667, "recent5": 0.6, "recent10": 0.6, "avgRank10": 2.1, "inWin": 0.8261, "playerType": "混合", "miyajima": {}, "score": 60, "scoreM": 20.4, "scoreT": 22.1, "scoreB": 3.0, "scoreST": 7.1, "scoreV": 5.0, "formMul": 1.038}, {"name": "桑原悠", "mno": 32, "mpct": 42.9, "bno": 17, "bpct": 41.9, "time": 6.81, "ace": false, "stScore": 71.0, "stStd": 0.059, "avgST": 0.1321, "avgST1c": 0.1201, "form": 6.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.9, "inWin": 0.7619, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "avg_st": 0.1433}}, "score": 59, "scoreM": 24.9, "scoreT": 10.6, "scoreB": 9.2, "scoreST": 6.3, "scoreV": 10.0, "formMul": 0.959}, {"name": "磯部誠", "mno": 21, "mpct": 42.9, "bno": 65, "bpct": 34.1, "time": 6.72, "ace": true, "stScore": 79.6, "stStd": 0.0504, "avgST": 0.1256, "avgST1c": 0.1101, "form": 1.4, "recent3": 0, "recent5": 0, "recent10": 0.1, "avgRank10": 3.3, "inWin": 0.8, "playerType": "グレードメイン", "miyajima": {}, "score": 58, "scoreM": 24.9, "scoreT": 19.2, "scoreB": 4.2, "scoreST": 11.7, "scoreV": 5.0, "formMul": 0.888}, {"name": "羽野直也", "mno": 60, "mpct": 36.4, "bno": 57, "bpct": 38.0, "time": 6.77, "ace": false, "stScore": 76.4, "stStd": 0.0536, "avgST": 0.1345, "avgST1c": 0.1266, "form": 10.98, "recent3": 1.0, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.3, "inWin": 0.7045, "playerType": "グレードメイン", "miyajima": {}, "score": 55, "scoreM": 16.1, "scoreT": 14.4, "scoreB": 6.7, "scoreST": 9.7, "scoreV": 5.0, "formMul": 1.062}, {"name": "太田和美", "mno": 38, "mpct": 50.3, "bno": 14, "bpct": 32.1, "time": 6.81, "ace": true, "stScore": 65.8, "stStd": 0.0642, "avgST": 0.1522, "avgST1c": 0.1474, "form": 0.35, "recent3": 0, "recent5": 0, "recent10": 0, "avgRank10": 4.4, "inWin": 0.6429, "playerType": "混合", "miyajima": {}, "score": 49, "scoreM": 35.0, "scoreT": 10.6, "scoreB": 2.9, "scoreST": 3.1, "scoreV": 5.0, "formMul": 0.867}, {"name": "馬場貴也", "mno": 15, "mpct": 34.3, "bno": 22, "bpct": 34.7, "time": 6.84, "ace": false, "stScore": 73.4, "stStd": 0.0566, "avgST": 0.135, "avgST1c": 0.1197, "form": 16.76, "recent3": 1.0, "recent5": 1.0, "recent10": 0.8, "avgRank10": 1.6, "inWin": 0.7603, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 1.0, "avg_st": 0.1567}}, "score": 48, "scoreM": 13.2, "scoreT": 7.7, "scoreB": 4.6, "scoreST": 7.8, "scoreV": 10.0, "formMul": 1.116}, {"name": "菊地孝平", "mno": 31, "mpct": 29.2, "bno": 68, "bpct": 38.7, "time": 6.77, "ace": false, "stScore": 84.8, "stStd": 0.0437, "avgST": 0.108, "avgST1c": 0.1067, "form": 5.09, "recent3": 0, "recent5": 0.4, "recent10": 0.3, "avgRank10": 3.1, "inWin": 0.7018, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "avg_st": 0.12}}, "score": 48, "scoreM": 6.3, "scoreT": 14.4, "scoreB": 7.2, "scoreST": 15.0, "scoreV": 10.0, "formMul": 0.915}, {"name": "平本真之", "mno": 23, "mpct": 33.1, "bno": 18, "bpct": 35.0, "time": 6.86, "ace": false, "stScore": 75.4, "stStd": 0.0546, "avgST": 0.1296, "avgST1c": 0.1298, "form": 13.53, "recent3": 0.667, "recent5": 0.8, "recent10": 0.8, "avgRank10": 1.2, "inWin": 0.6455, "playerType": "グレードメイン", "miyajima": {}, "score": 39, "scoreM": 11.6, "scoreT": 5.8, "scoreB": 4.8, "scoreST": 9.1, "scoreV": 5.0, "formMul": 1.074}, {"name": "常住蓮", "mno": 53, "mpct": 29.2, "bno": 76, "bpct": 32.7, "time": 6.66, "ace": false, "stScore": 69.1, "stStd": 0.0609, "avgST": 0.1433, "avgST1c": 0.1328, "form": 2.76, "recent3": 0, "recent5": 0.2, "recent10": 0.1, "avgRank10": 2.5, "inWin": 0.7664, "playerType": "混合", "miyajima": {}, "score": 40, "scoreM": 6.3, "scoreT": 25.0, "scoreB": 3.3, "scoreST": 5.1, "scoreV": 5.0, "formMul": 0.899}, {"name": "新田泰章", "mno": 67, "mpct": 37.0, "bno": 26, "bpct": 27.8, "time": 6.71, "ace": false, "stScore": 61.7, "stStd": 0.0683, "avgST": 0.1536, "avgST1c": 0.1321, "form": 3.44, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 2.5, "inWin": 0.8131, "playerType": "一般メイン", "miyajima": {"1": {"runs": 21, "win1": 0.7619, "avg_st": 0.1229}}, "score": 45, "scoreM": 16.9, "scoreT": 20.2, "scoreB": 0.1, "scoreST": 0.5, "scoreV": 10.0, "formMul": 0.949}, {"name": "辻栄蔵", "mno": 16, "mpct": 35.8, "bno": 75, "bpct": 28.6, "time": 6.79, "ace": false, "stScore": 71.4, "stStd": 0.0586, "avgST": 0.1535, "avgST1c": 0.143, "form": 7.4, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.1, "inWin": 0.5914, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 15, "win1": 0.7333, "avg_st": 0.1527}}, "score": 44, "scoreM": 15.3, "scoreT": 12.5, "scoreB": 0.6, "scoreST": 6.6, "scoreV": 10.0, "formMul": 0.969}, {"name": "白井英治", "mno": 70, "mpct": 35.8, "bno": 23, "bpct": 37.9, "time": 6.85, "ace": false, "stScore": 71.5, "stStd": 0.0585, "avgST": 0.1378, "avgST1c": 0.1365, "form": 10.04, "recent3": 0.667, "recent5": 0.6, "recent10": 0.5, "avgRank10": 2.2, "inWin": 0.7091, "playerType": "グレードメイン", "miyajima": {}, "score": 42, "scoreM": 15.3, "scoreT": 6.7, "scoreB": 6.7, "scoreST": 6.7, "scoreV": 5.0, "formMul": 1.031}, {"name": "横澤剛治", "mno": 19, "mpct": 30.5, "bno": 37, "bpct": 37.0, "time": 6.8, "ace": true, "stScore": 72.6, "stStd": 0.0574, "avgST": 0.1575, "avgST1c": 0.1619, "form": 11.53, "recent3": 0.667, "recent5": 0.6, "recent10": 0.3, "avgRank10": 2.8, "inWin": 0.7053, "playerType": "一般メイン", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "avg_st": 0.1}}, "score": 41, "scoreM": 8.0, "scoreT": 11.5, "scoreB": 6.1, "scoreST": 7.3, "scoreV": 7.7, "formMul": 1.009}, {"name": "関浩哉", "mno": 25, "mpct": 37.9, "bno": 53, "bpct": 29.8, "time": 6.82, "ace": false, "stScore": 72.4, "stStd": 0.0576, "avgST": 0.1387, "avgST1c": 0.1243, "form": 7.62, "recent3": 0.667, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.5, "inWin": 0.7955, "playerType": "グレードメイン", "miyajima": {}, "score": 42, "scoreM": 18.1, "scoreT": 9.6, "scoreB": 1.4, "scoreST": 7.2, "scoreV": 5.0, "formMul": 1.014}];
+
+const MIYAJIMA = {"race_count":1560,"in_nige_rate":0.566,"c1_win":0.5878,"c2_win":0.1141,"c3_win":0.1301,"c4_win":0.0923,"c5_win":0.0571,"c6_win":0.0186,"R_areyasusa":[28.2,42.6,51.2,40.6,39.3,37.3,54.9,50,45.3,42.7,31.1,27.4],"innige_2nd":[0,0.3307,0.3035,0.188,0.1246,0.0532]};
+
+let cur = [...RACERS_ALL];
+let sortCol = 10, sortAsc = false;
+
+function pp(v,hi,md){return v>=hi?'phi':v>=md?'pmd':'plo'}
+function stpc(s){return s>=80?'pbl':s>=73?'phi':s>=68?'pmd':'plo'}
+function rb(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return `<span class="rb ${c}">${i+1}</span>`}
+function dn(n){return n.replace(/(.{2})(.*)/,'$1 $2')}
+
+function toggleGuide(){
+  const g=document.getElementById('beginner-guide');
+  g.style.display=g.style.display==='none'?'':'none';
+}
+function toggleHelp(id){
+  const el=document.getElementById(id);
+  el.classList.toggle('show');
+}
+
+function renderTable(){
+  // Desktop table
+  const tb=document.getElementById('tb');
+  if(tb){
+    tb.innerHTML=cur.map((r,i)=>{
+      const sc=r.score;
+      const scC=sc>=75?'var(--ac3)':sc>=60?'var(--ac2)':'var(--mu)';
+      const tags=(r.ace?'<span class="tg tga">エース</span>':'')
+               +(r.time<=6.75?'<span class="tg tgs">速</span>':'')
+               +(r.stScore>=80?'<span class="tg tgst">ST優</span>':'')
+               +(r.form>=10?'<span class="tg tgf">好調</span>':'');
+      const mc1=r.miyajima&&r.miyajima['1'];
+      const mc1txt=mc1?`${mc1.runs}走 ${(mc1.win1*100).toFixed(0)}%`:'--';
+      const fC=r.form>=12?'var(--ac3)':r.form>=8?'var(--ac2)':'var(--mu)';
+      const r3C=r.recent3>=0.67?'var(--ac3)':r.recent3>=0.33?'var(--ac2)':'var(--mu)';
+      const mw=Math.round(r.scoreM/35*100);
+      const tw=Math.round(r.scoreT/25*100);
+      const bw=Math.round(r.scoreB/15*100);
+      const sw=Math.round(r.scoreST/15*100);
+      return `<tr>
+        <td>${rb(i)}</td>
+        <td class="nm">${dn(r.name)}${tags}</td>
+        <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct}%</span></td>
+        <td style="font-family:'Oswald',sans-serif;color:${r.time<=6.70?'var(--ac)':r.time<=6.75?'var(--ac2)':'var(--mu)'}">${r.time.toFixed(2)}</td>
+        <td><span class="ps ${stpc(r.stScore)}">${r.stScore}</span></td>
+        <td style="font-family:'Oswald',sans-serif;color:${fC}">${r.form.toFixed(2)}</td>
+        <td style="color:${r3C}">${(r.recent3*100).toFixed(0)}%</td>
+        <td style="font-size:11px;color:${mc1&&mc1.win1>=0.5?'var(--ac3)':'var(--mu)'}">${mc1txt}</td>
+        <td class="ts" style="color:${scC}">${sc}pt</td>
+        <td><div class="score-bar">
+          <div style="width:${mw}%;background:var(--ac2);height:7px"></div>
+          <div style="width:${tw}%;background:var(--ac);height:7px"></div>
+          <div style="width:${bw}%;background:var(--ac3);height:7px"></div>
+          <div style="width:${sw}%;background:var(--pu);height:7px"></div>
+        </div></td>
+      </tr>`;
+    }).join('');
+  }
+  // Mobile cards
+  const mc=document.getElementById('score-cards-mobile');
+  if(mc){
+    mc.innerHTML=cur.map((r,i)=>{
+      const sc=r.score;
+      const scC=sc>=75?'var(--ac3)':sc>=60?'var(--ac2)':'var(--mu)';
+      const tags=(r.ace?'<span class="tg tga">エース</span>':'')
+               +(r.time<=6.75?'<span class="tg tgs">前検速</span>':'')
+               +(r.stScore>=80?'<span class="tg tgst">ST優</span>':'')
+               +(r.form>=10?'<span class="tg tgf">好調</span>':'');
+      const mc1=r.miyajima&&r.miyajima['1'];
+      const mc1txt=mc1?`${mc1.runs}走${(mc1.win1*100).toFixed(0)}%`:'--';
+      const fC=r.form>=12?'var(--ac3)':r.form>=8?'var(--ac2)':'var(--mu)';
+      const barW=Math.round(sc/100*100);
+      return `<div class="smc">
+        <div class="smc-rank">${rb(i)}</div>
+        <div class="smc-body">
+          <div class="smc-name">${dn(r.name)}</div>
+          <div class="smc-tags">${tags}</div>
+          <div class="smc-stats">
+            <div class="smc-stat"><div class="smc-stat-val" style="color:${r.mpct>=40?'var(--ac2)':'var(--mu)'}">${r.mpct}%</div><div class="smc-stat-lbl">M2連対率</div></div>
+            <div class="smc-stat"><div class="smc-stat-val" style="color:${r.time<=6.75?'var(--ac)':'var(--mu)'}">${r.time.toFixed(2)}</div><div class="smc-stat-lbl">前検T</div></div>
+            <div class="smc-stat"><div class="smc-stat-val" style="color:${fC}">${r.form.toFixed(1)}</div><div class="smc-stat-lbl">フォーム</div></div>
+          </div>
+          <div class="smc-bar"><div class="smc-bar-fill" style="width:${barW}%;background:${scC}"></div></div>
+        </div>
+        <div class="smc-score">
+          <div class="smc-score-num" style="color:${scC}">${sc}pt</div>
+          <div class="smc-score-lbl">スコア</div>
+          <div style="font-size:10px;color:var(--mu);margin-top:6px">宮島1C<br><span style="color:${mc1&&r.miyajima&&r.miyajima['1']&&r.miyajima['1'].win1>=0.5?'var(--ac3)':'var(--mu)'}">${mc1txt}</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  const cnt=document.getElementById('cnt');
+  if(cnt) cnt.textContent=cur.length+'選手表示中';
+}
+
+function flt(type,el){
+  document.querySelectorAll('.ch').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  const all=[...RACERS_ALL].sort((a,b)=>b.score-a.score);
+  if(type==='all') cur=all;
+  else if(type==='motor-hi') cur=all.filter(r=>r.mpct>=40);
+  else if(type==='time-hi')  cur=all.filter(r=>r.time<=6.75);
+  else if(type==='ace')      cur=all.filter(r=>r.ace);
+  else if(type==='form-hi')  cur=all.filter(r=>r.form>=8);
+  else if(type==='st-hi')    cur=all.filter(r=>r.stScore>=80);
+  else if(type==='triple')   cur=all.filter(r=>r.mpct>=40&&r.time<=6.75&&r.stScore>=75);
+  renderTable();
+}
+
+function srch(v){
+  const q=v.replace(/\s/g,'');
+  cur=[...RACERS_ALL].sort((a,b)=>b.score-a.score).filter(r=>r.name.includes(q));
+  renderTable();
+}
+
+function srt(col){
+  if(sortCol===col) sortAsc=!sortAsc; else{sortCol=col;sortAsc=false;}
+  document.querySelectorAll('.tb th').forEach((th,i)=>th.classList.toggle('on',i===col));
+  const keys=['rank','name','mno','mpct','bpct','time','stScore','form','recent3','_mc1','score'];
+  cur.sort((a,b)=>{
+    let va,vb;
+    if(col===9){va=a.miyajima&&a.miyajima['1']?a.miyajima['1'].win1:-1;vb=b.miyajima&&b.miyajima['1']?b.miyajima['1'].win1:-1;}
+    else if(col===10){va=a.score;vb=b.score;}
+    else if(col===0){va=RACERS_ALL.indexOf(a);vb=RACERS_ALL.indexOf(b);}
+    else{va=a[keys[col]]??'';vb=b[keys[col]]??'';}
+    if(typeof va==='string') return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
+    return sortAsc?va-vb:vb-va;
+  });
+  renderTable();
+}
+
+function tab(id){
+  const tabs=['score','picks','motor','time','st','venue'];
+  document.querySelectorAll('.nt').forEach((t,i)=>t.classList.toggle('on',tabs[i]===id));
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+}
+
+function renderMotor(){
+  const ace=[
+    {name:'岩瀬 裕亮',mno:72,mpct:48.3,note:'エース格'},
+    {name:'太田 和美',mno:38,mpct:50.3,note:'エース格（最高）'},
+    {name:'高橋 竜矢',mno:37,mpct:44.8,note:'準エース'},
+    {name:'土屋 智則',mno:17,mpct:43.9,note:'準エース'},
+    {name:'北野 輝季',mno:66,mpct:42.9,note:'準エース'},
+    {name:'磯部 誠', mno:21,mpct:42.9,note:'準エース'},
+    {name:'永井 彪也',mno:79,mpct:36.3,note:'準エース'},
+  ];
+  const aceEl=document.getElementById('ace-list');
+  if(aceEl) aceEl.innerHTML=ace.map(a=>`
+    <div class="player-bar-row">
+      <div class="mini-bar ace">${a.mno}</div>
+      <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--tx)">${a.name}</div><div style="font-size:10px;color:var(--mu)">${a.note}</div></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(a.mpct/50.3*100)}%;background:var(--ac2)"></div></div>
+      <div class="pbar-val" style="color:var(--ac2)">${a.mpct}%</div>
+    </div>`).join('');
+
+  const bins=[{l:'40%↑ エース',col:'var(--ac3)',f:r=>r.mpct>=40},{l:'35〜39%',col:'var(--ac2)',f:r=>r.mpct>=35&&r.mpct<40},{l:'30〜34%',col:'var(--pu)',f:r=>r.mpct>=30&&r.mpct<35},{l:'〜29%',col:'var(--mu)',f:r=>r.mpct<30}];
+  const mDistEl=document.getElementById('m-dist');
+  if(mDistEl) mDistEl.innerHTML=bins.map(b=>{
+    const cnt=RACERS_ALL.filter(b.f).length;
+    return `<div class="bar-row"><div class="bar-name-sm" style="width:70px;color:${b.col};font-size:11px;font-weight:700">${b.l}</div><div class="bar-track"><div class="bar-fill" style="width:${cnt/20*100}%;background:${b.col}"></div></div><div class="bar-val" style="color:${b.col}">${cnt}人</div></div>`;
+  }).join('');
+
+  const sorted=[...RACERS_ALL].sort((a,b)=>b.mpct-a.mpct);
+  const mFullEl=document.getElementById('m-full');
+  if(mFullEl) mFullEl.innerHTML=sorted.map(r=>`
+    <tr>
+      <td style="font-family:'Oswald',sans-serif;color:${r.ace?'var(--ac2)':'var(--mu)'}">${r.mno}${r.ace?'★':''}</td>
+      <td class="nm">${dn(r.name)}</td>
+      <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct}%</span></td>
+      <td style="color:${r.time<=6.75?'var(--ac)':'var(--mu)'}">${r.time.toFixed(2)}</td>
+      <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct>=40?'強':r.mpct>=33?'並':'低'}</span></td>
+    </tr>`).join('');
+}
+
+function renderTime(){
+  const s=[...RACERS_ALL].sort((a,b)=>a.time-b.time).slice(0,20);
+  const el=document.getElementById('time-chart');
+  if(el) el.innerHTML=s.map(r=>{
+    const w=Math.round((6.92-r.time)/(6.92-6.66)*100);
+    const c=r.time<=6.69?'var(--ac)':r.time<=6.74?'var(--ac2)':'var(--mu)';
+    const tags=(r.ace?'<span class="tg tga">エース</span>':'')+(r.stScore>=80?'<span class="tg tgst">ST優</span>':'');
+    return `<div class="bar-row"><div class="bar-name">${dn(r.name)}${tags}</div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${c}"></div></div><div class="bar-val" style="color:${c}">${r.time.toFixed(2)}</div></div>`;
+  }).join('');
+}
+
+function renderST(){
+  const byST=[...RACERS_ALL].sort((a,b)=>b.stScore-a.stScore);
+  const stEl=document.getElementById('st-rank');
+  if(stEl) stEl.innerHTML=byST.slice(0,8).map((r,i)=>`
+    <div class="player-bar-row">
+      <div class="mini-bar ${i<3?'ace':''}">${i+1}</div>
+      <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--tx)">${dn(r.name)}</div></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.round((r.stScore-60)/25*100)}%;background:var(--pu)"></div></div>
+      <div class="pbar-val" style="color:var(--pu)">${r.stScore}</div>
+    </div>`).join('');
+
+  const byForm=[...RACERS_ALL].sort((a,b)=>b.form-a.form);
+  const formEl=document.getElementById('form-rank');
+  if(formEl) formEl.innerHTML=byForm.slice(0,8).map((r,i)=>`
+    <div class="player-bar-row">
+      <div class="mini-bar ${i<3?'ace':''}">${i+1}</div>
+      <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--tx)">${dn(r.name)}</div></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(r.form/17*100)}%;background:var(--ac3)"></div></div>
+      <div class="pbar-val" style="color:var(--ac3)">${r.form.toFixed(1)}</div>
+    </div>`).join('');
+
+  const byR3=[...RACERS_ALL].sort((a,b)=>b.recent3-a.recent3);
+  const r3El=document.getElementById('r3-rank');
+  if(r3El) r3El.innerHTML=byR3.slice(0,8).map((r,i)=>`
+    <div class="player-bar-row">
+      <div class="mini-bar ${i<3?'ace':''}">${i+1}</div>
+      <div style="flex:1"><div style="font-size:11px;font-weight:700;color:var(--tx)">${dn(r.name)}</div><div style="font-size:10px;color:var(--mu)">直近5走${(r.recent5*100).toFixed(0)}%</div></div>
+      <div class="pbar-track"><div class="pbar-fill" style="width:${Math.round(r.recent3*100)}%;background:var(--ac2)"></div></div>
+      <div class="pbar-val" style="color:var(--ac2)">${(r.recent3*100).toFixed(0)}%</div>
+    </div>`).join('');
+
+  const byST2=[...RACERS_ALL].sort((a,b)=>a.avgST-b.avgST);
+  const stFullEl=document.getElementById('st-full');
+  if(stFullEl) stFullEl.innerHTML=byST2.map(r=>`
+    <tr>
+      <td class="nm">${dn(r.name)}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.avgST<=0.13?'var(--ac)':r.avgST<=0.15?'var(--ac2)':'var(--mu)'}">${r.avgST.toFixed(3)}</td>
+      <td style="color:${r.avgST1c<=0.12?'var(--ac)':r.avgST1c<=0.14?'var(--ac2)':'var(--mu)'}">${r.avgST1c.toFixed(3)}</td>
+      <td><span class="ps ${stpc(r.stScore)}">${r.stScore}pt</span></td>
+      <td style="color:${r.form>=10?'var(--ac3)':r.form>=7?'var(--ac2)':'var(--mu)'}">${r.form.toFixed(2)}</td>
+      <td><span class="ps ${r.playerType==='グレードメイン'?'pbl':r.playerType==='混合'?'pmd':'plo'}">${r.playerType}</span></td>
+    </tr>`).join('');
+}
+
+function renderVenue(){
+  const R=['1R','2R','3R','4R','5R','6R','7R','8R','9R','10R','11R','12R'];
+  const areEl=document.getElementById('r-areyasusa');
+  if(areEl) areEl.innerHTML=MIYAJIMA.R_areyasusa.map((v,i)=>{
+    const c=v>=50?'var(--rd)':v>=40?'var(--ac2)':'var(--mu)';
+    return `<div class="bar-row"><div class="bar-name-sm">${R[i]}</div><div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${c}"></div></div><div class="bar-val" style="color:${c}">${v}</div></div>`;
+  }).join('');
+
+  const F=['1枠','2枠','3枠','4枠','5枠','6枠'];
+  const inn2El=document.getElementById('innige-2nd');
+  if(inn2El) inn2El.innerHTML=MIYAJIMA.innige_2nd.map((v,i)=>{
+    const c=v>=0.3?'var(--ac3)':v>=0.15?'var(--ac2)':'var(--mu)';
+    return `<div class="bar-row"><div class="bar-name-sm">${F[i]}</div><div class="bar-track"><div class="bar-fill" style="width:${v*250}%;background:${c}"></div></div><div class="bar-val" style="color:${c}">${(v*100).toFixed(1)}%</div></div>`;
+  }).join('');
+
+  const vtbEl=document.getElementById('venue-tb');
+  if(vtbEl) vtbEl.innerHTML=[...RACERS_ALL].sort((a,b)=>{
+    const ga=Object.values(a.miyajima||{}).reduce((s,c)=>s+(c.runs||0),0);
+    const gb=Object.values(b.miyajima||{}).reduce((s,c)=>s+(c.runs||0),0);
+    return gb-ga;
+  }).map(r=>{
+    const mc=r.miyajima||{};
+    const total=Object.values(mc).reduce((s,c)=>s+(c.runs||0),0);
+    const c1=mc['1'],c2=mc['2'];
+    const c1t=c1?`${c1.runs}走 ${(c1.win1*100).toFixed(0)}%`:'--';
+    const c2t=c2?`${c2.runs}走 ${(c2.win1*100).toFixed(0)}%`:'--';
+    const c1st=c1&&c1.avg_st?c1.avg_st.toFixed(3):'--';
+    const c1col=c1&&c1.win1>=0.67?'var(--ac3)':c1&&c1.win1>=0.33?'var(--ac2)':'var(--mu)';
+    return `<tr>
+      <td class="nm">${dn(r.name)}</td>
+      <td style="font-family:'Oswald',sans-serif">${total}</td>
+      <td style="color:${c1col};font-weight:500">${c1t}</td>
+      <td>${c2t}</td>
+      <td style="color:${c1&&c1.avg_st<=0.13?'var(--ac)':'var(--mu)'}">${c1st}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderPicks(){
+  const picks=[
+    {name:'岩瀬裕亮',col:'var(--ac3)',label:'◎ 本命',points:['エースM72号機（公式コメント最高評価）','前検タイム全体2位6.67（速い！）','宮島1コース 3走全勝・平均ST0.087（全体最速クラス）','インコース勝率81.7%（実測値）','直近5走40%・フォーム指数3.58']},
+    {name:'馬場貴也',col:'var(--ac2)',label:'〇 対抗',points:['フォーム指数1位16.76（全体断トツの好調）','直近3走全勝1.000・直近10走8割勝率','宮島1コース 3走全勝（地の利あり）','G1メインで格上戦に慣れている','平均ST1C=0.120（スタート安定）']},
+    {name:'平本真之',col:'var(--tl)',label:'〇 対抗2',points:['フォーム指数2位13.53（超好調）','直近3走67%・直近5走80%の圧倒的成績','平均着順1.2（全体1位！）','SG/G1常連のトップ選手','直近10走8割の状態は本物']},
+    {name:'常住蓮',col:'var(--pu)',label:'▲ 穴本命',points:['前検タイム全体1位6.66（最速！）','平均着順2.5・直近実績安定','モーター実績は薄→低人気になりやすい','低評価ならば高配当が狙える穴候補','ST安定69.1・実力は確かにある']},
+    {name:'高橋竜矢',col:'var(--ac)',label:'△ 要注目',points:['M2連対率3位44.8%（準エース格）','前検タイム6.73と動き良好','直近5走40%・フォーム5.22','平均ST1C=0.114（スタート速い）','バランス型で安定した成績が見込める']},
+    {name:'羽野直也',col:'var(--rd)',label:'△ 穴2',points:['直近3走全勝1.000（今が旬！）','フォーム指数10.98（全体5位）','G1メインで実績のある格上選手','直近10走4割と急上昇中','モーターは並だが勢いで補完可能']},
+  ];
+  const pdEl=document.getElementById('picks-detail');
+  if(pdEl) pdEl.innerHTML=picks.map(p=>{
+    const r=RACERS_ALL.find(x=>x.name===p.name)||{};
+    return `<div class="pick-card" style="border-left-color:${p.col}">
+      <div class="pick-header">
+        <div>
+          <div class="pick-label" style="color:${p.col}">${p.label}</div>
+          <div class="pick-name">${dn(p.name)}</div>
+        </div>
+        <div class="pick-score">
+          <div class="pick-score-num" style="color:${p.col}">${r.score||'--'}pt</div>
+          <div class="pick-score-lbl">総合スコア</div>
+        </div>
+      </div>
+      <div class="pick-tags">
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">M${r.mno||'--'}号 ${r.mpct||'--'}%</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">前検${r.time||'--'}</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">ST${r.stScore||'--'}pt</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">フォーム${r.form||'--'}</span>
+      </div>
+      <ul class="pick-points">
+        ${p.points.map(pt=>`<li style="color:var(--mu)"><span style="color:${p.col}">▸</span><span>${pt}</span></li>`).join('')}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+// Init
+renderTable();
+renderMotor();
+renderTime();
+renderST();
+renderVenue();
+renderPicks();
+</script>
+
+<footer style="
+  margin-top:48px;
+  padding:20px 16px;
+  border-top:1px solid var(--bd2);
+  text-align:center;
+  background:var(--bg2);
+">
+  <div style="
+    font-size:13px;
+    color:var(--mu);
+    letter-spacing:0.05em;
+  ">
+    <span style="color:var(--ac);font-weight:700;">⚓</span>
+    &nbsp;&copy; <span style="color:var(--tx);">Boat Research Club</span>
+    &nbsp;<span style="color:var(--bd2);">|</span>&nbsp;
+    <span style="font-size:11px;">競艇レース分析・AI予想プラットフォーム</span>
+  </div>
+</footer>
+
+</body>
+</html>
