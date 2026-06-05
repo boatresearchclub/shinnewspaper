@@ -211,7 +211,7 @@ body{
 .ph3{background:linear-gradient(135deg,rgba(167,139,250,.1),rgba(167,139,250,.03));border:1px solid rgba(167,139,250,.25)}
 .ph-label{font-size:11px;font-weight:700;margin-bottom:4px}
 .ph1 .ph-label{color:var(--ac3)}.ph2 .ph-label{color:var(--ac2)}.ph3 .ph-label{color:var(--pu)}
-.ph-name{font-size:16px;font-weight:900;color:#fff;margin-bottom:6px}
+.ph-name{font-size:16px;font-weight:900;color:var(--tx);margin-bottom:6px}
 .ph-reason{font-size:10px;color:var(--mu);line-height:1.6}
 
 /* ===== KPI CARDS ===== */
@@ -378,7 +378,7 @@ body{
 }
 .pick-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .pick-label{font-size:11px;font-weight:700;margin-bottom:3px}
-.pick-name{font-size:18px;font-weight:900;color:#fff}
+.pick-name{font-size:18px;font-weight:900;color:var(--tx)}
 .pick-score{text-align:right}
 .pick-score-num{font-family:'Oswald',sans-serif;font-size:24px;font-weight:700;line-height:1}
 .pick-score-lbl{font-size:10px;color:var(--mu);margin-top:2px}
@@ -448,7 +448,7 @@ body{
 }
 .smc-rank{flex-shrink:0}
 .smc-body{flex:1;min-width:0}
-.smc-name{font-size:15px;font-weight:900;color:#fff;margin-bottom:4px}
+.smc-name{font-size:15px;font-weight:900;color:var(--tx);margin-bottom:4px}
 .smc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
 .smc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
 .smc-stat{background:var(--bg4);border-radius:6px;padding:5px 7px;text-align:center}
@@ -498,7 +498,7 @@ body{
     <span>🔰</span> はじめての方向け：見方ガイド
     <span style="margin-left:auto;cursor:pointer;font-size:11px;color:var(--mu)" onclick="toggleGuide()">▼ 開閉</span>
   </div>
-  <div id="beginner-guide" class="bb-grid">
+  <div id="beginner-guide" class="bb-grid" style="display:none">
     <div class="bb-item"><strong>🏅 総合スコア（pt）</strong>モーター性能・前検タイム・スタート安定性・直近成績を合算した「買いやすさ指数」。高いほど注目。</div>
     <div class="bb-item"><strong>🚀 フォーム指数</strong>直近のレース成績をもとにした「今の調子」スコア。10以上なら超好調！</div>
     <div class="bb-item"><strong>⚡ M2連対率（モーター）</strong>乗っているモーターの勝率。40%以上はエース格の強いモーター。</div>
