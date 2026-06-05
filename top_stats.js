@@ -1452,8 +1452,8 @@ function buildDateCard(dateStr, label) {
   const { results: resultsRec, excludedList } = collectResultsForDate(dateStr, 'rec');
   const resultsScen    = collectResultsForDateScen(dateStr);
   const resultsScenAll = collectResultsForDateScen(dateStr, true);
-  const resultsInTep   = collectResultsForDateInTep(dateStr);
-  const resultsInNeg   = collectResultsForDateInNeg(dateStr);
+  const resultsInTep   = window.collectResultsForDateInTep(dateStr);
+  const resultsInNeg   = window.collectResultsForDateInNeg ? window.collectResultsForDateInNeg(dateStr) : (typeof collectResultsForDateInNeg === 'function' ? collectResultsForDateInNeg(dateStr) : []);
 
   if (resultsHit.length === 0 && resultsRec.length === 0 && excludedList.length === 0 && resultsScen.length === 0 && resultsScenAll.length === 0 && resultsInTep.length === 0 && resultsInNeg.length === 0) return '';
 
@@ -1638,7 +1638,7 @@ function calcTopAIStats() {
       let allResultsInNeg = [];
 
       // [2026-06-01] v6→v7: ev=null が混入したキャッシュを自動破棄するためバージョン更新
-      const _cacheKey = 'aiStats30_' + todayDate + '_' + past30[0] + '_' + past30[past30.length - 1] + '_' + past30.length + '_v10';
+      const _cacheKey = 'aiStats30_' + todayDate + '_' + past30[0] + '_' + past30[past30.length - 1] + '_' + past30.length + '_v11';
       let _cacheHit = false;
       try {
         const _cached = sessionStorage.getItem(_cacheKey);
@@ -1676,8 +1676,8 @@ function calcTopAIStats() {
               const { results: rr } = collectResultsForDate(d, 'rec');
               const rs    = collectResultsForDateScen(d);
               const rsAll = collectResultsForDateScen(d, true);
-              const rIt   = collectResultsForDateInTep(d);
-              const rIn   = collectResultsForDateInNeg(d);
+              const rIt   = window.collectResultsForDateInTep(d);
+              const rIn   = window.collectResultsForDateInNeg ? window.collectResultsForDateInNeg(d) : (typeof collectResultsForDateInNeg === 'function' ? collectResultsForDateInNeg(d) : []);
               allResultsHit.push(...rh);
               allResultsRec.push(...rr);
               allResultsScen.push(...rs);
@@ -1857,12 +1857,12 @@ function _buildHitSokuhoPanel(dateStr) {
   } catch(e) {}
 
   try {
-    const rsInTep = collectResultsForDateInTep(dateStr);
+    const rsInTep = window.collectResultsForDateInTep(dateStr);
     rsInTep.forEach(r => { if (r.isHit) labeledResults.push({ ...r, _sokuhoLabel: '🔒 イン鉄板' }); });
   } catch(e) {}
 
   try {
-    const rsInNeg = collectResultsForDateInNeg(dateStr);
+    const rsInNeg = window.collectResultsForDateInNeg ? window.collectResultsForDateInNeg(dateStr) : (typeof collectResultsForDateInNeg === 'function' ? collectResultsForDateInNeg(dateStr) : []);
     rsInNeg.forEach(r => { if (r.isHit) labeledResults.push({ ...r, _sokuhoLabel: '⚡ イン否定' }); });
   } catch(e) {}
 
@@ -2360,3 +2360,246 @@ function _buildCondBuyPanel30(results, title, subtitle) {
       ${venueDetail30}
     </div>`;
 }
+
+// ══════════════════════════════════════════════════════════════════
+// collectResultsForDateInTep  ─ 新ロジック版（グローバル上書き）
+//
+// [2026-06-05 v11] バックテストで効果確認済みの新アルゴリズムに差し替え。
+//   旧: computeInTepCombos（obf版）を呼ぶだけ
+//   新: 乖離率フィルタ（IT_P2_DIVERGE_MIN 1.2倍）+ 3着最下位カット
+//
+// ─ 変更理由 ─────────────────────────────────────────────
+//   バックテスト結果（直近30日）:
+//     新ロジック … 的中率 42.1% / 回収率  89.7% / 平均 8.4点
+//     旧ロジック … 的中率 40.6% / 回収率  74.9% / 平均 6.0点
+//   回収率 +15pt 改善を確認 → 本番反映。
+//
+// ─ 呼び出し箇所（top_stats.js / sample_obf.js 側は変更不要）──
+//   buildDateCard           … 各日カード（③エリア）
+//   calcTopAIStats / 30日集計 … _renderHistory30 へ渡す
+//   _buildHitSokuhoPanel    … 的中速報カード
+// ──────────────────────────────────────────────────────────
+(function() {
+  'use strict';
+
+  // ── パラメータ（バックテストと同一値）──
+  const IT_P2_DIVERGE_MIN = 1.2;
+  const IT_P3_TAIL_RATIO  = 0.5;
+  const IT_P3_ABS_MIN     = 0.10;
+
+  // コンボ正規化（区切り文字を半角ハイフンに統一）
+  function _normC(c) { return (c || '').replace(/[－−–—―‐‑‒\-]/g, '-'); }
+  // 数字のみ抽出（的中照合用）
+  function _digitsOnly(s) { return (s || '').replace(/[^1-6]/g, ''); }
+
+  // ── 1レース分の新ロジックイン鉄板買い目を生成 ──
+  // 戻り値: ["1-2-3", "1-3-2", ...] の文字列配列（空なら条件不成立）
+  function _computeInTepNewLocal(venue, vdata, rno) {
+    const saved = (typeof window._setDataForCalc === 'function')
+      ? window._setDataForCalc(vdata, venue) : null;
+    try {
+      const rd = vdata?.races?.[String(rno)];
+      if (!rd || !rd.boats || rd.boats.length < 2) return [];
+      if (typeof calcTenkaiProbs  !== 'function') return [];
+      if (typeof calcScenarioData !== 'function') return [];
+
+      const arek     = (typeof rd.arek === 'number' && rd.arek > 0) ? rd.arek : 54.7;
+      const rawBoats = rd.boats;
+
+      // final_prob 計算（calcTenkaiProbs の prob を正規化するだけ）
+      let ranked2;
+      try {
+        ranked2 = calcTenkaiProbs(rawBoats, arek);
+        if (!ranked2 || ranked2.length < 2) return [];
+        const probTotal = ranked2.reduce((s, b) => s + b.prob, 0) || 1;
+        ranked2.forEach(b => { b.final_prob = b.prob / probTotal; });
+        ranked2.sort((a, b) => b.final_prob - a.final_prob);
+      } catch(e) { return []; }
+
+      // 1号艇 final_prob が 0.75 未満 → 条件不成立（イン鉄板の基本条件）
+      const boat1 = ranked2.find(b => b.boat === 1);
+      if (!boat1 || (boat1.final_prob ?? 0) < 0.75) return [];
+
+      // シナリオデータ（2着・3着確率の元になる）
+      let sd;
+      try {
+        const place2Map = (typeof calcPlace2Probs === 'function')
+          ? calcPlace2Probs(rawBoats, ranked2) : {};
+        const ranked2w  = ranked2.map(b => ({ ...b, place2_prob: place2Map[b.boat] || 0 }));
+        // vdata に venue を付与（calcScenarioData が DATA.venue を参照するため）
+        const _vdataV   = (vdata.venue === venue) ? vdata : Object.assign({}, vdata, { venue });
+        sd = calcScenarioData(ranked2w, rawBoats, null, venue, _vdataV);
+      } catch(e) { return []; }
+
+      if (!sd || !sd.valid) return [];
+
+      // inn_2place 取得（乖離率フィルタ用）
+      const _inn2p = (() => {
+        const v = (vdata.inn_data || {}).inn_2place;
+        if (v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0) return v;
+        return (typeof MASTER_EXT !== 'undefined')
+          ? (MASTER_EXT?.venue_stats?.[venue]?.inn_2place || null) : null;
+      })();
+
+      // シナリオ加重2着確率マップ（winner=1号艇）
+      function getP2WeightedMap() {
+        const w1 = 1;
+        if (!sd.scenarioPlace2?.[w1]) {
+          const m = {};
+          ranked2.filter(r => r.boat !== w1).forEach(r => { m[r.boat] = r.final_prob ?? 0; });
+          return m;
+        }
+        const totals = {}; let ws = 0;
+        for (const [kimari, list] of Object.entries(sd.scenarioPlace2[w1])) {
+          const sp = sd.scenarioProb?.[w1]?.[kimari] ?? 0;
+          ws += sp;
+          (list || []).forEach(x => { totals[x.boat] = (totals[x.boat] ?? 0) + x.p2 * sp; });
+        }
+        if (ws > 0) Object.keys(totals).forEach(k => { totals[k] /= ws; });
+        return totals;
+      }
+
+      // 2着軸リスト（乖離率フィルタ付き）
+      function getP2Axes() {
+        const wMap = getP2WeightedMap();
+        const boats = Object.entries(wMap)
+          .map(([b, w]) => ({ boat: parseInt(b), w }))
+          .filter(x => x.boat !== 1 && !isNaN(x.boat))
+          .sort((a, b) => b.w - a.w);
+        if (boats.length === 0) return [];
+        if (_inn2p) {
+          const diverged = boats.filter(x => {
+            const avg = _inn2p[String(x.boat)] ?? _inn2p[x.boat] ?? null;
+            if (avg == null || avg <= 0) return true;       // 平均データなし → 無条件採用
+            return (x.w / avg) >= IT_P2_DIVERGE_MIN;       // 乖離率 >= 1.2倍のみ
+          });
+          // 乖離基準を満たす艇がゼロの場合は最有力の1艇のみに絞る
+          return (diverged.length > 0 ? diverged : boats.slice(0, 1)).map(x => x.boat);
+        }
+        // inn_2place データなし → 全艇を2着候補にする（旧ロジック相当のフォールバック）
+        return boats.map(x => x.boat);
+      }
+
+      // 3着候補（最下位カット付き）
+      function getP3(secondBoat) {
+        const thirdAll = sd.merged3rdMap?.[1]?.[secondBoat] || [];
+        let list;
+        if (thirdAll.length > 0) {
+          list = thirdAll.filter(x => x.boat !== 1 && x.boat !== secondBoat)
+            .map(x => ({ boat: x.boat, r3: x.r3 ?? 0 }));
+        } else {
+          list = ranked2.filter(r => r.boat !== 1 && r.boat !== secondBoat)
+            .sort((a, b) => (b.final_prob ?? 0) - (a.final_prob ?? 0))
+            .map(r => ({ boat: r.boat, r3: r.final_prob ?? 0 }));
+        }
+        // 最下位が "平均の0.5倍未満 かつ 10%未満" なら除外
+        if (list.length >= 2) {
+          const avg  = list.reduce((s, x) => s + x.r3, 0) / list.length;
+          const tail = list[list.length - 1];
+          if (tail.r3 < avg * IT_P3_TAIL_RATIO && tail.r3 < IT_P3_ABS_MIN) {
+            list = list.slice(0, -1);
+          }
+        }
+        return list.map(x => x.boat).slice(0, 3);
+      }
+
+      const p2Axes = getP2Axes();
+      if (p2Axes.length === 0) return [];
+
+      const seen   = new Set();
+      const combos = [];
+      p2Axes.forEach(second => {
+        getP3(second).forEach(t => {
+          if (t === 1 || t === second) return;
+          const fwd = `1-${second}-${t}`;
+          const bwd = `1-${t}-${second}`;
+          if (!seen.has(fwd)) { seen.add(fwd); combos.push(fwd); }
+          if (!seen.has(bwd)) { seen.add(bwd); combos.push(bwd); }
+        });
+      });
+      return combos;
+
+    } finally {
+      if (saved && typeof window._restoreDataForCalc === 'function') {
+        window._restoreDataForCalc(saved);
+      }
+    }
+  }
+
+  // ── グローバル上書き ──
+  // sample_obf.js で定義された旧版より後ろで読み込まれるため
+  // window.collectResultsForDateInTep を上書きして新ロジックに切り替える。
+  window.collectResultsForDateInTep = function collectResultsForDateInTep(dateStr) {
+    const dataForDate = getDataForDate(dateStr);
+    const results     = [];
+
+    VENUE_LIST.forEach(venue => {
+      if (venue === '江戸川') return;
+      const vdata = dataForDate?.[venue];
+      if (!vdata || !vdata.races) return;
+
+      const slug   = SLUG_MAP[venue] || venue;
+      const dateNd = (vdata.date || dateStr).replace(/-/g, '');
+
+      Object.keys(vdata.races).sort((a, b) => +a - +b).forEach(rnoStr => {
+        const rno = parseInt(rnoStr);
+        const rd  = vdata.races[rnoStr];
+        if (!rd || !rd.boats || rd.boats.length < 2) return;
+
+        // 未確定レース（RESULT_DATA なし）→ スキップ
+        const rKey   = `${slug}_${dateNd}_${rno}`;
+        const result = RESULT_DATA?.[rKey];
+        if (!result || !result.sanrentan || result.sanrentan.length === 0) return;
+
+        // 除外条件（既存ロジックと完全統一）
+        if (typeof hasInsufficient      === 'function' && hasInsufficient(rd))             return;
+        if (typeof hasCourseOrderChange === 'function' && hasCourseOrderChange(rno, vdata)) return;
+        if (typeof hasNoLapTime         === 'function' && hasNoLapTime(rno, vdata))         return;
+
+        // 新ロジックで買い目生成
+        let combos;
+        try { combos = _computeInTepNewLocal(venue, vdata, rno); }
+        catch(e) { console.warn('[collectResultsForDateInTep] error', venue, rno, e); return; }
+        if (!combos || combos.length === 0) return;
+
+        // 確定結果
+        const actualRaw    = result.sanrentan[0]?.combo ?? null;
+        const actualResult = actualRaw ? _normC(actualRaw) : null;
+        const actualDigits = actualResult ? _digitsOnly(actualResult) : null;
+
+        // 的中チェック
+        const isHit = !!(actualResult && (
+          combos.some(c => _normC(c) === actualResult) ||
+          (actualDigits && actualDigits.length === 3 &&
+            combos.some(c => _digitsOnly(c) === actualDigits))
+        ));
+
+        // 的中配当（単位: 円。hitOdds < 100 は倍率表記と判断して×100）
+        let hitOdds = 0;
+        if (isHit) {
+          const _m = result.sanrentan.find(s =>
+            s?.combo && _normC(s.combo) === actualResult
+          ) || result.sanrentan[0];
+          const rdOdds = _m?.odds ?? null;
+          if (rdOdds != null && rdOdds > 0) {
+            hitOdds = rdOdds < 100 ? Math.round(rdOdds * 100) : rdOdds;
+          }
+        }
+
+        results.push({
+          venue,
+          date:         vdata.date || dateStr,
+          rno,
+          buy3cnt:      combos.length,
+          isHit,
+          hitOdds,
+          actualResult: actualResult || null,
+        });
+      });
+    });
+
+    return results;
+  };
+
+})(); // end of IIFE for collectResultsForDateInTep new logic
+

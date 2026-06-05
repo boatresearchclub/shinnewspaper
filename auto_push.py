@@ -89,7 +89,7 @@ def get_race_index_path(date_str=None):
         return p
     # フォールバック: 旧来の race_index.json
     return RACE_INDEX_JSON
-CHECK_INTERVAL = 5   # 秒（展示・オッズ検知を高速化）★ 10→5秒に短縮
+CHECK_INTERVAL = 2   # 秒（展示・オッズ検知を高速化）★ 10→5→2秒に短縮
 
 # 過去データの保持・表示日数
 HISTORY_DAYS = 30  # 過去日数（日付ナビ・AI予想成績・展示・コメント・JSONファイル）
@@ -3819,7 +3819,12 @@ def main():
                 # ※ RESULT_DATAはバックグラウンドスレッドが独立してpushするためここでは呼ばない
                 # フェーズ3: 停止 → data/history_YYYYMMDD.json でfetch配信
                 # inject_history_to_html()
-                fetch_and_inject_race_index()  # 公式サイトから開催グレード情報を埋め込む
+
+                # race_index取得は公式サイトへのHTTPアクセス（約30秒）を伴うため、
+                # 開催グレード・タイトルが変わりうるCSV変更時のみ実行する。
+                # 展示・コメント・結果変更時はスキップして先行pushの遅延を防ぐ。
+                if csv_changed:
+                    fetch_and_inject_race_index()  # 公式サイトから開催グレード情報を埋め込む
                 write_all_json_files()    # フェーズ1: data/*.json を追加書き出し（HTML変更なし）
 
                 # オッズ永続ループの死活監視 → 死んでいれば再起動
