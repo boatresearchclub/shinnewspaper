@@ -1,0 +1,127 @@
+{
+  "date": "2026-06-06",
+  "fetched_at": "07:12",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "ＭＢＰ津幡開設１３周年記念",
+      "period": "6/5-6/10",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "01",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "江戸川": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎ江戸川",
+      "period": "6/3-6/7",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "03",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "一般",
+      "title": "テレしずサマーカップ",
+      "period": "6/6-6/10",
+      "day": "初日",
+      "total_days": 5,
+      "jcd": "06",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "蒲郡": {
+      "grade": "一般",
+      "title": "やしの実ＦＭ　「蒲郡ＵＰ！」杯争奪戦",
+      "period": "6/3-6/7",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "07",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "一般",
+      "title": "ＢＴＳ名古屋開設記念・第３４回４ＫソリューションＣ",
+      "period": "6/4-6/8",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "08",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "三国": {
+      "grade": "一般",
+      "title": "スカパー！・ＪＬＣ杯ルーキーシリーズ第１２戦",
+      "period": "6/2-6/8",
+      "day": "４日目",
+      "total_days": 7,
+      "jcd": "10",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "丸亀": {
+      "grade": "一般",
+      "title": "ヴィーナスシリーズ第５戦　マクール杯",
+      "period": "6/6-6/11",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "15",
+      "is_joshi": true,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "宮島": {
+      "grade": "G1",
+      "title": "宮島チャンピオンカップ開設７２周年記念",
+      "period": "6/4-6/9",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "17",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "一般",
+      "title": "西部発刊１万号記念スポーツ報知杯争奪戦",
+      "period": "6/5-6/10",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "18",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "芦屋": {
+      "grade": "一般",
+      "title": "ＢＯＡＴＢｏｙカップ",
+      "period": "6/3-6/8",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "21",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "大村": {
+      "grade": "一般",
+      "title": "ミッドナイトボートレースｉｎ大村　３",
+      "period": "6/6-6/10",
+      "day": "初日",
+      "total_days": 5,
+      "jcd": "24",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    }
+  }
+}
