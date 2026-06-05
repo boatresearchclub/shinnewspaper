@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宮島G1 チャンピオンカップ 2026 ｜ 実データ分析ダッシュボード</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e1a;--bg2:#111827;--bg3:#1a2235;--bd:rgba(255,255,255,.08);--bd2:rgba(255,255,255,.15);--tx:#e8edf5;--mu:#8899aa;--ac:#00c9ff;--ac2:#f59e0b;--ac3:#10b981;--rd:#ef4444;--pu:#a78bfa;--tl:#14b8a6}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--tx);font-size:14px}
+.hd{background:linear-gradient(135deg,#0a0e1a,#0f1e3a,#0a1628);border-bottom:1px solid var(--bd2);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hd-l{display:flex;align-items:center;gap:12px}
+.vb{background:var(--ac);color:#000;font-family:'Oswald',sans-serif;font-weight:700;font-size:12px;padding:3px 9px;border-radius:4px}
+.ht{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:#fff}
+.hs{font-size:11px;color:var(--mu);margin-top:1px}
+.hd-r{display:flex;gap:10px}
+.sp{text-align:center;padding:5px 11px;background:var(--bg3);border:1px solid var(--bd);border-radius:7px}
+.sp-n{font-family:'Oswald',sans-serif;font-size:16px;color:var(--ac)}
+.sp-l{font-size:10px;color:var(--mu)}
+.nav{display:flex;background:var(--bg2);border-bottom:1px solid var(--bd);padding:0 20px;overflow-x:auto}
+.nt{padding:10px 15px;font-size:12px;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500;transition:.2s}
+.nt:hover{color:var(--tx)}
+.nt.on{color:var(--ac);border-bottom-color:var(--ac)}
+.fb{background:var(--bg2);border-bottom:1px solid var(--bd);padding:8px 20px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.fl{font-size:11px;color:var(--mu);margin-right:3px}
+.ch{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid var(--bd2);color:var(--mu);cursor:pointer;transition:.2s}
+.ch:hover{border-color:var(--ac);color:var(--ac)}
+.ch.on{background:rgba(0,201,255,.12);border-color:var(--ac);color:var(--ac)}
+.sb{margin-left:auto;background:var(--bg3);border:1px solid var(--bd2);border-radius:5px;padding:4px 10px;color:var(--tx);font-size:12px;width:140px;outline:none;font-family:'Noto Sans JP',sans-serif}
+.sb:focus{border-color:var(--ac)}
+.mn{padding:12px 20px}
+.kr{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px}
+.kc{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:11px 13px;position:relative;overflow:hidden}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kc.bl::before{background:var(--ac)}
+.kc.am::before{background:var(--ac2)}
+.kc.gr::before{background:var(--ac3)}
+.kc.pu::before{background:var(--pu)}
+.kc.rd::before{background:var(--rd)}
+.kl{font-size:10px;color:var(--mu);letter-spacing:.08em;margin-bottom:2px}
+.kn{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700}
+.kc.bl .kn{color:var(--ac)}.kc.am .kn{color:var(--ac2)}.kc.gr .kn{color:var(--ac3)}.kc.pu .kn{color:var(--pu)}.kc.rd .kn{color:var(--rd)}
+.ks{font-size:10px;color:var(--mu);margin-top:1px}
+.pn{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:12px 14px;margin-bottom:10px}
+.pt{font-size:11px;font-weight:700;color:var(--mu);letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.pt span{color:var(--ac)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+/* テーブル */
+.tb{width:100%;border-collapse:collapse;font-size:12px}
+.tb th{padding:5px 6px;text-align:left;color:var(--mu);font-size:10px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--bd);cursor:pointer;white-space:nowrap;user-select:none}
+.tb th:hover,.tb th.on{color:var(--ac)}
+.tb td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap}
+.tb tr:hover td{background:rgba(0,201,255,.04)}
+.rb{width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:10px;font-weight:700}
+.r1{background:#fbbf24;color:#000}.r2{background:#94a3b8;color:#000}.r3{background:#b45309;color:#fff}.rn{background:var(--bg3);color:var(--mu)}
+.nm{font-weight:500;color:var(--tx)}
+.ps{display:inline-block;font-size:10px;padding:2px 5px;border-radius:3px;font-weight:700}
+.phi{background:rgba(16,185,129,.15);color:var(--ac3);border:1px solid rgba(16,185,129,.3)}
+.pmd{background:rgba(245,158,11,.15);color:var(--ac2);border:1px solid rgba(245,158,11,.3)}
+.plo{background:rgba(148,163,184,.1);color:var(--mu);border:1px solid var(--bd)}
+.pbl{background:rgba(0,201,255,.12);color:var(--ac);border:1px solid rgba(0,201,255,.3)}
+.ppu{background:rgba(167,139,250,.15);color:var(--pu);border:1px solid rgba(167,139,250,.3)}
+.ts{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700}
+.tg{display:inline-block;font-size:9px;padding:1px 4px;border-radius:2px;font-weight:700;margin-left:3px}
+.tga{background:rgba(245,158,11,.2);color:var(--ac2)}
+.tgs{background:rgba(0,201,255,.15);color:var(--ac)}
+.tgst{background:rgba(167,139,250,.2);color:var(--pu)}
+.tgf{background:rgba(16,185,129,.2);color:var(--ac3)}
+.tgr{background:rgba(239,68,68,.2);color:var(--rd)}
+/* バー */
+.br{display:inline-block;height:4px;border-radius:2px;background:var(--ac);vertical-align:middle;margin-right:3px;opacity:.7}
+.mb{display:flex;height:6px;border-radius:3px;overflow:hidden;gap:1px}
+/* ピックス */
+.pk{background:linear-gradient(135deg,var(--bg3),rgba(0,201,255,.05));border:1px solid rgba(0,201,255,.2);border-radius:9px;padding:12px 14px;margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pi{padding:9px 10px;border-radius:7px}
+.pi1{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
+.pi2{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25)}
+.pi3{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25)}
+.pl{font-size:12px;font-weight:700;margin-bottom:3px}
+.pi1 .pl{color:var(--ac3)}.pi2 .pl{color:var(--ac2)}.pi3 .pl{color:var(--pu)}
+.pna{font-size:15px;font-weight:700;color:#fff;margin-bottom:2px}
+.pr{font-size:10px;color:var(--mu)}
+/* タイムバー */
+.tbr{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.tbr:last-child{border-bottom:none}
+.tn{width:76px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.tf{height:100%;border-radius:3px}
+.tv{font-family:'Oswald',sans-serif;font-size:12px;width:32px;text-align:right}
+/* コース */
+.cg{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.cc{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;padding:7px 3px;text-align:center}
+.cn{font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;margin-bottom:3px}
+.cv{font-family:'Oswald',sans-serif;font-size:17px;font-weight:700}
+.cl{font-size:9px;color:var(--mu);margin-top:2px}
+/* モーター */
+.mr{display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.mr:last-child{border-bottom:none}
+.mn2{width:25px;height:25px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:11px;font-weight:700;background:var(--bg3);border:1px solid var(--bd2);color:var(--mu);flex-shrink:0}
+.mn2.ace{background:rgba(245,158,11,.15);border-color:var(--ac2);color:var(--ac2)}
+.mt{flex:1;font-size:12px;font-weight:500}
+.mb2{width:70px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.mf{height:100%;border-radius:3px;background:var(--ac2)}
+.mp{font-family:'Oswald',sans-serif;font-size:12px;width:36px;text-align:right}
+/* 表フッター */
+.tf2{display:flex;align-items:center;justify-content:space-between;padding:6px 0 0;font-size:11px;color:var(--mu)}
+/* 凡例 */
+.lg{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--mu);margin-bottom:8px}
+.lgi{display:flex;align-items:center;gap:4px}
+.lgd{width:8px;height:8px;border-radius:2px}
+/* タブ */
+.tc{display:none}
+.tc.on{display:block}
+/* 荒れスコアバー */
+.rr{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px}
+.rr:last-child{border-bottom:none}
+.rl{width:28px;color:var(--mu)}
+.rt{flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.rf{height:100%;border-radius:3px}
+.rv{width:36px;text-align:right;font-family:'Oswald',sans-serif;font-size:11px}
+/* 宮島実績ミニテーブル */
+.myt{font-size:11px;background:var(--bg3);border-radius:6px;padding:8px;margin-top:6px}
+.myr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.myr:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-l">
+    <span class="vb">宮島 G1</span>
+    <div>
+      <div class="ht">チャンピオンカップ 開設72周年記念</div>
+      <div class="hs">2026年6月5日〜10日 ／ 実データ版（選手指数マスタ・会場別コースマスタ 2026-06-04更新）</div>
+    </div>
+  </div>
+  <div class="hd-r">
+    <div class="sp"><div class="sp-n">52</div><div class="sp-l">出場選手</div></div>
+    <div class="sp"><div class="sp-n">1,560</div><div class="sp-l">宮島G1レース数</div></div>
+    <div class="sp"><div class="sp-n" style="color:var(--ac2)">56.6%</div><div class="sp-l">イン逃げ率(実測)</div></div>
+    <div class="sp" style="border-color:rgba(16,185,129,.3)"><div class="sp-n" style="font-size:11px;color:var(--ac3)">実データ反映済</div><div class="sp-l">フォーム指数×ST実測</div></div>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nt on" onclick="tab('score')">総合スコアカード</div>
+  <div class="nt" onclick="tab('motor')">モーター分析</div>
+  <div class="nt" onclick="tab('time')">前検タイム</div>
+  <div class="nt" onclick="tab('st')">ST安定・フォーム</div>
+  <div class="nt" onclick="tab('venue')">宮島コース傾向</div>
+  <div class="nt" onclick="tab('pick')">注目PICKS</div>
+</div>
+
+<div class="fb">
+  <span class="fl">絞り込み：</span>
+  <span class="ch on" onclick="flt('all',this)">全選手(52)</span>
+  <span class="ch" onclick="flt('motor-hi',this)">M40%↑</span>
+  <span class="ch" onclick="flt('time-hi',this)">前検速い(≤6.75)</span>
+  <span class="ch" onclick="flt('ace',this)">エース機</span>
+  <span class="ch" onclick="flt('form-hi',this)">フォーム好調</span>
+  <span class="ch" onclick="flt('st-hi',this)">ST安定(80↑)</span>
+  <span class="ch" onclick="flt('triple',this)">三拍子揃い</span>
+  <input class="sb" type="text" placeholder="選手名検索..." oninput="srch(this.value)">
+</div>
+
+<div class="mn">
+
+  <div class="pk">
+    <div class="pi pi1">
+      <div class="pl">◎ 本命</div>
+      <div class="pna">岩瀬 裕亮</div>
+      <div class="pr">エースM72×前検6.67×宮島1C全勝(3/3)×イン勝率81.7%</div>
+    </div>
+    <div class="pi pi2">
+      <div class="pl">〇 対抗</div>
+      <div class="pna">馬場 貴也</div>
+      <div class="pr">フォーム指数1位16.76×直近3走全勝×直近10走8割勝率</div>
+    </div>
+    <div class="pi pi3">
+      <div class="pl">▲ 穴</div>
+      <div class="pna">常住 蓮</div>
+      <div class="pr">前検1位6.66×平均着順2.5×低人気M→高配当狙い</div>
+    </div>
+  </div>
+
+  <!-- スコアカード -->
+  <div id="tab-score" class="tc on">
+    <div class="kr">
+      <div class="kc bl"><div class="kl">フォーム指数1位</div><div class="kn">16.76</div><div class="ks">馬場貴也（直近3走全勝）</div></div>
+      <div class="kc am"><div class="kl">M最高2連対率</div><div class="kn">50.3%</div><div class="ks">太田和美 / 38号機</div></div>
+      <div class="kc gr"><div class="kl">ST安定スコア1位</div><div class="kn">84.8</div><div class="ks">菊地孝平（標準偏差0.044）</div></div>
+      <div class="kc pu"><div class="kl">前検最速</div><div class="kn">6.66</div><div class="ks">常住蓮 / 53号機</div></div>
+      <div class="kc rd"><div class="kl">宮島1C実績1.000</div><div class="kn">3人</div><div class="ks">岩瀬・馬場・久田(各3走)</div></div>
+    </div>
+    <div class="lg">
+      <span style="font-size:11px;color:var(--mu);margin-right:4px">スコア構成（実データ版）：</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac2)"></span>M2連対率 35pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac)"></span>前検タイム 25pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--ac3)"></span>B2連対率 15pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--pu)"></span>ST安定(実測) 15pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--rd)"></span>宮島実績補正 10pt</span>
+      <span class="lgi"><span class="lgd" style="background:var(--tl)"></span>× フォーム指数乗算</span>
+    </div>
+    <div class="pn">
+      <div class="pt"><span>▮</span> 選手スコアカード（実データ・フォーム指数込み） — 列クリックでソート</div>
+      <div style="overflow-x:auto">
+        <table class="tb" id="mt">
+          <thead><tr>
+            <th onclick="srt(0)">順</th>
+            <th onclick="srt(1)">選手名</th>
+            <th onclick="srt(2)">M番</th>
+            <th onclick="srt(3)" class="on">M2連対率▼</th>
+            <th onclick="srt(4)">B2連対率</th>
+            <th onclick="srt(5)">前検T</th>
+            <th onclick="srt(6)">ST安定(実)</th>
+            <th onclick="srt(7)">フォーム指数</th>
+            <th onclick="srt(8)">直近3走1着</th>
+            <th onclick="srt(9)">宮島1C実績</th>
+            <th onclick="srt(10)">総合スコア</th>
+            <th>内訳バー</th>
+          </tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+      <div class="tf2"><span id="cnt">52選手表示中</span><span>フォーム指数 = 直近成績の複合スコア（最高16.76）</span></div>
+    </div>
+  </div>
+
+  <!-- モーター -->
+  <div id="tab-motor" class="tc">
+    <div class="g2">
+      <div class="pn">
+        <div class="pt"><span>▮</span> エース・準エース格モーター</div>
+        <div id="ace-list"></div>
+      </div>
+      <div class="pn">
+        <div class="pt"><span>▮</span> M2連対率分布</div>
+        <div id="m-dist"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--mu);line-height:1.7">
+          エース格は <strong style="color:var(--ac2)">72号（岩瀬）・38号（太田）</strong>。<br>
+          準エース：17・21・37・54・66・71・79号機。
+        </div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span>▮</span> 全選手モーター一覧（M2連対率順）</div>
+      <div style="overflow-x:auto">
+        <table class="tb"><thead><tr>
+          <th>M番</th><th>選手名</th><th>M2連対率</th><th>B番</th><th>B2連対率</th><th>前検T</th><th>ST安定(実)</th><th>フォーム</th><th>評価</th>
+        </tr></thead><tbody id="m-full"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 前検タイム -->
+  <div id="tab-time" class="tc">
+    <div class="pn">
+      <div class="pt"><span>▮</span> 前検タイムランキング TOP20（速い順）</div>
+      <div id="time-chart"></div>
+    </div>
+    <div style="margin-top:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--bd);border-radius:9px;font-size:12px;color:var(--mu);line-height:1.9">
+      <strong style="color:var(--tx)">⚠ 前検タイムの読み方</strong><br>
+      数値が小さいほど速い。初日前検はプロペラ調整途中のため参考値。<br>
+      <span style="color:var(--ac)">常住蓮（6.66）</span> — M実績薄も、ST安定スコア69.1・平均着順2.5と実力あり。日々改善に期待。<br>
+      <span style="color:var(--ac2)">岩瀬裕亮（6.67）</span> — エース機72号との組み合わせが最強。宮島1C 3走全勝の実績も裏付け。<br>
+      <span style="color:var(--tl)">井上忠政（6.69）</span> — フォーム指数8.55・直近3走67%。前検3位の動きは本物。
+    </div>
+  </div>
+
+  <!-- ST・フォーム -->
+  <div id="tab-st" class="tc">
+    <div class="g3">
+      <div class="pn">
+        <div class="pt"><span>▮</span> ST安定スコア（実測）TOP</div>
+        <div id="st-rank"></div>
+      </div>
+      <div class="pn">
+        <div class="pt"><span>▮</span> フォーム指数TOP（直近成績複合）</div>
+        <div id="form-rank"></div>
+      </div>
+      <div class="pn">
+        <div class="pt"><span>▮</span> 直近3走1着率TOP</div>
+        <div id="r3-rank"></div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span>▮</span> ST指数詳細（実測平均ST×1コース）</div>
+      <div style="overflow-x:auto">
+        <table class="tb"><thead><tr>
+          <th>選手名</th><th>平均ST(全)</th><th>平均ST(1C)</th><th>ST安定スコア</th><th>ST標準偏差</th><th>フォーム指数</th><th>直近10走平均着順</th><th>選手タイプ</th>
+        </tr></thead><tbody id="st-full"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 宮島コース傾向 -->
+  <div id="tab-venue" class="tc">
+    <div class="g2">
+      <div class="pn">
+        <div class="pt"><span>▮</span> 宮島コース別1着率（G1実測 1,560レース）</div>
+        <div class="cg" style="margin-bottom:10px">
+          <div class="cc"><div class="cn" style="color:var(--ac)">1C</div><div class="cv" style="color:var(--ac)">58.8%</div><div class="cl">逃げ</div></div>
+          <div class="cc"><div class="cn" style="color:var(--ac2)">2C</div><div class="cv" style="color:var(--ac2)">11.4%</div><div class="cl">差し</div></div>
+          <div class="cc"><div class="cn" style="color:var(--pu)">3C</div><div class="cv" style="color:var(--pu)">13.0%</div><div class="cl">捲り</div></div>
+          <div class="cc"><div class="cn" style="color:var(--mu)">4C</div><div class="cv" style="color:var(--mu)">9.2%</div><div class="cl">捲り差し</div></div>
+          <div class="cc"><div class="cn" style="color:var(--mu)">5C</div><div class="cv" style="color:var(--mu)">5.7%</div><div class="cl">抜き</div></div>
+          <div class="cc"><div class="cn" style="color:var(--mu)">6C</div><div class="cv" style="color:var(--mu)">1.9%</div><div class="cl">抜き</div></div>
+        </div>
+        <div style="font-size:11px;color:var(--mu);line-height:1.7">
+          宮島G1はイン逃げ率<strong style="color:var(--ac)">56.6%</strong>（全国比+0.33%）。<br>
+          3コースが2コースより高い特徴的なコース構造。<br>
+          イン逃げ後の2コース2着率：<strong style="color:var(--ac2)">33.1%</strong>（実測値）。
+        </div>
+      </div>
+      <div class="pn">
+        <div class="pt"><span>▮</span> R番号別荒れスコア（実測）</div>
+        <div id="r-areyasusa"></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--mu)">
+          高スコア＝荒れやすい（1着がイン以外になりやすい）。<br>
+          7R(54.9pt)と3R(51.2pt)が特に波乱含み。
+        </div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="pn">
+        <div class="pt"><span>▮</span> イン逃げ後 枠別2着率（実測 883レース）</div>
+        <div id="innige-2nd"></div>
+      </div>
+      <div class="pn">
+        <div class="pt"><span>▮</span> 舟券フォーメーション（実データから）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">
+          <div style="background:var(--bg3);border-radius:7px;padding:10px">
+            <div style="color:var(--ac);font-weight:700;margin-bottom:5px">堅め / 3連単</div>
+            <div style="color:var(--mu);font-size:10px;margin-bottom:3px">イン逃げ58.8%信頼</div>
+            <div>1-2-3 / 1-3-2<br>1-2-4 / 1-3-4</div>
+            <div style="margin-top:4px;font-size:10px;color:var(--mu)">2コース差し33.1%の対抗</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:7px;padding:10px">
+            <div style="color:var(--ac2);font-weight:700;margin-bottom:5px">中穴 / 3コース軸</div>
+            <div style="color:var(--mu);font-size:10px;margin-bottom:3px">3C1着率13.0%（全国比高）</div>
+            <div>3-1-2 / 3-2-1<br>3-4-1 / 3-1-4</div>
+            <div style="margin-top:4px;font-size:10px;color:var(--mu)">7R(荒54.9pt)狙い</div>
+          </div>
+          <div style="background:var(--bg3);border-radius:7px;padding:10px">
+            <div style="color:var(--pu);font-weight:700;margin-bottom:5px">大穴 / 常住軸</div>
+            <div style="color:var(--mu);font-size:10px;margin-bottom:3px">前検1位×低人気M</div>
+            <div>常住-岩瀬-馬場<br>常住-太田-高橋</div>
+            <div style="margin-top:4px;font-size:10px;color:var(--mu)">高配当狙い 3R(荒51.2pt)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pn">
+      <div class="pt"><span>▮</span> 今節出場選手 宮島実績一覧（会場別コースマスタ実測）</div>
+      <div style="overflow-x:auto">
+        <table class="tb"><thead><tr>
+          <th>選手名</th><th>宮島総走数</th><th>1C実績(走数/勝率)</th><th>2C実績</th><th>3C実績</th><th>1C平均ST</th><th>選手タイプ</th>
+        </tr></thead><tbody id="venue-tb"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PICKS -->
+  <div id="tab-pick" class="tc">
+    <div class="pn">
+      <div class="pt"><span>▮</span> 注目選手 詳細分析（実データ6指標）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" id="picks-detail"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const RACERS = [{"name": "岩瀬裕亮", "mno": 72, "mpct": 48.3, "bno": 62, "bpct": 39.2, "time": 6.67, "ace": true, "stScore": 75.5, "stStd": 0.0545, "avgST": 0.1412, "avgST1c": 0.1192, "form": 3.58, "recent3": 0.333, "recent5": 0.4, "recent10": 0.2, "avgRank10": 3.2, "inWin": 0.8165, "win3_1y": 0.7137, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.0867}, "2": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.14}, "3": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.13}, "4": {"runs": 4, "win1": 0.25, "ewma": 0.0597, "avg_st": 0.1225}, "5": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.2033}}, "score": 78, "scoreM": 32.3, "scoreT": 24.0, "scoreB": 7.5, "scoreST": 9.2, "scoreV": 10.0, "formMul": 0.942}, {"name": "永井彪也", "mno": 79, "mpct": 36.3, "bno": 19, "bpct": 40.2, "time": 6.73, "ace": true, "stScore": 79.0, "stStd": 0.051, "avgST": 0.1332, "avgST1c": 0.1381, "form": 8.73, "recent3": 0.667, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.6863, "win3_1y": 0.6278, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9492, "avg_st": 0.1567}, "3": {"runs": 5, "win1": 0.4, "ewma": 0.3356, "avg_st": 0.14}, "4": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.15}, "5": {"runs": 4, "win1": 0.5, "ewma": 0.1235, "avg_st": 0.0925}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.15}}, "score": 65, "scoreM": 15.9, "scoreT": 18.3, "scoreB": 8.1, "scoreST": 11.4, "scoreV": 10.0, "formMul": 1.014}, {"name": "高橋竜矢", "mno": 37, "mpct": 44.8, "bno": 12, "bpct": 36.7, "time": 6.73, "ace": false, "stScore": 68.3, "stStd": 0.0617, "avgST": 0.1402, "avgST1c": 0.1143, "form": 5.22, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.2, "inWin": 0.8158, "win3_1y": 0.6829, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 13, "win1": 0.6154, "ewma": 0.56, "avg_st": 0.1285}, "2": {"runs": 6, "win1": 0.6667, "ewma": 0.9909, "avg_st": 0.1083}, "3": {"runs": 11, "win1": 0.2727, "ewma": 0.1166, "avg_st": 0.1527}, "4": {"runs": 12, "win1": 0.1667, "ewma": 0.0578, "avg_st": 0.1217}, "5": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.0767}, "6": {"runs": 12, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1583}}, "score": 64, "scoreM": 27.5, "scoreT": 18.3, "scoreB": 5.9, "scoreST": 4.6, "scoreV": 9.5, "formMul": 0.973}, {"name": "高憧四季", "mno": 58, "mpct": 44.2, "bno": 78, "bpct": 40.2, "time": 6.72, "ace": false, "stScore": 63.5, "stStd": 0.0665, "avgST": 0.1584, "avgST1c": 0.1491, "form": 8.31, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.7315, "win3_1y": 0.7045, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 5, "win1": 0.2, "ewma": 0.3104, "avg_st": 0.17}, "2": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.18}, "4": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.158}, "5": {"runs": 5, "win1": 0.2, "ewma": 0.3208, "avg_st": 0.114}}, "score": 62, "scoreM": 26.7, "scoreT": 19.2, "scoreB": 8.1, "scoreST": 1.6, "scoreV": 7.5, "formMul": 0.974}, {"name": "山崎郡", "mno": 65, "mpct": 41.5, "bno": 59, "bpct": 34.7, "time": 6.75, "ace": false, "stScore": 78.1, "stStd": 0.0519, "avgST": 0.1319, "avgST1c": 0.1344, "form": 7.38, "recent3": 0.333, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.0, "inWin": 0.813, "win3_1y": 0.7066, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 4, "win1": 0.5, "ewma": 0.4981, "avg_st": 0.1325}, "2": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.16}, "3": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.13}, "4": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.162}, "5": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.144}}, "score": 62, "scoreM": 23.0, "scoreT": 16.3, "scoreB": 4.6, "scoreST": 10.8, "scoreV": 9.0, "formMul": 0.979}, {"name": "井上忠政", "mno": 61, "mpct": 39.6, "bno": 39, "bpct": 32.3, "time": 6.69, "ace": false, "stScore": 72.2, "stStd": 0.0578, "avgST": 0.1534, "avgST1c": 0.142, "form": 8.55, "recent3": 0.667, "recent5": 0.6, "recent10": 0.6, "avgRank10": 2.1, "inWin": 0.8261, "win3_1y": 0.6974, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 60, "scoreM": 20.4, "scoreT": 22.1, "scoreB": 3.0, "scoreST": 7.1, "scoreV": 5.0, "formMul": 1.038}, {"name": "桑原悠", "mno": 32, "mpct": 42.9, "bno": 17, "bpct": 41.9, "time": 6.81, "ace": false, "stScore": 71.0, "stStd": 0.059, "avgST": 0.1321, "avgST1c": 0.1201, "form": 6.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.9, "inWin": 0.7619, "win3_1y": 0.6307, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9513, "avg_st": 0.1433}, "3": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.11}, "4": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.14}, "5": {"runs": 3, "win1": 0.3333, "ewma": 0.0856, "avg_st": 0.1833}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1267}}, "score": 59, "scoreM": 24.9, "scoreT": 10.6, "scoreB": 9.2, "scoreST": 6.3, "scoreV": 10.0, "formMul": 0.959}, {"name": "磯部誠", "mno": 21, "mpct": 42.9, "bno": 65, "bpct": 34.1, "time": 6.72, "ace": true, "stScore": 79.6, "stStd": 0.0504, "avgST": 0.1256, "avgST1c": 0.1101, "form": 1.4, "recent3": 0, "recent5": 0, "recent10": 0.1, "avgRank10": 3.3, "inWin": 0.8, "win3_1y": 0.6256, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 58, "scoreM": 24.9, "scoreT": 19.2, "scoreB": 4.2, "scoreST": 11.7, "scoreV": 5.0, "formMul": 0.888}, {"name": "羽野直也", "mno": 60, "mpct": 36.4, "bno": 57, "bpct": 38.0, "time": 6.77, "ace": false, "stScore": 76.4, "stStd": 0.0536, "avgST": 0.1345, "avgST1c": 0.1266, "form": 10.98, "recent3": 1.0, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.3, "inWin": 0.7045, "win3_1y": 0.6552, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 55, "scoreM": 16.1, "scoreT": 14.4, "scoreB": 6.7, "scoreST": 9.7, "scoreV": 5.0, "formMul": 1.062}, {"name": "白神優", "mno": 55, "mpct": 42.7, "bno": 64, "bpct": 32.0, "time": 6.77, "ace": false, "stScore": 68.3, "stStd": 0.0617, "avgST": 0.1364, "avgST1c": 0.1293, "form": 4.49, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.6, "inWin": 0.7422, "win3_1y": 0.7183, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 6, "win1": 1.0, "ewma": 1.0, "avg_st": 0.1167}, "5": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.11}, "6": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1233}}, "score": 54, "scoreM": 24.6, "scoreT": 14.4, "scoreB": 2.8, "scoreST": 4.6, "scoreV": 10.0, "formMul": 0.959}, {"name": "土屋智則", "mno": 17, "mpct": 43.9, "bno": 56, "bpct": 30.6, "time": 6.77, "ace": true, "stScore": 72.5, "stStd": 0.0575, "avgST": 0.132, "avgST1c": 0.1148, "form": 4.76, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.3, "inWin": 0.6182, "win3_1y": 0.6667, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 53, "scoreM": 26.3, "scoreT": 14.4, "scoreB": 1.9, "scoreST": 7.3, "scoreV": 5.0, "formMul": 0.962}, {"name": "北野輝季", "mno": 66, "mpct": 42.9, "bno": 21, "bpct": 33.5, "time": 6.77, "ace": true, "stScore": 79.0, "stStd": 0.051, "avgST": 0.1431, "avgST1c": 0.1479, "form": 1.38, "recent3": 0, "recent5": 0, "recent10": 0.1, "avgRank10": 3.9, "inWin": 0.7835, "win3_1y": 0.6269, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 53, "scoreM": 24.9, "scoreT": 14.4, "scoreB": 3.8, "scoreST": 11.4, "scoreV": 5.0, "formMul": 0.882}, {"name": "實森美祐", "mno": 57, "mpct": 43.6, "bno": 50, "bpct": 28.6, "time": 6.78, "ace": false, "stScore": 68.8, "stStd": 0.0612, "avgST": 0.1493, "avgST1c": 0.1372, "form": 3.36, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 2.9, "inWin": 0.75, "win3_1y": 0.6468, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.12}, "2": {"runs": 6, "win1": 0.3333, "ewma": 0.1128, "avg_st": 0.155}, "3": {"runs": 7, "win1": 0.2857, "ewma": 0.3171, "avg_st": 0.1129}, "4": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.145}, "5": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.13}, "6": {"runs": 8, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1588}}, "score": 52, "scoreM": 25.9, "scoreT": 13.5, "scoreB": 0.6, "scoreST": 5.0, "scoreV": 10.0, "formMul": 0.945}, {"name": "赤岩善生", "mno": 51, "mpct": 39.6, "bno": 63, "bpct": 39.5, "time": 6.81, "ace": false, "stScore": 78.6, "stStd": 0.0514, "avgST": 0.151, "avgST1c": 0.1213, "form": 3.98, "recent3": 0, "recent5": 0, "recent10": 0.3, "avgRank10": 2.9, "inWin": 0.6148, "win3_1y": 0.7891, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "ewma": 0.0501, "avg_st": 0.1467}}, "score": 51, "scoreM": 20.4, "scoreT": 10.6, "scoreB": 7.7, "scoreST": 11.1, "scoreV": 5.4, "formMul": 0.915}, {"name": "村岡賢人", "mno": 33, "mpct": 36.2, "bno": 79, "bpct": 31.4, "time": 6.77, "ace": false, "stScore": 81.5, "stStd": 0.048, "avgST": 0.1173, "avgST1c": 0.1057, "form": 5.15, "recent3": 0.667, "recent5": 0.6, "recent10": 0.3, "avgRank10": 3.1, "inWin": 0.6952, "win3_1y": 0.734, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 5, "win1": 0.4, "ewma": 0.045, "avg_st": 0.086}, "2": {"runs": 5, "win1": 0.4, "ewma": 0.1674, "avg_st": 0.126}, "3": {"runs": 3, "win1": 0.3333, "ewma": 0.1066, "avg_st": 0.0833}, "4": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1433}, "5": {"runs": 3, "win1": 0.3333, "ewma": 0.8006, "avg_st": 0.13}}, "score": 51, "scoreM": 15.8, "scoreT": 14.4, "scoreB": 2.5, "scoreST": 12.9, "scoreV": 5.4, "formMul": 0.995}, {"name": "太田和美", "mno": 38, "mpct": 50.3, "bno": 14, "bpct": 32.1, "time": 6.81, "ace": true, "stScore": 65.8, "stStd": 0.0642, "avgST": 0.1522, "avgST1c": 0.1474, "form": 0.35, "recent3": 0, "recent5": 0, "recent10": 0, "avgRank10": 4.4, "inWin": 0.6429, "win3_1y": 0.6772, "flyImpact": null, "playerType": "混合", "miyajima": {"4": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1833}, "5": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.09}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1533}}, "score": 49, "scoreM": 35.0, "scoreT": 10.6, "scoreB": 2.9, "scoreST": 3.1, "scoreV": 5.0, "formMul": 0.867}, {"name": "池田浩二", "mno": 30, "mpct": 40.7, "bno": 20, "bpct": 35.0, "time": 6.85, "ace": false, "stScore": 80.6, "stStd": 0.0492, "avgST": 0.1231, "avgST1c": 0.1234, "form": 7.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 2.5, "inWin": 0.8362, "win3_1y": 0.7409, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 49, "scoreM": 21.9, "scoreT": 6.7, "scoreB": 4.8, "scoreST": 12.4, "scoreV": 5.0, "formMul": 0.974}, {"name": "瓜生正義", "mno": 54, "mpct": 33.7, "bno": 16, "bpct": 40.0, "time": 6.77, "ace": true, "stScore": 73.7, "stStd": 0.0563, "avgST": 0.1437, "avgST1c": 0.1334, "form": 9.49, "recent3": 0.667, "recent5": 0.6, "recent10": 0.5, "avgRank10": 2.7, "inWin": 0.6381, "win3_1y": 0.599, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 49, "scoreM": 12.4, "scoreT": 14.4, "scoreB": 8.0, "scoreST": 8.0, "scoreV": 5.0, "formMul": 1.025}, {"name": "馬場貴也", "mno": 15, "mpct": 34.3, "bno": 22, "bpct": 34.7, "time": 6.84, "ace": false, "stScore": 73.4, "stStd": 0.0566, "avgST": 0.135, "avgST1c": 0.1197, "form": 16.76, "recent3": 1.0, "recent5": 1.0, "recent10": 0.8, "avgRank10": 1.6, "inWin": 0.7603, "win3_1y": 0.6422, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.1567}, "2": {"runs": 3, "win1": 0.3333, "ewma": 0.073, "avg_st": 0.1333}, "4": {"runs": 3, "win1": 0.3333, "ewma": 0.0768, "avg_st": 0.18}}, "score": 48, "scoreM": 13.2, "scoreT": 7.7, "scoreB": 4.6, "scoreST": 7.8, "scoreV": 10.0, "formMul": 1.116}, {"name": "菊地孝平", "mno": 31, "mpct": 29.2, "bno": 68, "bpct": 38.7, "time": 6.77, "ace": false, "stScore": 84.8, "stStd": 0.0437, "avgST": 0.108, "avgST1c": 0.1067, "form": 5.09, "recent3": 0, "recent5": 0.4, "recent10": 0.3, "avgRank10": 3.1, "inWin": 0.7018, "win3_1y": 0.6347, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "ewma": 0.9894, "avg_st": 0.12}, "3": {"runs": 3, "win1": 0.3333, "ewma": 0.0053, "avg_st": 0.1233}}, "score": 48, "scoreM": 6.3, "scoreT": 14.4, "scoreB": 7.2, "scoreST": 15.0, "scoreV": 10.0, "formMul": 0.915}, {"name": "澤田尚也", "mno": 82, "mpct": 32.6, "bno": 13, "bpct": 33.7, "time": 6.77, "ace": false, "stScore": 75.0, "stStd": 0.055, "avgST": 0.1394, "avgST1c": 0.1401, "form": 7.42, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.3, "inWin": 0.7872, "win3_1y": 0.6244, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 5, "win1": 0.4, "ewma": 0.4735, "avg_st": 0.094}, "2": {"runs": 3, "win1": 0.3333, "ewma": 0.3122, "avg_st": 0.1733}, "3": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.16}, "4": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1067}, "5": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.124}, "6": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1375}}, "score": 46, "scoreM": 10.9, "scoreT": 14.4, "scoreB": 3.9, "scoreST": 8.8, "scoreV": 8.8, "formMul": 0.976}, {"name": "新田泰章", "mno": 67, "mpct": 37.0, "bno": 26, "bpct": 27.8, "time": 6.71, "ace": false, "stScore": 61.7, "stStd": 0.0683, "avgST": 0.1536, "avgST1c": 0.1321, "form": 3.44, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 2.5, "inWin": 0.8131, "win3_1y": 0.7373, "flyImpact": null, "playerType": "一般メイン", "miyajima": {"1": {"runs": 21, "win1": 0.7619, "ewma": 0.932, "avg_st": 0.1229}, "2": {"runs": 12, "win1": 0.25, "ewma": 0.1394, "avg_st": 0.1533}, "3": {"runs": 13, "win1": 0.2308, "ewma": 0.1205, "avg_st": 0.1369}, "4": {"runs": 18, "win1": 0.1667, "ewma": 0.1708, "avg_st": 0.1456}, "5": {"runs": 12, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1808}, "6": {"runs": 7, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1657}}, "score": 45, "scoreM": 16.9, "scoreT": 20.2, "scoreB": 0.1, "scoreST": 0.5, "scoreV": 10.0, "formMul": 0.949}, {"name": "新田雄史", "mno": 11, "mpct": 35.7, "bno": 29, "bpct": 50.8, "time": 6.84, "ace": false, "stScore": 68.7, "stStd": 0.0613, "avgST": 0.1354, "avgST1c": 0.1164, "form": 3.4, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 2.8, "inWin": 0.8131, "win3_1y": 0.7114, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"3": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1333}}, "score": 45, "scoreM": 15.1, "scoreT": 7.7, "scoreB": 15.0, "scoreST": 4.9, "scoreV": 5.0, "formMul": 0.946}, {"name": "原田幸哉", "mno": 34, "mpct": 33.7, "bno": 27, "bpct": 35.6, "time": 6.81, "ace": false, "stScore": 80.4, "stStd": 0.0495, "avgST": 0.1123, "avgST1c": 0.1091, "form": 2.22, "recent3": 0, "recent5": 0, "recent10": 0.2, "avgRank10": 2.5, "inWin": 0.7476, "win3_1y": 0.5545, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 5, "win1": 0.6, "ewma": 0.5026, "avg_st": 0.108}, "2": {"runs": 6, "win1": 0.1667, "ewma": 0.0023, "avg_st": 0.135}, "3": {"runs": 5, "win1": 0.2, "ewma": 0.0451, "avg_st": 0.116}, "4": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.104}, "5": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1375}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.0767}}, "score": 45, "scoreM": 12.4, "scoreT": 10.6, "scoreB": 5.2, "scoreST": 12.2, "scoreV": 9.0, "formMul": 0.907}, {"name": "辻栄蔵", "mno": 16, "mpct": 35.8, "bno": 75, "bpct": 28.6, "time": 6.79, "ace": false, "stScore": 71.4, "stStd": 0.0586, "avgST": 0.1535, "avgST1c": 0.143, "form": 7.4, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.1, "inWin": 0.5914, "win3_1y": 0.7421, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 15, "win1": 0.7333, "ewma": 0.9718, "avg_st": 0.1527}, "2": {"runs": 6, "win1": 0.0, "ewma": 0.0, "avg_st": 0.13}, "3": {"runs": 8, "win1": 0.0, "ewma": 0.0, "avg_st": 0.145}, "4": {"runs": 13, "win1": 0.3077, "ewma": 0.5287, "avg_st": 0.1708}, "5": {"runs": 8, "win1": 0.25, "ewma": 0.8009, "avg_st": 0.1413}, "6": {"runs": 8, "win1": 0.125, "ewma": 0.0194, "avg_st": 0.1925}}, "score": 44, "scoreM": 15.3, "scoreT": 12.5, "scoreB": 0.6, "scoreST": 6.6, "scoreV": 10.0, "formMul": 0.969}, {"name": "関浩哉", "mno": 25, "mpct": 37.9, "bno": 53, "bpct": 29.8, "time": 6.82, "ace": false, "stScore": 72.4, "stStd": 0.0576, "avgST": 0.1387, "avgST1c": 0.1243, "form": 7.62, "recent3": 0.667, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.5, "inWin": 0.7955, "win3_1y": 0.6667, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 42, "scoreM": 18.1, "scoreT": 9.6, "scoreB": 1.4, "scoreST": 7.2, "scoreV": 5.0, "formMul": 1.014}, {"name": "白井英治", "mno": 70, "mpct": 35.8, "bno": 23, "bpct": 37.9, "time": 6.85, "ace": false, "stScore": 71.5, "stStd": 0.0585, "avgST": 0.1378, "avgST1c": 0.1365, "form": 10.04, "recent3": 0.667, "recent5": 0.6, "recent10": 0.5, "avgRank10": 2.2, "inWin": 0.7091, "win3_1y": 0.6612, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 42, "scoreM": 15.3, "scoreT": 6.7, "scoreB": 6.7, "scoreST": 6.7, "scoreV": 5.0, "formMul": 1.031}, {"name": "佐々木完太", "mno": 56, "mpct": 35.0, "bno": 54, "bpct": 28.4, "time": 6.72, "ace": false, "stScore": 66.6, "stStd": 0.0634, "avgST": 0.1513, "avgST1c": 0.1316, "form": 3.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 2.9, "inWin": 0.7245, "win3_1y": 0.6934, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 4, "win1": 0.75, "ewma": 0.19, "avg_st": 0.125}, "3": {"runs": 3, "win1": 0.6667, "ewma": 0.8452, "avg_st": 0.1467}, "4": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.2425}, "6": {"runs": 5, "win1": 0.4, "ewma": 0.8136, "avg_st": 0.16}}, "score": 42, "scoreM": 14.2, "scoreT": 19.2, "scoreB": 0.5, "scoreST": 3.6, "scoreV": 6.5, "formMul": 0.945}, {"name": "藤原碧生", "mno": 39, "mpct": 34.8, "bno": 71, "bpct": 34.1, "time": 6.72, "ace": false, "stScore": 65.5, "stStd": 0.0645, "avgST": 0.1489, "avgST1c": 0.1418, "form": 4.67, "recent3": 0.333, "recent5": 0.2, "recent10": 0.1, "avgRank10": 2.8, "inWin": 0.76, "win3_1y": 0.7151, "flyImpact": null, "playerType": "一般メイン", "miyajima": {}, "score": 42, "scoreM": 13.9, "scoreT": 19.2, "scoreB": 4.2, "scoreST": 2.9, "scoreV": 5.0, "formMul": 0.939}, {"name": "横澤剛治", "mno": 19, "mpct": 30.5, "bno": 37, "bpct": 37.0, "time": 6.8, "ace": true, "stScore": 72.6, "stStd": 0.0574, "avgST": 0.1575, "avgST1c": 0.1619, "form": 11.53, "recent3": 0.667, "recent5": 0.6, "recent10": 0.3, "avgRank10": 2.8, "inWin": 0.7053, "win3_1y": 0.6344, "flyImpact": null, "playerType": "一般メイン", "miyajima": {"1": {"runs": 3, "win1": 0.3333, "ewma": 0.3402, "avg_st": 0.1}}, "score": 41, "scoreM": 8.0, "scoreT": 11.5, "scoreB": 6.1, "scoreST": 7.3, "scoreV": 7.7, "formMul": 1.009}, {"name": "常住蓮", "mno": 53, "mpct": 29.2, "bno": 76, "bpct": 32.7, "time": 6.66, "ace": false, "stScore": 69.1, "stStd": 0.0609, "avgST": 0.1433, "avgST1c": 0.1328, "form": 2.76, "recent3": 0, "recent5": 0.2, "recent10": 0.1, "avgRank10": 2.5, "inWin": 0.7664, "win3_1y": 0.7733, "flyImpact": null, "playerType": "混合", "miyajima": {"2": {"runs": 3, "win1": 0.3333, "ewma": 0.0231, "avg_st": 0.1767}, "5": {"runs": 3, "win1": 0.3333, "ewma": 0.0121, "avg_st": 0.12}}, "score": 40, "scoreM": 6.3, "scoreT": 25.0, "scoreB": 3.3, "scoreST": 5.1, "scoreV": 5.0, "formMul": 0.899}, {"name": "平本真之", "mno": 23, "mpct": 33.1, "bno": 18, "bpct": 35.0, "time": 6.86, "ace": false, "stScore": 75.4, "stStd": 0.0546, "avgST": 0.1296, "avgST1c": 0.1298, "form": 13.53, "recent3": 0.667, "recent5": 0.8, "recent10": 0.8, "avgRank10": 1.2, "inWin": 0.6455, "win3_1y": 0.6457, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 39, "scoreM": 11.6, "scoreT": 5.8, "scoreB": 4.8, "scoreST": 9.1, "scoreV": 5.0, "formMul": 1.074}, {"name": "井上遥妃", "mno": 20, "mpct": 32.9, "bno": 73, "bpct": 38.4, "time": 6.8, "ace": false, "stScore": 61.5, "stStd": 0.0685, "avgST": 0.1445, "avgST1c": 0.1403, "form": 4.6, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 3.1, "inWin": 0.569, "win3_1y": 0.6704, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9956, "avg_st": 0.16}, "2": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1475}, "3": {"runs": 3, "win1": 0.3333, "ewma": 0.0428, "avg_st": 0.0833}, "5": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.18}, "6": {"runs": 10, "win1": 0.0, "ewma": 0.0, "avg_st": 0.164}}, "score": 39, "scoreM": 11.3, "scoreT": 11.5, "scoreB": 7.0, "scoreST": 0.4, "scoreV": 10.0, "formMul": 0.963}, {"name": "山口剛", "mno": 63, "mpct": 30.4, "bno": 67, "bpct": 36.0, "time": 6.82, "ace": false, "stScore": 73.1, "stStd": 0.0569, "avgST": 0.1233, "avgST1c": 0.1063, "form": 5.89, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.8, "inWin": 0.7708, "win3_1y": 0.6598, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 12, "win1": 0.9167, "ewma": 0.9324, "avg_st": 0.0917}, "2": {"runs": 11, "win1": 0.2727, "ewma": 0.0186, "avg_st": 0.1236}, "3": {"runs": 10, "win1": 0.3, "ewma": 0.6342, "avg_st": 0.113}, "4": {"runs": 9, "win1": 0.3333, "ewma": 0.8008, "avg_st": 0.1089}, "5": {"runs": 9, "win1": 0.2222, "ewma": 0.78, "avg_st": 0.11}}, "score": 39, "scoreM": 7.9, "scoreT": 9.6, "scoreB": 5.4, "scoreST": 7.7, "scoreV": 10.0, "formMul": 0.959}, {"name": "上野真之介", "mno": 18, "mpct": 34.9, "bno": 51, "bpct": 34.2, "time": 6.87, "ace": false, "stScore": 78.8, "stStd": 0.0512, "avgST": 0.1162, "avgST1c": 0.1067, "form": 6.69, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.4, "inWin": 0.8134, "win3_1y": 0.6838, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {}, "score": 38, "scoreM": 14.0, "scoreT": 4.8, "scoreB": 4.3, "scoreST": 11.2, "scoreV": 5.0, "formMul": 0.974}, {"name": "秋元哲", "mno": 62, "mpct": 33.9, "bno": 77, "bpct": 34.0, "time": 6.88, "ace": false, "stScore": 73.7, "stStd": 0.0563, "avgST": 0.1385, "avgST1c": 0.1284, "form": 6.98, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 1.9, "inWin": 0.7091, "win3_1y": 0.7382, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 5, "win1": 1.0, "ewma": 1.0, "avg_st": 0.11}, "2": {"runs": 4, "win1": 0.5, "ewma": 0.8088, "avg_st": 0.125}, "5": {"runs": 5, "win1": 0.2, "ewma": 0.0037, "avg_st": 0.11}, "6": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.17}}, "score": 38, "scoreM": 12.7, "scoreT": 3.8, "scoreB": 4.1, "scoreST": 8.0, "scoreV": 10.0, "formMul": 0.979}, {"name": "中嶋健一郎", "mno": 81, "mpct": 33.5, "bno": 36, "bpct": 33.7, "time": 6.77, "ace": false, "stScore": 69.3, "stStd": 0.0607, "avgST": 0.1559, "avgST1c": 0.1511, "form": 6.62, "recent3": 0, "recent5": 0.4, "recent10": 0.5, "avgRank10": 2.4, "inWin": 0.7, "win3_1y": 0.6414, "flyImpact": null, "playerType": "一般メイン", "miyajima": {}, "score": 38, "scoreM": 12.1, "scoreT": 14.4, "scoreB": 3.9, "scoreST": 5.3, "scoreV": 5.0, "formMul": 0.943}, {"name": "大上卓人", "mno": 59, "mpct": 29.8, "bno": 74, "bpct": 30.3, "time": 6.83, "ace": false, "stScore": 80.2, "stStd": 0.0498, "avgST": 0.141, "avgST1c": 0.136, "form": 3.93, "recent3": 0.333, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.4, "inWin": 0.7429, "win3_1y": 0.6079, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 15, "win1": 0.6667, "ewma": 0.9634, "avg_st": 0.1447}, "2": {"runs": 9, "win1": 0.5556, "ewma": 0.4846, "avg_st": 0.1244}, "3": {"runs": 10, "win1": 0.2, "ewma": 0.467, "avg_st": 0.123}, "4": {"runs": 14, "win1": 0.4286, "ewma": 0.0771, "avg_st": 0.105}, "5": {"runs": 10, "win1": 0.0, "ewma": 0.0, "avg_st": 0.15}, "6": {"runs": 12, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1575}}, "score": 38, "scoreM": 7.1, "scoreT": 8.7, "scoreB": 1.7, "scoreST": 12.1, "scoreV": 10.0, "formMul": 0.96}, {"name": "中野次郎", "mno": 36, "mpct": 32.5, "bno": 34, "bpct": 27.7, "time": 6.84, "ace": false, "stScore": 74.0, "stStd": 0.056, "avgST": 0.1318, "avgST1c": 0.115, "form": 5.78, "recent3": 0.667, "recent5": 0.4, "recent10": 0.3, "avgRank10": 3.1, "inWin": 0.6496, "win3_1y": 0.5958, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 4, "win1": 1.0, "ewma": 1.0, "avg_st": 0.0925}, "2": {"runs": 3, "win1": 0.3333, "ewma": 0.1765, "avg_st": 0.1367}, "3": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1367}, "4": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1133}, "5": {"runs": 3, "win1": 0.3333, "ewma": 0.5604, "avg_st": 0.1767}, "6": {"runs": 3, "win1": 0.3333, "ewma": 0.4578, "avg_st": 0.1567}}, "score": 37, "scoreM": 10.8, "scoreT": 7.7, "scoreB": 0.1, "scoreST": 8.2, "scoreV": 10.0, "formMul": 0.996}, {"name": "海野康志郎", "mno": 71, "mpct": 29.7, "bno": 31, "bpct": 28.2, "time": 6.79, "ace": true, "stScore": 72.2, "stStd": 0.0578, "avgST": 0.1398, "avgST1c": 0.1193, "form": 9.02, "recent3": 0.667, "recent5": 0.8, "recent10": 0.4, "avgRank10": 2.8, "inWin": 0.7869, "win3_1y": 0.6814, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.11}, "3": {"runs": 3, "win1": 0.3333, "ewma": 0.7604, "avg_st": 0.1467}}, "score": 37, "scoreM": 6.9, "scoreT": 12.5, "scoreB": 0.4, "scoreST": 7.1, "scoreV": 10.0, "formMul": 1.014}, {"name": "松本純平", "mno": 27, "mpct": 31.2, "bno": 25, "bpct": 32.6, "time": 6.76, "ace": false, "stScore": 70.3, "stStd": 0.0597, "avgST": 0.1597, "avgST1c": 0.1427, "form": 4.15, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 3.5, "inWin": 0.7634, "win3_1y": 0.6552, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 36, "scoreM": 9.0, "scoreT": 15.4, "scoreB": 3.2, "scoreST": 5.9, "scoreV": 5.0, "formMul": 0.94}, {"name": "上平真二", "mno": 22, "mpct": 27.2, "bno": 35, "bpct": 40.2, "time": 6.81, "ace": false, "stScore": 67.3, "stStd": 0.0627, "avgST": 0.1665, "avgST1c": 0.1492, "form": 4.35, "recent3": 0.333, "recent5": 0.2, "recent10": 0.4, "avgRank10": 2.8, "inWin": 0.6667, "win3_1y": 0.7459, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 13, "win1": 0.6923, "ewma": 0.757, "avg_st": 0.1315}, "2": {"runs": 11, "win1": 0.2727, "ewma": 0.59, "avg_st": 0.1709}, "3": {"runs": 8, "win1": 0.25, "ewma": 0.788, "avg_st": 0.1763}, "4": {"runs": 12, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1875}, "5": {"runs": 11, "win1": 0.0909, "ewma": 0.0016, "avg_st": 0.1509}, "6": {"runs": 5, "win1": 0.0, "ewma": 0.0, "avg_st": 0.164}}, "score": 35, "scoreM": 3.5, "scoreT": 10.6, "scoreB": 8.1, "scoreST": 4.0, "scoreV": 10.0, "formMul": 0.966}, {"name": "松尾充", "mno": 78, "mpct": 30.0, "bno": 24, "bpct": 32.7, "time": 6.78, "ace": false, "stScore": 71.9, "stStd": 0.0581, "avgST": 0.1489, "avgST1c": 0.1515, "form": 3.05, "recent3": 0.333, "recent5": 0.2, "recent10": 0.2, "avgRank10": 3.5, "inWin": 0.7363, "win3_1y": 0.5789, "flyImpact": null, "playerType": "一般メイン", "miyajima": {}, "score": 34, "scoreM": 7.4, "scoreT": 13.5, "scoreB": 3.3, "scoreST": 6.9, "scoreV": 5.0, "formMul": 0.938}, {"name": "小池修平", "mno": 69, "mpct": 25.4, "bno": 72, "bpct": 39.0, "time": 6.76, "ace": false, "stScore": 71.1, "stStd": 0.0589, "avgST": 0.1391, "avgST1c": 0.1336, "form": 3.85, "recent3": 0.333, "recent5": 0.4, "recent10": 0.3, "avgRank10": 2.8, "inWin": 0.7692, "win3_1y": 0.7078, "flyImpact": null, "playerType": "混合", "miyajima": {"2": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1733}, "4": {"runs": 4, "win1": 0.25, "ewma": 0.0083, "avg_st": 0.11}, "6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.2667}}, "score": 34, "scoreM": 1.1, "scoreT": 15.4, "scoreB": 7.4, "scoreST": 6.4, "scoreV": 5.0, "formMul": 0.956}, {"name": "船岡洋一郎", "mno": 52, "mpct": 31.4, "bno": 11, "bpct": 27.6, "time": 6.82, "ace": false, "stScore": 67.6, "stStd": 0.0624, "avgST": 0.1363, "avgST1c": 0.126, "form": 9.13, "recent3": 0.667, "recent5": 0.4, "recent10": 0.3, "avgRank10": 2.2, "inWin": 0.7414, "win3_1y": 0.7004, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 21, "win1": 0.8095, "ewma": 0.9426, "avg_st": 0.1071}, "2": {"runs": 9, "win1": 0.4444, "ewma": 0.6948, "avg_st": 0.1689}, "3": {"runs": 10, "win1": 0.3, "ewma": 0.4818, "avg_st": 0.124}, "4": {"runs": 9, "win1": 0.1111, "ewma": 0.8101, "avg_st": 0.1056}, "5": {"runs": 15, "win1": 0.1333, "ewma": 0.3706, "avg_st": 0.156}, "6": {"runs": 9, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1711}}, "score": 33, "scoreM": 9.3, "scoreT": 9.6, "scoreB": 0.0, "scoreST": 4.2, "scoreV": 10.0, "formMul": 1.011}, {"name": "佐藤隆太郎", "mno": 77, "mpct": 29.1, "bno": 61, "bpct": 38.5, "time": 6.82, "ace": false, "stScore": 67.6, "stStd": 0.0624, "avgST": 0.1381, "avgST1c": 0.1347, "form": 7.45, "recent3": 0.333, "recent5": 0.4, "recent10": 0.4, "avgRank10": 2.5, "inWin": 0.7767, "win3_1y": 0.5723, "flyImpact": null, "playerType": "混合", "miyajima": {}, "score": 31, "scoreM": 6.1, "scoreT": 9.6, "scoreB": 7.0, "scoreST": 4.2, "scoreV": 5.0, "formMul": 0.974}, {"name": "浜先真範", "mno": 24, "mpct": 31.5, "bno": 80, "bpct": 30.8, "time": 6.85, "ace": false, "stScore": 69.8, "stStd": 0.0602, "avgST": 0.1383, "avgST1c": 0.1259, "form": 1.58, "recent3": 0, "recent5": 0.2, "recent10": 0.1, "avgRank10": 4.3, "inWin": 0.6972, "win3_1y": 0.6465, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 23, "win1": 0.6957, "ewma": 0.7292, "avg_st": 0.1148}, "2": {"runs": 10, "win1": 0.3, "ewma": 0.0511, "avg_st": 0.114}, "3": {"runs": 13, "win1": 0.0769, "ewma": 0.0006, "avg_st": 0.15}, "4": {"runs": 9, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1644}, "5": {"runs": 11, "win1": 0.2727, "ewma": 0.3469, "avg_st": 0.1255}, "6": {"runs": 14, "win1": 0.0714, "ewma": 0.014, "avg_st": 0.1907}}, "score": 30, "scoreM": 9.4, "scoreT": 6.7, "scoreB": 2.1, "scoreST": 5.6, "scoreV": 10.0, "formMul": 0.879}, {"name": "桐生順平", "mno": 68, "mpct": 27.7, "bno": 66, "bpct": 31.6, "time": 6.86, "ace": false, "stScore": 78.6, "stStd": 0.0514, "avgST": 0.1378, "avgST1c": 0.1341, "form": 2.31, "recent3": 0, "recent5": 0, "recent10": 0.2, "avgRank10": 3.5, "inWin": 0.7524, "win3_1y": 0.6667, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 0.6667, "ewma": 0.9012, "avg_st": 0.13}}, "score": 30, "scoreM": 4.2, "scoreT": 5.8, "scoreB": 2.6, "scoreST": 11.1, "scoreV": 10.0, "formMul": 0.897}, {"name": "久田敏之", "mno": 29, "mpct": 28.2, "bno": 15, "bpct": 31.7, "time": 6.82, "ace": false, "stScore": 61.5, "stStd": 0.0685, "avgST": 0.1333, "avgST1c": 0.1257, "form": 5.91, "recent3": 0.333, "recent5": 0.6, "recent10": 0.3, "avgRank10": 2.3, "inWin": 0.87, "win3_1y": 0.7849, "flyImpact": null, "playerType": "混合", "miyajima": {"1": {"runs": 4, "win1": 1.0, "ewma": 1.0, "avg_st": 0.1125}, "4": {"runs": 3, "win1": 0.3333, "ewma": 0.0712, "avg_st": 0.2467}}, "score": 27, "scoreM": 4.9, "scoreT": 9.6, "scoreB": 2.7, "scoreST": 0.4, "scoreV": 10.0, "formMul": 0.964}, {"name": "西山貴浩", "mno": 80, "mpct": 27.0, "bno": 32, "bpct": 33.1, "time": 6.92, "ace": false, "stScore": 77.6, "stStd": 0.0524, "avgST": 0.1333, "avgST1c": 0.1184, "form": 10.51, "recent3": 0, "recent5": 0.4, "recent10": 0.6, "avgRank10": 1.4, "inWin": 0.7864, "win3_1y": 0.5947, "flyImpact": null, "playerType": "グレードメイン", "miyajima": {"1": {"runs": 3, "win1": 1.0, "ewma": 1.0, "avg_st": 0.0833}, "3": {"runs": 4, "win1": 0.25, "ewma": 0.3389, "avg_st": 0.0925}}, "score": 26, "scoreM": 3.3, "scoreT": 0.0, "scoreB": 3.6, "scoreST": 10.5, "scoreV": 10.0, "formMul": 0.969}, {"name": "石橋道友", "mno": 73, "mpct": 27.9, "bno": 38, "bpct": 33.7, "time": 6.88, "ace": false, "stScore": 69.5, "stStd": 0.0605, "avgST": 0.1429, "avgST1c": 0.1301, "form": 9.49, "recent3": 0.667, "recent5": 0.6, "recent10": 0.4, "avgRank10": 2.7, "inWin": 0.7895, "win3_1y": 0.7095, "flyImpact": null, "playerType": "一般メイン", "miyajima": {"2": {"runs": 4, "win1": 0.0, "ewma": 0.0, "avg_st": 0.1425}, "4": {"runs": 3, "win1": 0.3333, "ewma": 0.1557, "avg_st": 0.1433}, "5": {"runs": 3, "win1": 0.3333, "ewma": 0.4173, "avg_st": 0.1067}}, "score": 23, "scoreM": 4.5, "scoreT": 3.8, "scoreB": 3.9, "scoreST": 5.4, "scoreV": 5.0, "formMul": 1.016}, {"name": "青木玄太", "mno": 12, "mpct": 24.6, "bno": 58, "bpct": 38.9, "time": 6.84, "ace": false, "stScore": 60.9, "stStd": 0.0691, "avgST": 0.1692, "avgST1c": 0.1577, "form": 3.85, "recent3": 0, "recent5": 0.2, "recent10": 0.3, "avgRank10": 2.2, "inWin": 0.7812, "win3_1y": 0.7143, "flyImpact": null, "playerType": "混合", "miyajima": {"6": {"runs": 3, "win1": 0.0, "ewma": 0.0, "avg_st": 0.24}}, "score": 18, "scoreM": 0.0, "scoreT": 7.7, "scoreB": 7.3, "scoreST": 0.0, "scoreV": 5.0, "formMul": 0.922}];
+const MIYAJIMA = {"race_count": 1560, "in_nige_rate": 0.566, "c1_win": 0.5878, "c2_win": 0.1141, "c3_win": 0.1301, "c4_win": 0.0923, "c5_win": 0.0571, "c6_win": 0.0186, "areyasusa": 43.4, "R_areyasusa": [28.2, 42.6, 51.2, 40.6, 39.3, 37.3, 54.9, 50, 45.3, 42.7, 31.1, 27.4], "innige_2nd": [0, 0.3307, 0.3035, 0.188, 0.1246, 0.0532], "innige_3rd": [0, 0.5844, 0.5368, 0.4032, 0.308, 0.1687]};
+
+let cur = [...RACERS];
+let sortCol = 10, sortAsc = false;
+
+function pp(v, hi, md){ return v>=hi?'phi':v>=md?'pmd':'plo'; }
+function rb(i){ const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn'; return `<span class="rb ${c}">${i+1}</span>`; }
+function stpc(s){ return s>=80?'pbl':s>=73?'phi':s>=68?'pmd':'plo'; }
+function fmtST(v){ return v!=null?v.toFixed(4):'--'; }
+function fmtPct(v){ return v!=null?(v*100).toFixed(1)+'%':'--'; }
+
+function renderTable(){
+  const tb = document.getElementById('tb');
+  tb.innerHTML = cur.map((r,i)=>{
+    const sc = r.score;
+    const scC = sc>=75?'var(--ac3)':sc>=60?'var(--ac2)':'var(--mu)';
+    const tags = (r.ace?'<span class="tg tga">エース</span>':'')
+               + (r.time<=6.75?'<span class="tg tgs">前検速</span>':'')
+               + (r.stScore>=80?'<span class="tg tgst">ST優</span>':'')
+               + (r.form>=10?'<span class="tg tgf">フォーム↑</span>':'')
+               + (r.mpct>=40&&r.time<=6.75&&r.stScore>=75?'<span class="tg tgr">三拍子</span>':'');
+    const mw = Math.round(r.scoreM/35*100);
+    const tw = Math.round(r.scoreT/25*100);
+    const bw = Math.round(r.scoreB/15*100);
+    const sw = Math.round(r.scoreST/15*100);
+    // 宮島1C実績
+    const mc1 = r.miyajima && r.miyajima['1'];
+    const mc1txt = mc1 ? `${mc1.runs}走 ${(mc1.win1*100).toFixed(0)}%` : '--';
+    // フォーム色
+    const fC = r.form>=12?'var(--ac3)':r.form>=8?'var(--ac2)':'var(--mu)';
+    // 直近3走
+    const r3C = r.recent3>=0.67?'var(--ac3)':r.recent3>=0.33?'var(--ac2)':'var(--mu)';
+    const dispName = r.name.replace(/(.{2})(.*)/, '$1 $2');
+    return `<tr>
+      <td>${rb(i)}</td>
+      <td class="nm">${dispName}${tags}</td>
+      <td style="color:var(--mu)">${r.mno}号</td>
+      <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct}%</span></td>
+      <td><span class="ps ${pp(r.bpct,38,32)}">${r.bpct}%</span></td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.time<=6.70?'var(--ac)':r.time<=6.75?'var(--ac2)':'var(--mu)'}">${r.time.toFixed(2)}</td>
+      <td><span class="ps ${stpc(r.stScore)}">${r.stScore}pt</span></td>
+      <td style="font-family:'Oswald',sans-serif;color:${fC}">${r.form.toFixed(2)}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r3C}">${(r.recent3*100).toFixed(0)}%</td>
+      <td style="font-size:11px;color:${mc1&&mc1.win1>=0.5?'var(--ac3)':'var(--mu)'}">${mc1txt}</td>
+      <td class="ts" style="color:${scC}">${sc}pt</td>
+      <td>
+        <div class="mb" style="width:72px">
+          <div style="width:${mw}%;background:var(--ac2);height:6px"></div>
+          <div style="width:${tw}%;background:var(--ac);height:6px"></div>
+          <div style="width:${bw}%;background:var(--ac3);height:6px"></div>
+          <div style="width:${sw}%;background:var(--pu);height:6px"></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cnt').textContent = cur.length + '選手表示中';
+}
+
+function flt(type, el){
+  document.querySelectorAll('.ch').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  const all = [...RACERS].sort((a,b)=>b.score-a.score);
+  if(type==='all') cur=all;
+  else if(type==='motor-hi') cur=all.filter(r=>r.mpct>=40);
+  else if(type==='time-hi')  cur=all.filter(r=>r.time<=6.75);
+  else if(type==='ace')      cur=all.filter(r=>r.ace);
+  else if(type==='form-hi')  cur=all.filter(r=>r.form>=8);
+  else if(type==='st-hi')    cur=all.filter(r=>r.stScore>=80);
+  else if(type==='triple')   cur=all.filter(r=>r.mpct>=40&&r.time<=6.75&&r.stScore>=75);
+  renderTable();
+}
+
+function srch(v){
+  const q=v.replace(/\s/g,'');
+  cur=[...RACERS].sort((a,b)=>b.score-a.score).filter(r=>r.name.includes(q));
+  renderTable();
+}
+
+function srt(col){
+  if(sortCol===col) sortAsc=!sortAsc; else{sortCol=col;sortAsc=false;}
+  document.querySelectorAll('.tb th').forEach((th,i)=>th.classList.toggle('on',i===col));
+  const keys=['rank','name','mno','mpct','bpct','time','stScore','form','recent3','_mc1','score'];
+  cur.sort((a,b)=>{
+    let va,vb;
+    if(col===9){ va=a.miyajima&&a.miyajima['1']?a.miyajima['1'].win1:-1; vb=b.miyajima&&b.miyajima['1']?b.miyajima['1'].win1:-1; }
+    else if(col===10){ va=a.score; vb=b.score; }
+    else if(col===0){ va=RACERS.indexOf(a); vb=RACERS.indexOf(b); }
+    else{ va=a[keys[col]]??''; vb=b[keys[col]]??''; }
+    if(typeof va==='string') return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
+    return sortAsc?va-vb:vb-va;
+  });
+  renderTable();
+}
+
+function tab(id){
+  const tabs=['score','motor','time','st','venue','pick'];
+  document.querySelectorAll('.nt').forEach((t,i)=>t.classList.toggle('on',tabs[i]===id));
+  document.querySelectorAll('.tc').forEach(c=>c.classList.remove('on'));
+  document.getElementById('tab-'+id).classList.add('on');
+}
+
+// モーター
+function renderMotor(){
+  const ace=[
+    {name:'岩瀬 裕亮',mno:72,mpct:48.3,note:'エース格'},
+    {name:'太田 和美',mno:38,mpct:50.3,note:'エース格'},
+    {name:'高橋 竜矢',mno:37,mpct:44.8,note:'準エース'},
+    {name:'土屋 智則',mno:17,mpct:43.9,note:'準エース'},
+    {name:'北野 輝季',mno:66,mpct:42.9,note:'準エース'},
+    {name:'磯部 誠', mno:21,mpct:42.9,note:'準エース'},
+    {name:'瓜生 正義',mno:54,mpct:33.7,note:'注目（公式）'},
+    {name:'永井 彪也',mno:79,mpct:36.3,note:'準エース'},
+    {name:'海野 康志郎',mno:71,mpct:29.7,note:'準エース'},
+  ];
+  document.getElementById('ace-list').innerHTML = ace.map(a=>`
+    <div class="mr">
+      <div class="mn2 ace">${a.mno}</div>
+      <div class="mt">${a.name}<br><span style="font-size:10px;color:var(--mu)">${a.note}</span></div>
+      <div class="mb2"><div class="mf" style="width:${Math.round(a.mpct/50.3*100)}%"></div></div>
+      <div class="mp" style="color:var(--ac2)">${a.mpct}%</div>
+    </div>`).join('');
+
+  const bins=[{l:'40%↑',col:'var(--ac3)',f:r=>r.mpct>=40},{l:'35〜39%',col:'var(--ac2)',f:r=>r.mpct>=35&&r.mpct<40},{l:'30〜34%',col:'var(--pu)',f:r=>r.mpct>=30&&r.mpct<35},{l:'〜29%',col:'var(--mu)',f:r=>r.mpct<30}];
+  document.getElementById('m-dist').innerHTML = bins.map(b=>{
+    const cnt=RACERS.filter(b.f).length;
+    return `<div class="mr"><div style="width:55px;font-size:11px;color:${b.col};font-weight:700">${b.l}</div><div class="mb2" style="flex:1"><div class="mf" style="width:${cnt/52*200}%;background:${b.col}"></div></div><div class="mp" style="color:${b.col}">${cnt}人</div></div>`;
+  }).join('');
+
+  const sorted=[...RACERS].sort((a,b)=>b.mpct-a.mpct);
+  document.getElementById('m-full').innerHTML = sorted.map(r=>`
+    <tr>
+      <td style="font-family:'Oswald',sans-serif;color:${r.ace?'var(--ac2)':'var(--mu)'}">${r.mno}${r.ace?'★':''}</td>
+      <td class="nm">${r.name.replace(/(.{2})(.*)/,'$1 $2')}</td>
+      <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct}%</span></td>
+      <td style="color:var(--mu)">${r.bno}号</td>
+      <td><span class="ps ${pp(r.bpct,38,32)}">${r.bpct}%</span></td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.time<=6.70?'var(--ac)':r.time<=6.75?'var(--ac2)':'var(--mu)'}">${r.time.toFixed(2)}</td>
+      <td><span class="ps ${stpc(r.stScore)}">${r.stScore}pt</span></td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.form>=10?'var(--ac3)':r.form>=7?'var(--ac2)':'var(--mu)'}">${r.form.toFixed(2)}</td>
+      <td><span class="ps ${pp(r.mpct,40,33)}">${r.mpct>=40?'強':r.mpct>=33?'並':'低'}</span></td>
+    </tr>`).join('');
+}
+
+// 前検タイム
+function renderTime(){
+  const s=[...RACERS].sort((a,b)=>a.time-b.time).slice(0,20);
+  document.getElementById('time-chart').innerHTML = s.map(r=>{
+    const w=Math.round((6.92-r.time)/(6.92-6.66)*100);
+    const c=r.time<=6.69?'var(--ac)':r.time<=6.74?'var(--ac2)':'var(--mu)';
+    const tags=(r.ace?'<span class="tg tga">エース</span>':'')+(r.stScore>=80?'<span class="tg tgst">ST優</span>':'');
+    return `<div class="tbr"><div class="tn">${r.name.replace(/(.{2})(.*)/,'$1 $2')}${tags}</div><div class="tt"><div class="tf" style="width:${w}%;background:${c}"></div></div><div class="tv" style="color:${c}">${r.time.toFixed(2)}</div></div>`;
+  }).join('');
+}
+
+// STランキング
+function renderST(){
+  const byST=[...RACERS].sort((a,b)=>b.stScore-a.stScore);
+  document.getElementById('st-rank').innerHTML = byST.slice(0,10).map((r,i)=>`
+    <div class="mr">
+      <div class="mn2 ${i<3?'ace':''}">${i+1}</div>
+      <div class="mt">${r.name.replace(/(.{2})(.*)/,'$1 $2')}<br><span style="font-size:10px;color:var(--mu)">σ=${r.stStd.toFixed(4)}</span></div>
+      <div class="mb2"><div class="mf" style="width:${Math.round((r.stScore-60)/25*100)}%;background:var(--pu)"></div></div>
+      <div class="mp" style="color:var(--pu)">${r.stScore}</div>
+    </div>`).join('');
+
+  const byForm=[...RACERS].sort((a,b)=>b.form-a.form);
+  document.getElementById('form-rank').innerHTML = byForm.slice(0,10).map((r,i)=>`
+    <div class="mr">
+      <div class="mn2 ${i<3?'ace':''}">${i+1}</div>
+      <div class="mt">${r.name.replace(/(.{2})(.*)/,'$1 $2')}<br><span style="font-size:10px;color:var(--mu)">直近3走${(r.recent3*100).toFixed(0)}%</span></div>
+      <div class="mb2"><div class="mf" style="width:${Math.round(r.form/17*100)}%;background:var(--ac3)"></div></div>
+      <div class="mp" style="color:var(--ac3)">${r.form.toFixed(1)}</div>
+    </div>`).join('');
+
+  const byR3=[...RACERS].sort((a,b)=>{
+    if(b.recent3!==a.recent3) return b.recent3-a.recent3;
+    return b.recent5-a.recent5;
+  });
+  document.getElementById('r3-rank').innerHTML = byR3.slice(0,10).map((r,i)=>`
+    <div class="mr">
+      <div class="mn2 ${i<3?'ace':''}">${i+1}</div>
+      <div class="mt">${r.name.replace(/(.{2})(.*)/,'$1 $2')}<br><span style="font-size:10px;color:var(--mu)">直近5走${(r.recent5*100).toFixed(0)}%</span></div>
+      <div class="mb2"><div class="mf" style="width:${Math.round(r.recent3*100)}%;background:var(--ac2)"></div></div>
+      <div class="mp" style="color:var(--ac2)">${(r.recent3*100).toFixed(0)}%</div>
+    </div>`).join('');
+
+  const byST2=[...RACERS].sort((a,b)=>a.avgST-b.avgST);
+  document.getElementById('st-full').innerHTML = byST2.map(r=>`
+    <tr>
+      <td class="nm">${r.name.replace(/(.{2})(.*)/,'$1 $2')}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.avgST<=0.13?'var(--ac)':r.avgST<=0.15?'var(--ac2)':'var(--mu)'}">${r.avgST.toFixed(4)}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.avgST1c<=0.12?'var(--ac)':r.avgST1c<=0.14?'var(--ac2)':'var(--mu)'}">${r.avgST1c.toFixed(4)}</td>
+      <td><span class="ps ${stpc(r.stScore)}">${r.stScore}pt</span></td>
+      <td style="color:${r.stStd<=0.05?'var(--ac3)':r.stStd<=0.06?'var(--ac2)':'var(--mu)'}">${r.stStd.toFixed(4)}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.form>=10?'var(--ac3)':r.form>=7?'var(--ac2)':'var(--mu)'}">${r.form.toFixed(2)}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${r.avgRank10<=2?'var(--ac3)':r.avgRank10<=3?'var(--ac2)':'var(--mu)'}">${r.avgRank10.toFixed(1)}</td>
+      <td><span class="ps ${r.playerType==='グレードメイン'?'pbl':r.playerType==='混合'?'pmd':'plo'}">${r.playerType}</span></td>
+    </tr>`).join('');
+}
+
+// 宮島コース傾向
+function renderVenue(){
+  // 荒れスコアバー
+  const R=['1R','2R','3R','4R','5R','6R','7R','8R','9R','10R','11R','12R'];
+  document.getElementById('r-areyasusa').innerHTML = MIYAJIMA.R_areyasusa.map((v,i)=>{
+    const c=v>=50?'var(--rd)':v>=40?'var(--ac2)':'var(--mu)';
+    return `<div class="rr"><div class="rl">${R[i]}</div><div class="rt"><div class="rf" style="width:${v}%;background:${c}"></div></div><div class="rv" style="color:${c}">${v}</div></div>`;
+  }).join('');
+
+  // イン逃げ2着率
+  const F=['1枠','2枠','3枠','4枠','5枠','6枠'];
+  document.getElementById('innige-2nd').innerHTML = MIYAJIMA.innige_2nd.map((v,i)=>{
+    const c=v>=0.3?'var(--ac3)':v>=0.15?'var(--ac2)':'var(--mu)';
+    return `<div class="rr"><div class="rl">${F[i]}</div><div class="rt"><div class="rf" style="width:${v*250}%;background:${c}"></div></div><div class="rv" style="color:${c}">${(v*100).toFixed(1)}%</div></div>`;
+  }).join('');
+
+  // 宮島実績テーブル
+  document.getElementById('venue-tb').innerHTML = [...RACERS].sort((a,b)=>{
+    const ga = Object.values(a.miyajima||{}).reduce((s,c)=>s+(c.runs||0),0);
+    const gb = Object.values(b.miyajima||{}).reduce((s,c)=>s+(c.runs||0),0);
+    return gb-ga;
+  }).map(r=>{
+    const mc = r.miyajima||{};
+    const total = Object.values(mc).reduce((s,c)=>s+(c.runs||0),0);
+    const c1=mc['1'],c2=mc['2'],c3=mc['3'];
+    const c1t=c1?`${c1.runs}走 ${(c1.win1*100).toFixed(0)}%`:'--';
+    const c2t=c2?`${c2.runs}走 ${(c2.win1*100).toFixed(0)}%`:'--';
+    const c3t=c3?`${c3.runs}走 ${(c3.win1*100).toFixed(0)}%`:'--';
+    const c1st=c1&&c1.avg_st?c1.avg_st.toFixed(3):'--';
+    const c1col=c1&&c1.win1>=0.67?'var(--ac3)':c1&&c1.win1>=0.33?'var(--ac2)':'var(--mu)';
+    const dispName=r.name.replace(/(.{2})(.*)/,'$1 $2');
+    return `<tr>
+      <td class="nm">${dispName}</td>
+      <td style="font-family:'Oswald',sans-serif">${total}</td>
+      <td style="color:${c1col};font-weight:500">${c1t}</td>
+      <td>${c2t}</td>
+      <td>${c3t}</td>
+      <td style="font-family:'Oswald',sans-serif;color:${c1&&c1.avg_st<=0.13?'var(--ac)':'var(--mu)'}">${c1st}</td>
+      <td><span class="ps ${r.playerType==='グレードメイン'?'pbl':r.playerType==='混合'?'pmd':'plo'}">${r.playerType}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// PICKS詳細
+function renderPicks(){
+  const picks = [
+    {name:'岩瀬裕亮',col:'var(--ac)',label:'◎ 本命',points:['エースM72号機（公式コメント最高評価）','前検タイム全体2位6.67','宮島1C 3走全勝・平均ST0.087（全体最速クラス）','イン勝率81.7%（実測）','直近5走40%・フォーム指数3.58・安定型']},
+    {name:'馬場貴也',col:'var(--ac2)',label:'〇 対抗',points:['フォーム指数1位16.76（全体断トツ）','直近3走全勝1.000・直近10走8割','宮島1C 3走全勝（実績あり）','グレードメインで格上戦慣れ','平均ST1C=0.120（全体上位クラス）']},
+    {name:'平本真之',col:'var(--tl)',label:'〇 対抗2',points:['フォーム指数2位13.53','直近3走67%・直近5走80%','平均着順1.2（全体1位！）','グレードメインのSG/G1常連','直近10走8割の圧倒的好調']},
+    {name:'常住蓮',  col:'var(--pu)',label:'▲ 穴本命',points:['前検タイム全体1位6.66（最速）','平均着順2.5・直近実績安定','宮島2C実績3走33%（実測）','低人気モーター→高配当狙い','ST安定69.1・平均着順が示す実力']},
+    {name:'高橋竜矢',col:'var(--ac3)',label:'△ 要注目',points:['M2連対率3位44.8%（準エース格）','前検6.73と動き良好','直近5走40%・フォーム5.22','平均ST1C=0.114（速い）','バランス型で安定した成績見込む']},
+    {name:'羽野直也',col:'var(--rd)',label:'△ 穴2',points:['直近3走全勝1.000（好調極まる）','フォーム指数10.98（全体5位）','グレードメインで格のある選手','M2連対率36.4%と並だが機力補完','直近10走4割と急上昇中']},
+  ];
+  document.getElementById('picks-detail').innerHTML = picks.map(p=>{
+    const r = RACERS.find(x=>x.name===p.name)||{};
+    const dispName = p.name.replace(/(.{2})(.*)/,'$1 $2');
+    return `
+    <div style="background:var(--bg3);border:1px solid ${p.col}33;border-left:3px solid ${p.col};border-radius:8px;padding:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div>
+          <div style="font-size:11px;color:${p.col};font-weight:700;margin-bottom:2px">${p.label}</div>
+          <div style="font-size:15px;font-weight:700;color:#fff">${dispName}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:'Oswald',sans-serif;font-size:20px;font-weight:700;color:${p.col}">${r.score||'--'}pt</div>
+          <div style="font-size:10px;color:var(--mu)">総合スコア</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">M${r.mno||'--'}号 ${r.mpct||'--'}%</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">前検${r.time||'--'}</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">ST安定${r.stScore||'--'}pt</span>
+        <span class="ps" style="background:${p.col}22;color:${p.col};border:1px solid ${p.col}44">フォーム${r.form||'--'}</span>
+      </div>
+      <ul style="list-style:none;font-size:11px;line-height:2.1;color:var(--mu)">
+        ${p.points.map(pt=>`<li style="display:flex;gap:4px"><span style="color:${p.col};flex-shrink:0">▸</span>${pt}</li>`).join('')}
+      </ul>
+    </div>`;
+  }).join('');
+}
+
+// 初期描画
+renderTable();
+renderMotor();
+renderTime();
+renderST();
+renderVenue();
+renderPicks();
+</script>
+</body>
+</html>
