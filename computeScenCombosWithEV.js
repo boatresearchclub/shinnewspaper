@@ -360,11 +360,35 @@
               }
             }
           } catch (_ce) { /* hitProbEst 計算失敗時は null のまま返す */ }
+
+          // キャッシュヒット時も boatProbs を構築する
+          // _ranked が取れていれば final_prob を使い、なければ空オブジェクト
+          const _boatProbs = {};
+          try {
+            const _rd2 = vdata?.races?.[String(rno)];
+            if (_rd2?.boats && typeof calcTenkaiProbs === 'function'
+                && typeof window._setDataForCalc === 'function') {
+              const _sv2 = window._setDataForCalc(vdata, venue);
+              try {
+                const _arek2   = (_rd2.arek > 0) ? _rd2.arek : 54.7;
+                const _ranked2 = calcTenkaiProbs(_rd2.boats, _arek2);
+                if (_ranked2 && _ranked2.length > 0) {
+                  const _pt = _ranked2.reduce((s, b) => s + b.prob, 0) || 1;
+                  _ranked2.forEach(b => { b.final_prob = b.prob / _pt; });
+                  _ranked2.forEach(b => { if (b.boat != null) _boatProbs[b.boat] = b.final_prob; });
+                }
+              } finally {
+                window._restoreDataForCalc(_sv2);
+              }
+            }
+          } catch (_be) { /* boatProbs 取得失敗は無視 */ }
+
           return {
             combos      : _combos,
             hitProbEst  : _hitProbEst,
             synthOdds   : null,
             ev          : null,
+            boatProbs   : _boatProbs,
             pred2ndRank : null,
             pred3rdRank : null,
             weighted2nd : {},
