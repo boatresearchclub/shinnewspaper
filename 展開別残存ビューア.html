@@ -162,6 +162,10 @@
       <span class="ctrl-label">会場</span>
       <select id="raceVenueSelect"></select>
     </div>
+    <div class="race-ctrl-row">
+      <span class="ctrl-label">レース</span>
+      <select id="raceNoSelect"></select>
+    </div>
   </div>
 
   <!-- 出走表 -->
@@ -379,13 +383,19 @@ render();
 // ===== タブ2: 出走表入力 =====
 let raceVenue = '三国'; // [AUTO_VENUE]
 // [AUTO_PLAYERS_START]
-const PLAYER_NAMES = {1:'中野希一', 2:'藤原仙二', 3:'中野仁照', 4:'島川海輝', 5:'遠藤圭吾', 6:'小林孝彰'};
+const PLAYER_NAMES = {1:'中野希一', 2:'鰐部太空', 3:'水谷理人', 4:'中野仁照', 5:'飛田江己', 6:'前田　翔'};
 // [AUTO_PLAYERS_END]
 // entryMap: 枠番 → 進入コース (default = 枠番)
 let entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6};
 let raceWinnerCourse = null; // 選択された勝者の進入コース
 let raceWinnerKime = kimete[0];
 let raceChart2 = null, raceChart3 = null;
+let currentRaceNo = 1; // 現在選択中のレース番号
+
+// 現在のレースの選手名を返す
+function getPlayerNames() {
+  return RACE_ENTRIES[currentRaceNo] || {};
+}
 
 // 会場セレクト初期化
 const rvs = document.getElementById('raceVenueSelect');
@@ -393,6 +403,24 @@ venues.forEach(v => { const o = document.createElement('option'); o.value=v; o.t
 // [AUTO_VENUE] で設定された会場がvenuesに含まれる場合はセレクトを同期
 if (venues.includes(raceVenue)) { rvs.value = raceVenue; } else { raceVenue = venues[0]; }
 rvs.addEventListener('change', () => { raceVenue = rvs.value; updateWinnerButtons(); renderRaceResult(); });
+
+// レース番号セレクト初期化
+const rns = document.getElementById('raceNoSelect');
+const availableRaces = Object.keys(RACE_ENTRIES).map(Number).sort((a,b) => a-b);
+(availableRaces.length > 0 ? availableRaces : [1,2,3,4,5,6,7,8,9,10,11,12]).forEach(n => {
+  const o = document.createElement('option'); o.value=n; o.textContent=n+'R'; rns.appendChild(o);
+});
+currentRaceNo = availableRaces.length > 0 ? availableRaces[0] : 1;
+rns.value = currentRaceNo;
+rns.addEventListener('change', () => {
+  currentRaceNo = parseInt(rns.value);
+  entryMap = {1:1, 2:2, 3:3, 4:4, 5:5, 6:6}; // 進入コースをリセット
+  raceWinnerCourse = null;
+  buildEntryRows();
+  updateCoursePreview();
+  updateWinnerButtons();
+  renderRaceResult();
+});
 
 // 出走表行を生成
 function buildEntryRows() {
@@ -413,7 +441,7 @@ function buildEntryRows() {
     // 選手名（表示のみ）
     const name = document.createElement('div');
     name.className = 'entry-name';
-    name.textContent = PLAYER_NAMES[waku] || `${waku}号艇`;
+    name.textContent = getPlayerNames()[waku] || `${waku}号艇`;
     row.appendChild(name);
     
     // コース選択ボタン群
