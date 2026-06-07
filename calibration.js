@@ -513,6 +513,184 @@
       </div>`;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // 2着・3着 データvs買い目 切り分け診断（管理者専用）
+  // ──────────────────────────────────────────────────────────────────
+  // 「予測が機能していない」原因を切り分ける：
+  //   データが悪い → 1位予測と2位予測の的中率がほぼ同率（識別力なし）
+  //   買い目が悪い → 1位予測の的中率が低く、かつ2位以下に偏っている
+  // ──────────────────────────────────────────────────────────────────
+  function buildDiagnosisHTML(results) {
+    const valid2 = results.filter(r => r.actual2nd != null && r.pred2ndRank != null);
+    const valid3 = results.filter(r => r.actual3rd != null && r.pred3rdRank != null);
+    if (valid2.length === 0 && valid3.length === 0) return '';
+
+    // ── 予測順位分布（2着・3着）──
+    function rankDist(arr, rankField) {
+      const dist = {};
+      arr.forEach(r => {
+        const k = r[rankField] <= 4 ? r[rankField] : 5; // 5位以下まとめ
+        dist[k] = (dist[k] ?? 0) + 1;
+      });
+      return dist;
+    }
+    const dist2 = rankDist(valid2, 'pred2ndRank');
+    const dist3 = rankDist(valid3, 'pred3rdRank');
+    const total2 = valid2.length;
+    const total3 = valid3.length;
+
+    // ── 識別力スコア（1位と2位の差）──
+    // 差が大きいほど予測が機能している
+    // 差が小さい（≤5%）→ データが悪い可能性大
+    const r2_1 = (dist2[1] ?? 0) / total2;
+    const r2_2 = (dist2[2] ?? 0) / total2;
+    const r3_1 = (dist3[1] ?? 0) / total3;
+    const r3_2 = (dist3[2] ?? 0) / total3;
+    const disc2 = r2_1 - r2_2; // 識別力（2着）
+    const disc3 = r3_1 - r3_2; // 識別力（3着）
+
+    // ── 診断判定 ──
+    function diagnose(disc, rank1, name) {
+      if (disc >= 0.08) return { verdict: `✅ ${name}予測は機能している`, color: 'var(--green)',   detail: `1位と2位に${(disc*100).toFixed(0)}%差あり` };
+      if (disc >= 0.03) return { verdict: `🟡 ${name}予測は弱い識別力`,   color: 'var(--orange)', detail: `1位と2位の差が${(disc*100).toFixed(0)}%のみ` };
+      return                   { verdict: `🔴 ${name}予測は機能していない`, color: 'var(--red,#e05)', detail: `1位と2位がほぼ同率 → データ品質を疑う` };
+    }
+    const diag2 = diagnose(disc2, r2_1, '2着');
+    const diag3 = diagnose(disc3, r3_1, '3着');
+
+    // ── 1着コース別の2着1位的中率 ──
+    // 逃げ（1着=1枠）とそれ以外で分けて見る
+    function courseGroup(r) {
+      if (!r.actualResult) return null;
+      const first = parseInt((r.actualResult + '').split(/[-－−]/)[0]);
+      return first === 1 ? '1コース(逃げ系)' : `${first}コース`;
+    }
+    const byWinner2 = {};
+    valid2.forEach(r => {
+      const g = courseGroup(r);
+      if (!g) return;
+      if (!byWinner2[g]) byWinner2[g] = { total: 0, rank1: 0 };
+      byWinner2[g].total++;
+      if (r.pred2ndRank === 1) byWinner2[g].rank1++;
+    });
+    const courseRows2 = Object.entries(byWinner2)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 6)
+      .map(([g, s]) => {
+        const rate = s.rank1 / s.total;
+        const color = rate >= 0.40 ? 'var(--green)' : rate >= 0.28 ? 'var(--orange)' : 'var(--red,#e05)';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:3px 5px;font-size:10px">${g}</td>
+          <td style="padding:3px 5px;font-size:10px;text-align:right;color:var(--text3)">${s.total}件</td>
+          <td style="padding:3px 5px;font-size:10px;text-align:right;font-weight:700;color:${color}">${(rate*100).toFixed(0)}%</td>
+        </tr>`;
+      }).join('');
+
+    // ── レース番号別の2着1位的中率 ──
+    const byRno2 = {};
+    valid2.forEach(r => {
+      const g = r.rno != null ? `${r.rno}R` : null;
+      if (!g) return;
+      if (!byRno2[g]) byRno2[g] = { total: 0, rank1: 0, rno: r.rno };
+      byRno2[g].total++;
+      if (r.pred2ndRank === 1) byRno2[g].rank1++;
+    });
+    const rnoRows2 = Object.entries(byRno2)
+      .sort((a, b) => a[1].rno - b[1].rno)
+      .map(([g, s]) => {
+        const rate = s.rank1 / s.total;
+        const color = rate >= 0.40 ? 'var(--green)' : rate >= 0.28 ? 'var(--orange)' : 'var(--red,#e05)';
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:3px 5px;font-size:10px">${g}</td>
+          <td style="padding:3px 5px;font-size:10px;text-align:right;color:var(--text3)">${s.total}件</td>
+          <td style="padding:3px 5px;font-size:10px;text-align:right;font-weight:700;color:${color}">${(rate*100).toFixed(0)}%</td>
+        </tr>`;
+      }).join('');
+
+    // ── 予測順位分布バー ──
+    function distBars(dist, total, maxRank) {
+      return Array.from({ length: maxRank }, (_, i) => i + 1).map(rank => {
+        const label = rank === maxRank ? `${rank}位以下` : `${rank}位`;
+        const cnt   = dist[rank] ?? 0;
+        const rate  = cnt / total;
+        const w     = Math.round(rate * 100);
+        const color = rank === 1 ? 'var(--green)' : rank === 2 ? 'var(--orange)' : 'var(--text3)';
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:9px;color:var(--text3);width:36px;flex-shrink:0">${label}</span>
+          <div style="flex:1;height:10px;background:var(--bg2);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${w}%;background:${color};opacity:0.8;border-radius:2px"></div>
+          </div>
+          <span style="font-size:9px;font-weight:700;color:${color};width:28px;text-align:right">${(rate*100).toFixed(0)}%</span>
+        </div>`;
+      }).join('');
+    }
+
+    const thStyle = `padding:3px 5px;text-align:left;font-size:9px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)`;
+
+    return `
+      <div class="admin-only" style="margin-top:8px">
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:8px">
+            🔬 2着・3着 データvs買い目 切り分け診断
+          </div>
+
+          <!-- 診断サマリー -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+            <div style="background:var(--bg2);border-radius:4px;padding:8px;border-left:3px solid ${diag2.color}">
+              <div style="font-size:10px;font-weight:700;color:${diag2.color};margin-bottom:2px">${diag2.verdict}</div>
+              <div style="font-size:9px;color:var(--text3)">${diag2.detail}</div>
+            </div>
+            <div style="background:var(--bg2);border-radius:4px;padding:8px;border-left:3px solid ${diag3.color}">
+              <div style="font-size:10px;font-weight:700;color:${diag3.color};margin-bottom:2px">${diag3.verdict}</div>
+              <div style="font-size:9px;color:var(--text3)">${diag3.detail}</div>
+            </div>
+          </div>
+
+          <!-- 予測順位分布 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:4px">2着 予測順位分布（${total2}件）</div>
+              ${distBars(dist2, total2, 5)}
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:4px">3着 予測順位分布（${total3}件）</div>
+              ${distBars(dist3, total3, 5)}
+            </div>
+          </div>
+
+          <!-- 1着コース別・レース番号別 -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:4px">1着コース別 2着1位的中率</div>
+              <table style="width:100%;border-collapse:collapse">
+                <thead><tr>
+                  <th style="${thStyle}">1着</th>
+                  <th style="${thStyle};text-align:right">件数</th>
+                  <th style="${thStyle};text-align:right">的中率</th>
+                </tr></thead>
+                <tbody>${courseRows2}</tbody>
+              </table>
+            </div>
+            <div>
+              <div style="font-size:9px;font-weight:700;color:var(--text3);margin-bottom:4px">レース番号別 2着1位的中率</div>
+              <table style="width:100%;border-collapse:collapse">
+                <thead><tr>
+                  <th style="${thStyle}">R</th>
+                  <th style="${thStyle};text-align:right">件数</th>
+                  <th style="${thStyle};text-align:right">的中率</th>
+                </tr></thead>
+                <tbody>${rnoRows2}</tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="font-size:9px;color:var(--text3);margin-top:6px">
+            識別力=1位と2位の的中率の差。差が小さい→データ品質の問題。差が大きく1位が低い→買い目ロジックの問題。
+          </div>
+        </div>
+      </div>`;
+  }
+
   // ── DOM への描画 ──
   function _ensureContainer() {
     let el = document.getElementById('top-ai-calibration-panel');
@@ -588,6 +766,7 @@
             <div class="admin-only">${buildCoursCalibHTML(courseStats, all.length)}</div>
           </div>
           ${buildOverestimateAnalysisHTML(all)}
+          ${buildDiagnosisHTML(all)}
         </div>`;
     } catch (e) {
       console.warn('[calibration] render error:', e);
