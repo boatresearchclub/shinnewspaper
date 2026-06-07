@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>尼崎センプルカップ 2026 ― 舟券予想強化版 | ボートリサーチ倶楽部</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Bebas+Neue&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0a0e1f;--deep:#05080f;--accent:#00e5ff;--gold:#ffd700;
+  --red:#ff3b5c;--green:#00e680;--silver:#9aacbf;--muted:#3d4f63;
+  --card:#0d1525;--card2:#111e31;--border:rgba(0,229,255,0.12);
+  --text:#dce8f5;--orange:#ff8c00;--purple:#a078ff;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--deep);color:var(--text);font-family:'Noto Sans JP',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* HERO */
+.hero{background:linear-gradient(155deg,#03060f 0%,#07112a 55%,#040c1a 100%);border-bottom:2px solid var(--accent);overflow:hidden;position:relative}
+.hero-grid{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,229,255,0.03) 40px),repeating-linear-gradient(90deg,transparent,transparent 59px,rgba(0,229,255,0.03) 60px);pointer-events:none}
+.hero-glow{position:absolute;right:-10%;top:-30%;width:60%;height:160%;background:radial-gradient(ellipse,rgba(0,100,200,0.1) 0%,transparent 65%);pointer-events:none}
+.hero-inner{position:relative;max-width:1200px;margin:0 auto;padding:44px 20px 36px;display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;margin-bottom:10px}
+.hero-pill{background:linear-gradient(90deg,var(--accent),#0099cc);color:#030a15;font-size:10px;font-weight:900;letter-spacing:.2em;padding:3px 12px 3px 10px;clip-path:polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)}
+.hero-site{font-size:10px;color:var(--muted);letter-spacing:.15em}
+.hero h1{font-size:clamp(18px,3vw,32px);font-weight:900;line-height:1.25;color:#fff;margin-bottom:8px}
+.hero h1 em{color:var(--accent);font-style:normal}
+.hero-period{font-size:12px;color:var(--silver);margin-bottom:18px}
+.hero-chips{display:flex;gap:12px;flex-wrap:wrap}
+.chip{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:8px 14px;display:flex;flex-direction:column;gap:2px}
+.chip-label{font-size:9px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase}
+.chip-val{font-size:14px;font-weight:700;color:var(--gold)}
+.hero-right{text-align:right;flex-shrink:0}
+.hero-g1{font-family:'Bebas Neue',sans-serif;font-size:96px;line-height:.9;color:transparent;-webkit-text-stroke:2px rgba(0,229,255,.35);user-select:none}
+.hero-venue{font-size:11px;color:var(--muted);letter-spacing:.1em;margin-top:4px}
+
+/* TABS */
+.tabbar{background:rgba(10,14,31,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200}
+.tab-scroll{max-width:1200px;margin:0 auto;display:flex;overflow-x:auto;scrollbar-width:none}
+.tab-scroll::-webkit-scrollbar{display:none}
+.tab-btn{padding:13px 18px;font-size:11.5px;font-weight:700;letter-spacing:.06em;color:var(--muted);border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .2s;font-family:'Noto Sans JP',sans-serif}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* SECTIONS */
+.sec{display:none;max-width:1200px;margin:0 auto;padding:28px 16px 56px}
+.sec.on{display:block}
+.sec-h{font-size:10px;font-weight:700;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:20px;display:flex;align-items:center;gap:10px}
+.sec-h::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card+.card{margin-top:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:800px){.g2,.g3,.g4{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.g2,.g3,.g4{grid-template-columns:1fr}.hero-right{display:none}}
+
+/* HIGHLIGHT CARDS */
+.hl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:24px}
+.hl-card{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;position:relative;overflow:hidden}
+.hl-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.hl-card.red::before{background:var(--red)}
+.hl-card.gold::before{background:var(--gold)}
+.hl-card.green::before{background:var(--green)}
+.hl-card.purple::before{background:#a078ff}
+.hl-card.orange::before{background:var(--orange)}
+.hl-lbl{font-size:9px;color:var(--muted);letter-spacing:.15em;margin-bottom:5px}
+.hl-name{font-size:17px;font-weight:900;color:#fff;margin-bottom:2px}
+.hl-sub{font-size:11px;color:var(--silver)}
+.hl-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:var(--accent)}
+
+/* BADGES */
+.bdg{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.04em;vertical-align:middle;margin-left:4px}
+.bdg-hot{background:rgba(255,59,92,.18);color:var(--red);border:1px solid rgba(255,59,92,.35)}
+.bdg-ace{background:rgba(255,215,0,.14);color:var(--gold);border:1px solid rgba(255,215,0,.3)}
+.bdg-loc{background:rgba(160,120,255,.15);color:#a078ff;border:1px solid rgba(160,120,255,.3)}
+.bdg-new{background:rgba(0,229,255,.1);color:var(--accent);border:1px solid rgba(0,229,255,.25)}
+.bdg-form{background:rgba(255,140,0,.15);color:var(--orange);border:1px solid rgba(255,140,0,.3)}
+
+/* COMMENT BOX */
+.comment-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin-bottom:20px}
+.comment-box h3{font-size:10px;letter-spacing:.2em;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.comment-body{font-size:13px;line-height:1.85;color:var(--silver)}
+.comment-body strong{color:#fff}
+.comment-body .hl{color:var(--accent);font-weight:700}
+.comment-body .rd{color:var(--red);font-weight:700}
+.comment-body .gd{color:var(--gold);font-weight:700}
+.comment-body .or{color:var(--orange);font-weight:700}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{background:rgba(0,229,255,.07)}
+th{padding:9px 10px;text-align:left;font-size:10px;letter-spacing:.08em;color:var(--accent);white-space:nowrap;border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+th:hover{color:#fff}
+th.sort-asc::after{content:" ↑";color:var(--gold)}
+th.sort-desc::after{content:" ↓";color:var(--gold)}
+td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,229,255,.03)}
+.rname{font-weight:700;font-size:13px;color:#fff}
+.rtoban{font-size:10px;color:var(--muted)}
+.mno{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;font-weight:900;font-size:12px;font-family:'Orbitron',monospace}
+.m-hot{background:rgba(255,59,92,.18);color:var(--red);border:1px solid rgba(255,59,92,.35)}
+.m-good{background:rgba(0,230,128,.12);color:var(--green);border:1px solid rgba(0,230,128,.28)}
+.m-norm{background:rgba(255,255,255,.06);color:var(--silver);border:1px solid rgba(255,255,255,.1)}
+.bar{display:flex;align-items:center;gap:6px}
+.bar-fill{height:4px;border-radius:2px;min-width:2px;flex-shrink:0}
+.bar-fill.r{background:linear-gradient(90deg,var(--red),#cc2244)}
+.bar-fill.g{background:linear-gradient(90deg,var(--green),#00aa55)}
+.bar-fill.a{background:linear-gradient(90deg,var(--accent),#0088aa)}
+.bar-fill.d{background:rgba(255,255,255,.15)}
+.bar-fill.o{background:linear-gradient(90deg,var(--orange),#cc6600)}
+.bar-val{font-size:12px;font-weight:700;min-width:38px}
+.zt{font-family:'Orbitron',monospace;font-size:12px;font-weight:700}
+.zt-f{color:var(--red)}
+.zt-g{color:var(--gold)}
+.zt-s{color:var(--muted)}
+
+/* SORT BUTTONS */
+.sort-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.sort-btn{padding:5px 13px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;font-family:'Noto Sans JP',sans-serif}
+.sort-btn:hover,.sort-btn.on{background:rgba(0,229,255,.1);color:var(--accent);border-color:rgba(0,229,255,.4)}
+
+/* COURSE HEAT MAP */
+.course-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:4px}
+.course-cell{border-radius:3px;padding:3px 4px;text-align:center;font-size:10px;font-weight:700;font-family:'Orbitron',monospace}
+
+/* VENUE STATS */
+.venue-block{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.venue-block h4{font-size:10px;letter-spacing:.18em;color:var(--accent);margin-bottom:12px;text-transform:uppercase}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px}
+.stat-box{text-align:center;background:rgba(255,255,255,.04);border-radius:6px;padding:8px}
+.stat-label{font-size:9px;color:var(--muted);margin-bottom:3px}
+.stat-num{font-family:'Orbitron',monospace;font-size:16px;font-weight:900;color:var(--gold)}
+.stat-sub{font-size:9px;color:var(--muted);margin-top:2px}
+
+/* FORM RANK BAR */
+.form-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.form-name{font-size:12px;font-weight:700;color:#fff;width:130px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.form-bg{flex:1;background:rgba(255,255,255,.05);border-radius:3px;height:6px;overflow:hidden}
+.form-bar{height:6px;border-radius:3px}
+.form-val{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;min-width:40px;text-align:right}
+
+/* RACER CARD GRID */
+.racer-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.racer-card{background:var(--card2);border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .2s}
+.racer-card:hover{border-color:rgba(0,229,255,.4);transform:translateY(-2px)}
+.racer-img{width:100%;height:100px;object-fit:cover;object-position:top;background:#0d1525;display:block}
+.racer-card-body{padding:8px 10px}
+.rc-name{font-size:12.5px;font-weight:700;color:#fff;margin-bottom:2px}
+.rc-toban{font-size:10px;color:var(--muted)}
+
+/* COURSE BADGE in player card */
+.course-mini{display:grid;grid-template-columns:repeat(6,1fr);gap:2px;margin-top:6px}
+.cm-cell{border-radius:2px;height:14px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px)}
+.modal-bg.on{display:flex}
+.modal{background:#0b1425;border:1px solid var(--border);border-radius:12px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto}
+.modal-head{display:flex;gap:14px;align-items:center;padding:18px 18px 14px;border-bottom:1px solid var(--border);position:relative}
+.modal-img{width:64px;height:64px;border-radius:7px;object-fit:cover;object-position:top;background:var(--card2);flex-shrink:0}
+.modal-title h2{font-size:18px;font-weight:900;color:#fff}
+.modal-title p{font-size:11px;color:var(--muted)}
+.modal-close{position:absolute;right:14px;top:14px;background:none;border:1px solid var(--border);color:var(--muted);width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:14px 18px 18px}
+.mstat-section{margin-bottom:14px}
+.mstat-section h4{font-size:9px;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.mstat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:12px}
+.mstat-row:last-child{border-bottom:none}
+.mstat-key{color:var(--muted)}
+.mstat-val{font-weight:700;color:#fff}
+.mstat-val.hot{color:var(--red)}
+.mstat-val.good{color:var(--green)}
+.mstat-val.gold{color:var(--gold)}
+.course-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.course-table th{background:rgba(0,229,255,.07);padding:5px 7px;color:var(--accent);font-size:10px;letter-spacing:.05em}
+.course-table td{padding:5px 7px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center}
+.course-table tr:last-child td{border-bottom:none}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--deep)}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:2px}
+
+/* PREDICTION BOX */
+.pred-box{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:12px}
+.pred-h{font-size:10px;letter-spacing:.18em;color:var(--accent);font-weight:700;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.pred-h .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.pick-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pick-rank{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;width:28px;color:var(--gold)}
+.pick-name{font-size:15px;font-weight:900;color:#fff}
+.pick-reason{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.5;padding-left:38px;border-left:2px solid var(--border);margin-left:0}
+
+/* AMAGASAKI COURSE BARS */
+.ama-course-row{display:grid;grid-template-columns:20px 1fr 52px 50px;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.ama-course-num{font-family:'Orbitron',monospace;font-size:10px;color:var(--muted);font-weight:700}
+.ama-course-bar{background:rgba(255,255,255,.05);border-radius:2px;height:5px;overflow:hidden}
+.ama-course-fill{height:5px;border-radius:2px}
+.ama-course-val{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;text-align:right}
+.ama-course-runs{font-size:9px;color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">
+        <span class="hero-pill">📊 ボートリサーチ倶楽部 予想強化版</span>
+        <span class="hero-site">G1 MASTER DATA ENHANCED</span>
+      </div>
+      <h1>尼崎市市制<em>110</em>周年記念<br>尼崎センプルカップ 2026</h1>
+      <p class="hero-period">2026年6月8日（日）〜 6月13日（土）　ボートレース尼崎</p>
+      <div class="hero-chips">
+        <div class="chip"><span class="chip-label">グレード</span><span class="chip-val">G1</span></div>
+        <div class="chip"><span class="chip-label">出場選手</span><span class="chip-val">52名</span></div>
+        <div class="chip"><span class="chip-label">イン逃げ率</span><span class="chip-val">58.6%</span></div>
+        <div class="chip"><span class="chip-label">荒れスコア</span><span class="chip-val">41.4</span></div>
+        <div class="chip"><span class="chip-label">データ</span><span class="chip-val">強化済</span></div>
+      </div>
+    </div>
+    <div class="hero-right">
+      <div class="hero-g1">G1</div>
+      <div class="hero-venue">BOAT RACE AMAGASAKI</div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabbar">
+  <div class="tab-scroll">
+    <button class="tab-btn on" onclick="go('overview',this)">🏆 概況・注目</button>
+    <button class="tab-btn" onclick="go('venue',this)">🌊 尼崎コース傾向</button>
+    <button class="tab-btn" onclick="go('motor',this)">⚙️ モーター＆前検</button>
+    <button class="tab-btn" onclick="go('form',this)">📈 近況フォーム</button>
+    <button class="tab-btn" onclick="go('amacourse',this)">📍 尼崎コース実績</button>
+    <button class="tab-btn" onclick="go('players',this)">👤 選手一覧</button>
+    <button class="tab-btn" onclick="go('prediction',this)">🎯 予想・舟券ポイント</button>
+  </div>
+</nav>
+
+<!-- ① 概況・注目 -->
+<section class="sec on" id="s-overview">
+  <h2 class="sec-h">レース概況・注目ポイント</h2>
+  <div class="hl-grid">
+    <div class="hl-card red">
+      <div class="hl-lbl">🔥 最強モーター保有</div>
+      <div class="hl-name">菅　章哉</div>
+      <div class="hl-sub">23号機 ／ M2連対率 <strong style="color:var(--red)">69.2%</strong></div>
+      <div style="margin-top:6px;font-size:11px;color:var(--red)">三拍子揃う快速機・節イチ最有力</div>
+    </div>
+    <div class="hl-card gold">
+      <div class="hl-lbl">⚡ 前検タイムトップ</div>
+      <div class="hl-name">宮田龍馬 <span class="bdg bdg-loc">地元</span></div>
+      <div class="hl-sub">9号機 ／ 前検タイム</div>
+      <div class="hl-val">6.78</div>
+      <div style="font-size:11px;color:var(--gold)">唯一の6.7台・尼崎C1実績.842</div>
+    </div>
+    <div class="hl-card orange">
+      <div class="hl-lbl">🔥 最高フォーム指数</div>
+      <div class="hl-name">前田篤哉</div>
+      <div class="hl-sub">フォーム指数 <strong style="color:var(--orange)">10.05</strong> ／ 直近3走2勝</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--orange)">直近10走平均着順1.8・絶好調</div>
+    </div>
+    <div class="hl-card green">
+      <div class="hl-lbl">📈 急上昇フォーム</div>
+      <div class="hl-name">丸野一樹</div>
+      <div class="hl-sub">フォーム10.04 ／ 直近10走1着率70%</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--green)">尼崎C1実績100%（5走）</div>
+    </div>
+    <div class="hl-card red">
+      <div class="hl-lbl">🔺 今節TOP3急調選手</div>
+      <div class="hl-name">上條 暢嵩</div>
+      <div class="hl-sub">直近3走3連勝 ／ 直近5走4勝</div>
+      <div style="margin-top:6px;font-size:11px;color:var(--red)">C1逃げ実績80%・ST安定スコア81.7</div>
+    </div>
+    <div class="hl-card purple">
+      <div class="hl-lbl">⚠️ 最下位モーター</div>
+      <div class="hl-name">守田　俊介</div>
+      <div class="hl-sub">50号機 21.0% ／ 前検 7.05（最遅）</div>
+      <div style="margin-top:6px;font-size:11px;color:#a078ff">機力・タイム両面で厳しい状況</div>
+    </div>
+  </div>
+
+  <div class="comment-box">
+    <h3><span>⚙️</span> モーター抽選 公式コメント</h3>
+    <div class="comment-body">
+      モーターは<span class="hl">4月17日から使用</span>され、バイオ燃料が導入された。今シリーズで<strong>7節目</strong>となるが、<span class="rd">機力差は激しい</span>。注目のモーターは2基あり、<span class="rd">三拍子揃う快速23号機は菅章哉</span>が引き当てた。もう一つの<span class="gd">4号機は山田康二</span>とタッグを組む。その他では<strong>山田祐也、河合佑樹、秦英悟、藤原啓史朗</strong>が出足型の好素性機。<strong>宮田龍馬、高橋正男、森永淳、丸野一樹、宮地元輝</strong>が伸び型の高出力機を手中にした。
+    </div>
+  </div>
+
+  <div class="comment-box">
+    <h3><span>⏱</span> 前検タイム 公式コメント</h3>
+    <div class="comment-body">
+      前検トップタイムは<span class="gd">6.78をマークした地元の宮田龍馬</span>。2位は<strong>森永淳</strong>と<strong>前田篤哉</strong>が<span class="hl">6.81</span>で並んだ。<strong>吉川元浩</strong>と<strong>大峯豊</strong>が<span class="hl">6.83</span>の好タイム。<strong>上條暢嵩、加藤翔馬、前原大道</strong>が僅差で続き直線の良さをアピールした。
+    </div>
+  </div>
+
+  <h2 class="sec-h" style="margin-top:24px">注目選手 モーター×フォーム 総合TOP10</h2>
+  <div class="tbl-wrap">
+    <table><thead><tr>
+      <th>総合</th><th>選手名</th><th>M号</th><th>M2連対率</th><th>前検T</th>
+      <th>フォーム指数</th><th>直近5走1着率</th><th>直近3走1着率</th><th>尼崎C1実績</th>
+    </tr></thead><tbody id="ov-tbody"></tbody></table>
+  </div>
+</section>
+
+<!-- ② 尼崎コース傾向 -->
+<section class="sec" id="s-venue">
+  <h2 class="sec-h">尼崎コース傾向（直近1年データ）</h2>
+  <div class="g2">
+    <div class="venue-block">
+      <h4>🏁 決まり手分布</h4>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-label">逃げ</div><div class="stat-num">58.6%</div><div class="stat-sub">全国比+5.4pt</div></div>
+        <div class="stat-box"><div class="stat-label">差し</div><div class="stat-num">10.0%</div><div class="stat-sub">全国比-3.5pt</div></div>
+        <div class="stat-box"><div class="stat-label">まくり</div><div class="stat-num">11.8%</div></div>
+        <div class="stat-box"><div class="stat-label">まくり差し</div><div class="stat-num">12.0%</div></div>
+        <div class="stat-box"><div class="stat-label">抜き</div><div class="stat-num">7.2%</div></div>
+        <div class="stat-box"><div class="stat-label">荒れスコア</div><div class="stat-num" style="color:var(--green)">41.4</div><div class="stat-sub">比較的堅い</div></div>
+      </div>
+    </div>
+    <div class="venue-block">
+      <h4>📊 コース別1着率</h4>
+      <div id="course-1win-bars"></div>
+    </div>
+  </div>
+
+  <div class="venue-block" style="margin-top:0">
+    <h4>🔁 イン逃げ時 残存率（764回）</h4>
+    <div class="tbl-wrap" style="border:none">
+      <table style="font-size:12px">
+        <thead><tr>
+          <th>枠</th><th>2着率</th><th>3着以内率</th><th>傾向</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>1枠（イン）</td><td style="color:var(--muted)">— (1着)</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">1着艇</td></tr>
+          <tr><td><strong>2枠</strong></td><td style="color:var(--green);font-weight:700">33.6%</td><td style="color:var(--green);font-weight:700">54.5%</td><td style="font-size:11px">逃げ時の2着最有力</td></tr>
+          <tr><td><strong>3枠</strong></td><td style="color:var(--accent);font-weight:700">29.1%</td><td style="color:var(--accent);font-weight:700">53.0%</td><td style="font-size:11px">2・3枠で着内77%</td></tr>
+          <tr><td>4枠</td><td>18.3%</td><td>42.5%</td><td style="font-size:11px;color:var(--muted)">差し展開で浮上</td></tr>
+          <tr><td>5枠</td><td>12.7%</td><td>32.3%</td><td style="font-size:11px;color:var(--muted)">まくり展開に注意</td></tr>
+          <tr><td>6枠</td><td>6.3%</td><td>17.8%</td><td style="font-size:11px;color:var(--muted)">基本的に厳しい</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="venue-block">
+    <h4>💥 レース別 荒れスコア（1R〜12R）</h4>
+    <div id="aare-bars"></div>
+  </div>
+
+  <div class="venue-block">
+    <h4>📌 まくり展開別 残存傾向（尼崎）</h4>
+    <div class="tbl-wrap" style="border:none">
+      <table>
+        <thead><tr><th>まくり艇</th><th>件数</th><th>信頼度</th><th>残存1位コース</th><th>3着以内率TOP</th></tr></thead>
+        <tbody>
+          <tr><td>2コース</td><td>35件</td><td>23.3%</td><td>4枠 54.3%</td><td>4枠 54.3%</td></tr>
+          <tr><td><strong>3コース</strong></td><td>43件</td><td>28.7%</td><td>4枠 41.9%</td><td>4枠 62.8%</td></tr>
+          <tr><td><strong>4コース</strong></td><td>59件</td><td>39.3%</td><td>5枠 37.3%</td><td>5枠 61.0%</td></tr>
+          <tr><td>5コース</td><td>12件</td><td>8.0%</td><td>1枠 33.3%</td><td>1枠 50.0%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="comment-body" style="margin-top:12px;font-size:12px">
+      <strong>舟券ポイント：</strong><span class="or">3コースまくり</span>時は<span class="hl">4枠が最残存</span>（3着以内63%）。<span class="or">4コースまくり</span>時は<span class="hl">5枠が浮上</span>（61%）。まくり差しは3コース起点が最多（67件）で<span class="rd">1枠が2着に残る確率71.6%</span>と高い。
+    </div>
+  </div>
+</section>
+
+<!-- ③ モーター＆前検 -->
+<section class="sec" id="s-motor">
+  <h2 class="sec-h">モーター抽選結果・前検タイムランキング（全52名）</h2>
+  <div class="sort-row">
+    <button class="sort-btn on" onclick="sortMotor('m2',false,this)">モーター2連対率↓</button>
+    <button class="sort-btn" onclick="sortMotor('zk',true,this)">前検タイム↑</button>
+    <button class="sort-btn" onclick="sortMotor('b2',false,this)">ボート2連対率↓</button>
+    <button class="sort-btn" onclick="sortMotor('form_idx',false,this)">フォーム↓</button>
+  </div>
+  <div class="tbl-wrap">
+    <table id="motor-tbl">
+      <thead><tr>
+        <th>前検順</th><th>選手名</th>
+        <th>M号</th><th>M2連対率</th><th>B号</th><th>B2連対率</th>
+        <th>前検T</th><th>フォーム指数</th><th>直近5走1着率</th>
+      </tr></thead>
+      <tbody id="motor-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ④ 近況フォーム -->
+<section class="sec" id="s-form">
+  <h2 class="sec-h">近況フォームランキング（直近走数ベース）</h2>
+  <div class="g2">
+    <div>
+      <div class="comment-box" style="margin-bottom:14px">
+        <h3><span>🔥</span> フォーム指数TOP15</h3>
+        <div id="form-bars-main"></div>
+      </div>
+    </div>
+    <div>
+      <div class="comment-box" style="margin-bottom:14px">
+        <h3><span>📉</span> 直近10走 平均着順（良い方TOP10）</h3>
+        <div id="form-avg-bars"></div>
+      </div>
+    </div>
+  </div>
+  <h2 class="sec-h" style="margin-top:4px">近況フォーム 詳細テーブル（全52名）</h2>
+  <div class="sort-row">
+    <button class="sort-btn on" onclick="sortForm('form_idx',false,this)">フォーム指数↓</button>
+    <button class="sort-btn" onclick="sortForm('recent3_win',false,this)">直近3走1着率↓</button>
+    <button class="sort-btn" onclick="sortForm('recent5_win',false,this)">直近5走1着率↓</button>
+    <button class="sort-btn" onclick="sortForm('recent10_win',false,this)">直近10走1着率↓</button>
+    <button class="sort-btn" onclick="sortForm('recent10_avg',true,this)">平均着順↑</button>
+    <button class="sort-btn" onclick="sortForm('in_win_rate',false,this)">イン1着率↓</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>選手名</th>
+        <th>フォーム指数</th><th>直近3走1着率</th><th>直近5走1着率</th>
+        <th>直近5走3連対率</th><th>直近10走1着率</th><th>直近10走平均着順</th>
+        <th>イン1着率</th><th>ST安定スコア</th><th>選手タイプ</th>
+      </tr></thead>
+      <tbody id="form-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ⑤ 尼崎コース実績 -->
+<section class="sec" id="s-amacourse">
+  <h2 class="sec-h">尼崎コース実績（マスタデータ統合）</h2>
+  <div class="comment-box" style="margin-bottom:14px">
+    <h3><span>📌</span> 見方</h3>
+    <div class="comment-body" style="font-size:12px">
+      各選手の尼崎での<strong>コース別1着率・出走数・平均ST</strong>を表示。出走数3未満は参考値。<span class="hl">時系列補正3連対率</span>は直近データ重みづけ済みの精度指標。
+    </div>
+  </div>
+  <div class="sort-row">
+    <button class="sort-btn on" onclick="sortAma('ama_c1_win',false,this)">C1実績↓</button>
+    <button class="sort-btn" onclick="sortAma('ama_c2_win',false,this)">C2実績↓</button>
+    <button class="sort-btn" onclick="sortAma('ama_c3_win',false,this)">C3実績↓</button>
+    <button class="sort-btn" onclick="sortAma('ama_c4_win',false,this)">C4実績↓</button>
+    <button class="sort-btn" onclick="sortAma('ama_c5_win',false,this)">C5実績↓</button>
+    <button class="sort-btn" onclick="sortAma('ama_c6_win',false,this)">C6実績↓</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr>
+        <th>選手名</th>
+        <th>C1<br>1着率(走)</th><th>C2<br>1着率(走)</th><th>C3<br>1着率(走)</th>
+        <th>C4<br>1着率(走)</th><th>C5<br>1着率(走)</th><th>C6<br>1着率(走)</th>
+        <th>尼崎 総合熟練度</th>
+      </tr></thead>
+      <tbody id="ama-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ⑥ 選手一覧 -->
+<section class="sec" id="s-players">
+  <h2 class="sec-h">出場選手（写真付）</h2>
+  <div class="sort-row">
+    <button class="sort-btn on" onclick="sortRacers('m2',false,this)">M2連対率↓</button>
+    <button class="sort-btn" onclick="sortRacers('form_idx',false,this)">フォーム↓</button>
+    <button class="sort-btn" onclick="sortRacers('zk',true,this)">前検T↑</button>
+    <button class="sort-btn" onclick="sortRacers('in_win_rate',false,this)">イン1着率↓</button>
+  </div>
+  <div class="racer-grid" id="racer-grid"></div>
+</section>
+
+<!-- ⑦ 予想・舟券ポイント -->
+<section class="sec" id="s-prediction">
+  <h2 class="sec-h">予想・舟券ポイント（マスタデータ総合分析）</h2>
+
+  <div class="pred-box">
+    <div class="pred-h"><span class="dot"></span>総合分析コメント</div>
+    <div class="comment-body">
+      尼崎はイン逃げ率<span class="hl">58.6%</span>と全国比+5.4ptの<span class="rd">強インコース</span>。荒れスコア41.4は比較的堅い展開。1〜6Rは荒れスコア40台後半〜53と荒れやすく、後半10〜12Rは20〜30台と堅い。
+      <br><br>
+      <strong>機力面：</strong>菅章哉の<span class="rd">23号機（69.2%）が圧倒的節イチ</span>。山田康二の4号機（55.1%）、吉田凌太朗の12号機（54.8%）が追う。
+      <br><br>
+      <strong>フォーム面：</strong>前田篤哉（10.05）・丸野一樹（10.04）が最高フォーム。上條暢嵩は直近3走連勝中で一発の期待大。
+      <br><br>
+      <strong>尼崎実績：</strong>宮田龍馬（地元）はC1実績84.2%・19走と圧倒的な尼崎巧者。稲田浩二のC1実績86.9%（23走）も高信頼度。
+    </div>
+  </div>
+
+  <div class="g2" style="margin-bottom:14px">
+    <div class="pred-box" style="margin-bottom:0">
+      <div class="pred-h"><span class="dot"></span>🎯 本命・対抗候補（機力×フォーム×尼崎実績）</div>
+      <div id="pred-main-list"></div>
+    </div>
+    <div class="pred-box" style="margin-bottom:0">
+      <div class="pred-h"><span class="dot"></span>⚡ 波乱要素・穴候補</div>
+      <div id="pred-ana-list"></div>
+    </div>
+  </div>
+
+  <div class="pred-box">
+    <div class="pred-h"><span class="dot"></span>🎰 舟券作戦ガイド</div>
+    <div class="tbl-wrap" style="border:none">
+      <table>
+        <thead><tr><th>券種</th><th>推奨</th><th>根拠</th></tr></thead>
+        <tbody>
+          <tr><td><strong>単勝</strong></td><td style="color:var(--red);font-weight:700">菅章哉 / 宮田龍馬</td><td style="font-size:11px">機力差・地元・イン実績の三位一体</td></tr>
+          <tr><td><strong>複勝</strong></td><td style="color:var(--accent);font-weight:700">前田篤哉 / 丸野一樹</td><td style="font-size:11px">フォーム最高水準・どのコースからでも着内</td></tr>
+          <tr><td><strong>2連単</strong></td><td style="color:var(--gold);font-weight:700">菅→宮田 / 宮田→稲田</td><td style="font-size:11px">イン逃げ時2枠33.6%・尼崎実績を加味</td></tr>
+          <tr><td><strong>3連単</strong></td><td style="color:var(--green);font-weight:700">軸：菅/宮田 ヒモ：前田・丸野・上條・稲田</td><td style="font-size:11px">機力×フォーム×尼崎実績の上位選手</td></tr>
+          <tr><td><strong>注意レース</strong></td><td style="color:var(--orange);font-weight:700">1〜4R（荒れスコア48〜54）</td><td style="font-size:11px">早いレースは荒れやすい！流し幅広めに</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <img class="modal-img" id="m-img" src="" alt="">
+      <div class="modal-title">
+        <h2 id="m-name"></h2>
+        <p id="m-sub"></p>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const D = [{"rank": 1, "toban": 4571, "name": "菅 章哉", "mn": 23, "m2": 69.2, "bn": 66, "b2": 30.5, "zk": 6.93, "local": false, "win_rate": 0.3789, "triple_rate": 0.6211, "in_win_rate": 0.6629, "form_idx": 8.69, "recent10_avg": 3.6, "recent3_win": 0.6667, "recent5_win": 0.6, "recent5_triple": 0.6, "recent10_win": 0.4, "avg_st": 0.1569, "st1c": 0.1567, "st_stab": 60.7, "fly": 0, "type": "混合", "jizai_win": 0.2836, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": 0, "ama_c3_runs": 3, "ama_c3_st": 0.27, "ama_c3_tri": 0.1814, "ama_c4_win": 0.6667, "ama_c4_runs": 3, "ama_c4_st": 0.0967, "ama_c4_tri": 0.8205, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 2, "toban": 5016, "name": "宮田 龍馬", "mn": 9, "m2": 56.2, "bn": 55, "b2": 31.7, "zk": 6.78, "local": true, "win_rate": 0.2799, "triple_rate": 0.6673, "in_win_rate": 0.7629, "form_idx": 3.6, "recent10_avg": 2.5, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.3, "avg_st": 0.1422, "st1c": 0.117, "st_stab": 69.7, "fly": 0, "type": "混合", "jizai_win": 0.0926, "ama_c1_win": 0.8421, "ama_c1_runs": 19, "ama_c1_st": 0.1263, "ama_c1_tri": 0.9146, "ama_c2_win": 0.4, "ama_c2_runs": 10, "ama_c2_st": 0.161, "ama_c2_tri": 0.9342, "ama_c3_win": 0.3846, "ama_c3_runs": 13, "ama_c3_st": 0.1385, "ama_c3_tri": 0.7501, "ama_c4_win": 0.0909, "ama_c4_runs": 11, "ama_c4_st": 0.1418, "ama_c4_tri": 0.997, "ama_c5_win": 0.0833, "ama_c5_runs": 12, "ama_c5_st": 0.1158, "ama_c5_tri": 0.4347, "ama_c6_win": 0.0625, "ama_c6_runs": 16, "ama_c6_st": 0.1456, "ama_c6_tri": 0.423}, {"rank": 3, "toban": 4500, "name": "山田 康二", "mn": 4, "m2": 55.1, "bn": 26, "b2": 42.1, "zk": 6.91, "local": false, "win_rate": 0.3473, "triple_rate": 0.6995, "in_win_rate": 0.7658, "form_idx": 3.36, "recent10_avg": 2.9, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.6, "recent10_win": 0.3, "avg_st": 0.1376, "st1c": 0.1266, "st_stab": 73.7, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1587, "ama_c1_win": 0.75, "ama_c1_runs": 4, "ama_c1_st": 0.085, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": 0, "ama_c3_runs": 4, "ama_c3_st": 0.1475, "ama_c3_tri": 1, "ama_c4_win": 0, "ama_c4_runs": 5, "ama_c4_st": 0.146, "ama_c4_tri": 0.0073, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1667, "ama_c5_tri": 0.136, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 4, "toban": 4903, "name": "吉田 凌太朗", "mn": 12, "m2": 54.8, "bn": 59, "b2": 44.7, "zk": 6.87, "local": false, "win_rate": 0.323, "triple_rate": 0.6736, "in_win_rate": 0.7419, "form_idx": 9.11, "recent10_avg": 2.8, "recent3_win": 0.6667, "recent5_win": 0.6, "recent5_triple": 1, "recent10_win": 0.4, "avg_st": 0.1545, "st1c": 0.1396, "st_stab": 60.5, "fly": 0, "type": "一般メイン", "jizai_win": 0.1582, "ama_c1_win": 0.6667, "ama_c1_runs": 6, "ama_c1_st": 0.1583, "ama_c1_tri": 0.7029, "ama_c2_win": 0.8, "ama_c2_runs": 5, "ama_c2_st": 0.26, "ama_c2_tri": 1, "ama_c3_win": 0, "ama_c3_runs": 4, "ama_c3_st": 0.185, "ama_c3_tri": 1, "ama_c4_win": 0.6, "ama_c4_runs": 5, "ama_c4_st": 0.086, "ama_c4_tri": 0.618, "ama_c5_win": 0.25, "ama_c5_runs": 4, "ama_c5_st": 0.165, "ama_c5_tri": 0.6814, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.14, "ama_c6_tri": 0.0785}, {"rank": 5, "toban": 4166, "name": "吉田 拡郎", "mn": 13, "m2": 54.5, "bn": 57, "b2": 48.4, "zk": 6.91, "local": false, "win_rate": 0.2681, "triple_rate": 0.6661, "in_win_rate": 0.7739, "form_idx": 5.65, "recent10_avg": 2.7, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.3, "avg_st": 0.1238, "st1c": 0.1132, "st_stab": 78.2, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0815, "ama_c1_win": 0.5, "ama_c1_runs": 4, "ama_c1_st": 0.205, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 4, "ama_c2_st": 0.135, "ama_c2_tri": 0.3836, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.082, "ama_c3_tri": 0.5975, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.13, "ama_c4_tri": 0.9984, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.09, "ama_c5_tri": 0.0034, "ama_c6_win": 0, "ama_c6_runs": 7, "ama_c6_st": 0.1371, "ama_c6_tri": 0.5493}, {"rank": 6, "toban": 4133, "name": "高橋 正男", "mn": 26, "m2": 52.6, "bn": 30, "b2": 25.7, "zk": 6.86, "local": false, "win_rate": 0.2126, "triple_rate": 0.6497, "in_win_rate": 0.5955, "form_idx": 1.78, "recent10_avg": 2.7, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.6, "recent10_win": 0.1, "avg_st": 0.1582, "st1c": 0.1563, "st_stab": 66.7, "fly": 0, "type": "一般メイン", "jizai_win": 0.106, "ama_c1_win": 0.5833, "ama_c1_runs": 12, "ama_c1_st": 0.1633, "ama_c1_tri": 0.9976, "ama_c2_win": 0.3636, "ama_c2_runs": 11, "ama_c2_st": 0.17, "ama_c2_tri": 0.8614, "ama_c3_win": 0.1111, "ama_c3_runs": 9, "ama_c3_st": 0.2311, "ama_c3_tri": 0.6205, "ama_c4_win": 0.2, "ama_c4_runs": 15, "ama_c4_st": 0.126, "ama_c4_tri": 0.3304, "ama_c5_win": 0.25, "ama_c5_runs": 8, "ama_c5_st": 0.1763, "ama_c5_tri": 0.1941, "ama_c6_win": 0.1429, "ama_c6_runs": 7, "ama_c6_st": 0.17, "ama_c6_tri": 0.9543}, {"rank": 7, "toban": 4391, "name": "松田 祐季", "mn": 32, "m2": 52.5, "bn": 64, "b2": 29.6, "zk": 6.87, "local": false, "win_rate": 0.2872, "triple_rate": 0.6708, "in_win_rate": 0.7788, "form_idx": 2.95, "recent10_avg": 3.1, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.2, "avg_st": 0.1578, "st1c": 0.1487, "st_stab": 67.2, "fly": 0, "type": "混合", "jizai_win": 0.0557, "ama_c1_win": 0.8, "ama_c1_runs": 5, "ama_c1_st": 0.19, "ama_c1_tri": 0.9572, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1167, "ama_c2_tri": 1, "ama_c3_win": 0, "ama_c3_runs": 3, "ama_c3_st": 0.17, "ama_c3_tri": 0.9658, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.1525, "ama_c5_tri": 0.5035, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.16, "ama_c6_tri": 0.0345}, {"rank": 8, "toban": 4335, "name": "若林 将", "mn": 35, "m2": 51.2, "bn": 71, "b2": 64.2, "zk": 6.93, "local": false, "win_rate": 0.3112, "triple_rate": 0.7194, "in_win_rate": 0.7422, "form_idx": 5.71, "recent10_avg": 2.4, "recent3_win": 0, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.4, "avg_st": 0.1206, "st1c": 0.1163, "st_stab": 80.9, "fly": 0, "type": "混合", "jizai_win": 0.1149, "ama_c1_win": 0.8333, "ama_c1_runs": 6, "ama_c1_st": 0.1117, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1267, "ama_c2_tri": 1, "ama_c3_win": 0.3333, "ama_c3_runs": 3, "ama_c3_st": 0.1533, "ama_c3_tri": 0.9896, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.12, "ama_c4_tri": 1, "ama_c5_win": 0.3333, "ama_c5_runs": 3, "ama_c5_st": 0.11, "ama_c5_tri": 1, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 9, "toban": 4237, "name": "大峯 豊", "mn": 48, "m2": 50.0, "bn": 42, "b2": 27.5, "zk": 6.83, "local": false, "win_rate": 0.3078, "triple_rate": 0.7024, "in_win_rate": 0.7273, "form_idx": 4.67, "recent10_avg": 3.3, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.2, "avg_st": 0.1636, "st1c": 0.1588, "st_stab": 64.8, "fly": 0, "type": "混合", "jizai_win": 0.0982, "ama_c1_win": 1, "ama_c1_runs": 4, "ama_c1_st": 0.1725, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 5, "ama_c2_st": 0.206, "ama_c2_tri": 0.5047, "ama_c3_win": 0.5, "ama_c3_runs": 6, "ama_c3_st": 0.1683, "ama_c3_tri": 0.1022, "ama_c4_win": 0.6667, "ama_c4_runs": 6, "ama_c4_st": 0.12, "ama_c4_tri": 0.1019, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.12, "ama_c5_tri": 0.0974, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1525, "ama_c6_tri": 0.5314}, {"rank": 9, "toban": 4757, "name": "山田 祐也", "mn": 14, "m2": 50.0, "bn": 25, "b2": 33.3, "zk": 6.89, "local": false, "win_rate": 0.2741, "triple_rate": 0.6495, "in_win_rate": 0.7679, "form_idx": 9.07, "recent10_avg": 2.7, "recent3_win": 0.6667, "recent5_win": 0.6, "recent5_triple": 0.8, "recent10_win": 0.4, "avg_st": 0.1434, "st1c": 0.1346, "st_stab": 73.3, "fly": 0, "type": "混合", "jizai_win": 0.1269, "ama_c1_win": 1, "ama_c1_runs": 7, "ama_c1_st": 0.1614, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 4, "ama_c2_st": 0.16, "ama_c2_tri": 0.5688, "ama_c3_win": 0, "ama_c3_runs": 6, "ama_c3_st": 0.14, "ama_c3_tri": 0.1043, "ama_c4_win": 0, "ama_c4_runs": 6, "ama_c4_st": 0.1417, "ama_c4_tri": 0.989, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.1975, "ama_c5_tri": 0.9371, "ama_c6_win": 0, "ama_c6_runs": 7, "ama_c6_st": 0.1414, "ama_c6_tri": 0.7529}, {"rank": 11, "toban": 4573, "name": "佐藤 翼", "mn": 29, "m2": 45.9, "bn": 46, "b2": 42.1, "zk": 6.91, "local": false, "win_rate": 0.245, "triple_rate": 0.6577, "in_win_rate": 0.7474, "form_idx": 5.6, "recent10_avg": 3.1, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.8, "recent10_win": 0.3, "avg_st": 0.1363, "st1c": 0.1254, "st_stab": 81.1, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0569, "ama_c1_win": 0.2, "ama_c1_runs": 5, "ama_c1_st": 0.16, "ama_c1_tri": 0.998, "ama_c2_win": 0.1667, "ama_c2_runs": 6, "ama_c2_st": 0.1383, "ama_c2_tri": 0.7457, "ama_c3_win": 0.25, "ama_c3_runs": 4, "ama_c3_st": 0.1325, "ama_c3_tri": 0.596, "ama_c4_win": 0.2, "ama_c4_runs": 5, "ama_c4_st": 0.108, "ama_c4_tri": 0.7509, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1867, "ama_c5_tri": 0.9966, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.1267, "ama_c6_tri": 0}, {"rank": 12, "toban": 4983, "name": "前田 篤哉", "mn": 25, "m2": 45.0, "bn": 50, "b2": 22.2, "zk": 6.81, "local": false, "win_rate": 0.3417, "triple_rate": 0.6881, "in_win_rate": 0.7928, "form_idx": 10.05, "recent10_avg": 1.8, "recent3_win": 0.6667, "recent5_win": 0.6, "recent5_triple": 0.8, "recent10_win": 0.5, "avg_st": 0.1652, "st1c": 0.1524, "st_stab": 68.6, "fly": 0, "type": "混合", "jizai_win": 0.1445, "ama_c1_win": 0.6667, "ama_c1_runs": 3, "ama_c1_st": 0.2267, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 13, "toban": 4030, "name": "森高 一真", "mn": 55, "m2": 44.7, "bn": 15, "b2": 45.4, "zk": 6.88, "local": false, "win_rate": 0.1931, "triple_rate": 0.6121, "in_win_rate": 0.6, "form_idx": 2.31, "recent10_avg": 3.3, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.1, "avg_st": 0.1387, "st1c": 0.1346, "st_stab": 79.9, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0628, "ama_c1_win": 1, "ama_c1_runs": 6, "ama_c1_st": 0.1517, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 4, "ama_c2_st": 0.1475, "ama_c2_tri": 0.6003, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.134, "ama_c3_tri": 0.6216, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.1367, "ama_c4_tri": 0.947, "ama_c5_win": 0, "ama_c5_runs": 6, "ama_c5_st": 0.1533, "ama_c5_tri": 0, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.14, "ama_c6_tri": 0.0019}, {"rank": 14, "toban": 4857, "name": "加藤 翔馬", "mn": 39, "m2": 43.5, "bn": 56, "b2": 38.4, "zk": 6.85, "local": false, "win_rate": 0.2707, "triple_rate": 0.6683, "in_win_rate": 0.7, "form_idx": 4.53, "recent10_avg": 2.5, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.3, "avg_st": 0.1741, "st1c": 0.1485, "st_stab": 58, "fly": 0, "type": "一般メイン", "jizai_win": 0.0998, "ama_c1_win": 0.875, "ama_c1_runs": 8, "ama_c1_st": 0.1138, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 8, "ama_c2_st": 0.1812, "ama_c2_tri": 0.9143, "ama_c3_win": 0.2857, "ama_c3_runs": 7, "ama_c3_st": 0.1429, "ama_c3_tri": 1, "ama_c4_win": 0.3, "ama_c4_runs": 10, "ama_c4_st": 0.152, "ama_c4_tri": 0.9505, "ama_c5_win": 0.2, "ama_c5_runs": 10, "ama_c5_st": 0.166, "ama_c5_tri": 0.3578, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1325, "ama_c6_tri": 0.862}, {"rank": 15, "toban": 4494, "name": "河合 佑樹", "mn": 16, "m2": 42.8, "bn": 11, "b2": 36.3, "zk": 6.9, "local": false, "win_rate": 0.298, "triple_rate": 0.6857, "in_win_rate": 0.7212, "form_idx": 6.35, "recent10_avg": 2.1, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.4, "avg_st": 0.1384, "st1c": 0.1276, "st_stab": 71.7, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1058, "ama_c1_win": 0.6667, "ama_c1_runs": 3, "ama_c1_st": 0.1433, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.1533, "ama_c4_tri": 0.9708, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.18, "ama_c5_tri": 1, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.1733, "ama_c6_tri": 0.9452}, {"rank": 16, "toban": 5058, "name": "前原 大道", "mn": 54, "m2": 41.3, "bn": 34, "b2": 27.5, "zk": 6.85, "local": false, "win_rate": 0.2841, "triple_rate": 0.714, "in_win_rate": 0.775, "form_idx": 1.53, "recent10_avg": 3.1, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.8, "recent10_win": 0.1, "avg_st": 0.1577, "st1c": 0.146, "st_stab": 55.6, "fly": 0, "type": "一般メイン", "jizai_win": 0.1159, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.2033, "ama_c4_tri": 1, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 17, "toban": 3854, "name": "吉川 元浩", "mn": 57, "m2": 40.0, "bn": 36, "b2": 44.8, "zk": 6.83, "local": false, "win_rate": 0.2577, "triple_rate": 0.6541, "in_win_rate": 0.7027, "form_idx": 1.22, "recent10_avg": 3.8, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.1, "avg_st": 0.1346, "st1c": 0.142, "st_stab": 73.9, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0809, "ama_c1_win": 0.7727, "ama_c1_runs": 22, "ama_c1_st": 0.1495, "ama_c1_tri": 0.8424, "ama_c2_win": 0.1667, "ama_c2_runs": 12, "ama_c2_st": 0.1642, "ama_c2_tri": 0.1751, "ama_c3_win": 0.125, "ama_c3_runs": 16, "ama_c3_st": 0.1344, "ama_c3_tri": 0.6602, "ama_c4_win": 0.1429, "ama_c4_runs": 14, "ama_c4_st": 0.1343, "ama_c4_tri": 0.7162, "ama_c5_win": 0.1429, "ama_c5_runs": 14, "ama_c5_st": 0.1479, "ama_c5_tri": 0.625, "ama_c6_win": 0, "ama_c6_runs": 7, "ama_c6_st": 0.1471, "ama_c6_tri": 0.0463}, {"rank": 17, "toban": 4028, "name": "田村 隆信", "mn": 58, "m2": 40.0, "bn": 12, "b2": 30.5, "zk": 6.92, "local": false, "win_rate": 0.2743, "triple_rate": 0.5802, "in_win_rate": 0.7879, "form_idx": 8.45, "recent10_avg": 2.5, "recent3_win": 0.6667, "recent5_win": 0.8, "recent5_triple": 0.8, "recent10_win": 0.5, "avg_st": 0.143, "st1c": 0.1204, "st_stab": 67.4, "fly": 0, "type": "混合", "jizai_win": 0.0691, "ama_c1_win": 0.8571, "ama_c1_runs": 7, "ama_c1_st": 0.1271, "ama_c1_tri": 0.9982, "ama_c2_win": 0.4, "ama_c2_runs": 5, "ama_c2_st": 0.114, "ama_c2_tri": 0.9715, "ama_c3_win": 0.2, "ama_c3_runs": 5, "ama_c3_st": 0.096, "ama_c3_tri": 0.9945, "ama_c4_win": 0, "ama_c4_runs": 6, "ama_c4_st": 0.135, "ama_c4_tri": 0.0739, "ama_c5_win": 0, "ama_c5_runs": 6, "ama_c5_st": 0.1417, "ama_c5_tri": 0, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1375, "ama_c6_tri": 0.9153}, {"rank": 19, "toban": 4072, "name": "森永 淳", "mn": 24, "m2": 39.4, "bn": 17, "b2": 28.2, "zk": 6.81, "local": false, "win_rate": 0.3055, "triple_rate": 0.6364, "in_win_rate": 0.7255, "form_idx": 1.15, "recent10_avg": 3.4, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.1, "avg_st": 0.1385, "st1c": 0.1375, "st_stab": 81.5, "fly": 0, "type": "一般メイン", "jizai_win": 0.1116, "ama_c1_win": 1, "ama_c1_runs": 4, "ama_c1_st": 0.1725, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": 0, "ama_c3_runs": 3, "ama_c3_st": 0.23, "ama_c3_tri": 1, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.16, "ama_c5_tri": 0.0082, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 20, "toban": 4477, "name": "篠崎 仁志", "mn": 45, "m2": 37.5, "bn": 72, "b2": 34.1, "zk": 6.96, "local": false, "win_rate": 0.2517, "triple_rate": 0.6534, "in_win_rate": 0.7586, "form_idx": 8.15, "recent10_avg": 2.4, "recent3_win": 0.3333, "recent5_win": 0.6, "recent5_triple": 0.6, "recent10_win": 0.6, "avg_st": 0.1369, "st1c": 0.1295, "st_stab": 78, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0728, "ama_c1_win": 0.8571, "ama_c1_runs": 7, "ama_c1_st": 0.16, "ama_c1_tri": 1, "ama_c2_win": 0.1429, "ama_c2_runs": 7, "ama_c2_st": 0.1343, "ama_c2_tri": 0.9492, "ama_c3_win": 0, "ama_c3_runs": 9, "ama_c3_st": 0.1511, "ama_c3_tri": 0.5132, "ama_c4_win": 0.1111, "ama_c4_runs": 9, "ama_c4_st": 0.1156, "ama_c4_tri": 0.9951, "ama_c5_win": 0, "ama_c5_runs": 8, "ama_c5_st": 0.1263, "ama_c5_tri": 0.0199, "ama_c6_win": 0, "ama_c6_runs": 7, "ama_c6_st": 0.1257, "ama_c6_tri": 0.1208}, {"rank": 21, "toban": 4256, "name": "渡辺 浩司", "mn": 3, "m2": 37.0, "bn": 18, "b2": 32.2, "zk": 6.92, "local": false, "win_rate": 0.2911, "triple_rate": 0.7402, "in_win_rate": 0.8049, "form_idx": 3.62, "recent10_avg": 2.3, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 1, "recent10_win": 0.3, "avg_st": 0.1277, "st1c": 0.1138, "st_stab": 80.9, "fly": 0, "type": "混合", "jizai_win": 0.0987, "ama_c1_win": 0.8, "ama_c1_runs": 5, "ama_c1_st": 0.14, "ama_c1_tri": 1, "ama_c2_win": 0.3333, "ama_c2_runs": 3, "ama_c2_st": 0.1233, "ama_c2_tri": 0.7084, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.148, "ama_c3_tri": 0.9913, "ama_c4_win": 0.2, "ama_c4_runs": 5, "ama_c4_st": 0.118, "ama_c4_tri": 0.9461, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.135, "ama_c5_tri": 0.9727, "ama_c6_win": 0, "ama_c6_runs": 5, "ama_c6_st": 0.13, "ama_c6_tri": 0.9691}, {"rank": 22, "toban": 4686, "name": "丸野 一樹", "mn": 44, "m2": 36.3, "bn": 32, "b2": 42.8, "zk": 6.94, "local": false, "win_rate": 0.2709, "triple_rate": 0.6381, "in_win_rate": 0.7692, "form_idx": 10.04, "recent10_avg": 1.5, "recent3_win": 0.3333, "recent5_win": 0.6, "recent5_triple": 0.8, "recent10_win": 0.7, "avg_st": 0.1493, "st1c": 0.1409, "st_stab": 71.6, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1037, "ama_c1_win": 1, "ama_c1_runs": 5, "ama_c1_st": 0.192, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1733, "ama_c2_tri": 0.0802, "ama_c3_win": 0.5, "ama_c3_runs": 4, "ama_c3_st": 0.1425, "ama_c3_tri": 1, "ama_c4_win": 0.2, "ama_c4_runs": 5, "ama_c4_st": 0.182, "ama_c4_tri": 0.9221, "ama_c5_win": 0.3333, "ama_c5_runs": 3, "ama_c5_st": 0.1833, "ama_c5_tri": 0.9252, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1525, "ama_c6_tri": 0.0084}, {"rank": 22, "toban": 4826, "name": "井上 一輝", "mn": 60, "m2": 36.3, "bn": 38, "b2": 33.3, "zk": 6.87, "local": false, "win_rate": 0.3184, "triple_rate": 0.6975, "in_win_rate": 0.8647, "form_idx": 3.76, "recent10_avg": 2.3, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.8, "recent10_win": 0.3, "avg_st": 0.132, "st1c": 0.1295, "st_stab": 77.3, "fly": 0, "type": "混合", "jizai_win": 0.1364, "ama_c1_win": 0.75, "ama_c1_runs": 4, "ama_c1_st": 0.13, "ama_c1_tri": 1, "ama_c2_win": 0.3333, "ama_c2_runs": 3, "ama_c2_st": 0.25, "ama_c2_tri": 0.9963, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0.25, "ama_c4_runs": 4, "ama_c4_st": 0.17, "ama_c4_tri": 0.8567, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.15, "ama_c5_tri": 0.8613, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.19, "ama_c6_tri": 0.9977}, {"rank": 24, "toban": 4427, "name": "秦 英悟", "mn": 20, "m2": 36.0, "bn": 60, "b2": 48.2, "zk": 6.87, "local": false, "win_rate": 0.3176, "triple_rate": 0.6733, "in_win_rate": 0.7812, "form_idx": 6.55, "recent10_avg": 2.6, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 1, "recent10_win": 0.4, "avg_st": 0.1472, "st1c": 0.1348, "st_stab": 68.2, "fly": 0, "type": "混合", "jizai_win": 0.1196, "ama_c1_win": 0.8333, "ama_c1_runs": 6, "ama_c1_st": 0.1467, "ama_c1_tri": 1, "ama_c2_win": 0.2, "ama_c2_runs": 5, "ama_c2_st": 0.198, "ama_c2_tri": 0.9781, "ama_c3_win": 0.1429, "ama_c3_runs": 7, "ama_c3_st": 0.14, "ama_c3_tri": 0.4984, "ama_c4_win": 0.1667, "ama_c4_runs": 6, "ama_c4_st": 0.1433, "ama_c4_tri": 0.9722, "ama_c5_win": 0.1667, "ama_c5_runs": 6, "ama_c5_st": 0.15, "ama_c5_tri": 0.0074, "ama_c6_win": 0, "ama_c6_runs": 6, "ama_c6_st": 0.165, "ama_c6_tri": 0.0048}, {"rank": 25, "toban": 4472, "name": "尾嶋 一広", "mn": 10, "m2": 35.7, "bn": 35, "b2": 34.3, "zk": 6.87, "local": false, "win_rate": 0.2673, "triple_rate": 0.6699, "in_win_rate": 0.7596, "form_idx": 3.65, "recent10_avg": 3, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.8, "recent10_win": 0.2, "avg_st": 0.1566, "st1c": 0.1562, "st_stab": 70.4, "fly": 0, "type": "混合", "jizai_win": 0.0899, "ama_c1_win": 0.7895, "ama_c1_runs": 19, "ama_c1_st": 0.1647, "ama_c1_tri": 0.9994, "ama_c2_win": 0.0667, "ama_c2_runs": 15, "ama_c2_st": 0.1613, "ama_c2_tri": 0.6584, "ama_c3_win": 0.2, "ama_c3_runs": 15, "ama_c3_st": 0.1647, "ama_c3_tri": 0.9205, "ama_c4_win": 0.1429, "ama_c4_runs": 14, "ama_c4_st": 0.145, "ama_c4_tri": 0.9767, "ama_c5_win": 0, "ama_c5_runs": 12, "ama_c5_st": 0.125, "ama_c5_tri": 0.4851, "ama_c6_win": 0, "ama_c6_runs": 11, "ama_c6_st": 0.1309, "ama_c6_tri": 0.9407}, {"rank": 26, "toban": 4019, "name": "笠原 亮", "mn": 8, "m2": 35.0, "bn": 65, "b2": 36.0, "zk": 6.93, "local": false, "win_rate": 0.2929, "triple_rate": 0.6828, "in_win_rate": 0.7961, "form_idx": 7.13, "recent10_avg": 3.5, "recent3_win": 0.6667, "recent5_win": 0.8, "recent5_triple": 0.8, "recent10_win": 0.4, "avg_st": 0.1686, "st1c": 0.1494, "st_stab": 68.1, "fly": 0, "type": "混合", "jizai_win": 0.0865, "ama_c1_win": 1, "ama_c1_runs": 3, "ama_c1_st": 0.2633, "ama_c1_tri": 1, "ama_c2_win": 0.5, "ama_c2_runs": 4, "ama_c2_st": 0.1775, "ama_c2_tri": 1, "ama_c3_win": 0.6667, "ama_c3_runs": 3, "ama_c3_st": 0.1833, "ama_c3_tri": 1, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.14, "ama_c4_tri": 1, "ama_c5_win": 0.6667, "ama_c5_runs": 3, "ama_c5_st": 0.1867, "ama_c5_tri": 0.1288, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.1933, "ama_c6_tri": 0.1272}, {"rank": 26, "toban": 4762, "name": "藤原 啓史朗", "mn": 18, "m2": 35.0, "bn": 19, "b2": 22.5, "zk": 6.89, "local": false, "win_rate": 0.3189, "triple_rate": 0.691, "in_win_rate": 0.8548, "form_idx": 9.07, "recent10_avg": 1.6, "recent3_win": 0.6667, "recent5_win": 0.6, "recent5_triple": 1, "recent10_win": 0.6, "avg_st": 0.1211, "st1c": 0.121, "st_stab": 80, "fly": 0, "type": "混合", "jizai_win": 0.1138, "ama_c1_win": 0.6667, "ama_c1_runs": 3, "ama_c1_st": 0.1033, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0, "ama_c4_runs": 4, "ama_c4_st": 0.1825, "ama_c4_tri": 1, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 28, "toban": 4445, "name": "宮地 元輝", "mn": 63, "m2": 34.4, "bn": 45, "b2": 40.0, "zk": 6.91, "local": false, "win_rate": 0.2577, "triple_rate": 0.6212, "in_win_rate": 0.8163, "form_idx": 2.13, "recent10_avg": 2.9, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.2, "avg_st": 0.1177, "st1c": 0.1193, "st_stab": 79.1, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0562, "ama_c1_win": 0.6, "ama_c1_runs": 5, "ama_c1_st": 0.124, "ama_c1_tri": 1, "ama_c2_win": 0, "ama_c2_runs": 6, "ama_c2_st": 0.1333, "ama_c2_tri": 0.4178, "ama_c3_win": 0, "ama_c3_runs": 3, "ama_c3_st": 0.09, "ama_c3_tri": 0.9776, "ama_c4_win": 0.5, "ama_c4_runs": 4, "ama_c4_st": 0.115, "ama_c4_tri": 0.0258, "ama_c5_win": 0.2, "ama_c5_runs": 5, "ama_c5_st": 0.134, "ama_c5_tri": 0.4152, "ama_c6_win": 0, "ama_c6_runs": 6, "ama_c6_st": 0.0767, "ama_c6_tri": 0.2904}, {"rank": 29, "toban": 3978, "name": "齊藤 仁", "mn": 1, "m2": 33.3, "bn": 52, "b2": 33.3, "zk": 6.9, "local": false, "win_rate": 0.2203, "triple_rate": 0.6141, "in_win_rate": 0.6792, "form_idx": 3.09, "recent10_avg": 2.9, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.6, "recent10_win": 0.2, "avg_st": 0.1424, "st1c": 0.1313, "st_stab": 74.4, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0729, "ama_c1_win": 0.4, "ama_c1_runs": 5, "ama_c1_st": 0.184, "ama_c1_tri": 0.5186, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1333, "ama_c2_tri": 0.9513, "ama_c3_win": 0, "ama_c3_runs": 3, "ama_c3_st": 0.1467, "ama_c3_tri": 0, "ama_c4_win": 0, "ama_c4_runs": 4, "ama_c4_st": 0.1475, "ama_c4_tri": 0, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1667, "ama_c5_tri": 0, "ama_c6_win": 0, "ama_c6_runs": 6, "ama_c6_st": 0.1183, "ama_c6_tri": 0}, {"rank": 29, "toban": 4290, "name": "稲田 浩二", "mn": 30, "m2": 33.3, "bn": 20, "b2": 25.0, "zk": 6.98, "local": false, "win_rate": 0.2841, "triple_rate": 0.6528, "in_win_rate": 0.7647, "form_idx": 6.49, "recent10_avg": 2.9, "recent3_win": 0.6667, "recent5_win": 0.4, "recent5_triple": 1, "recent10_win": 0.2, "avg_st": 0.125, "st1c": 0.1168, "st_stab": 70.9, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0911, "ama_c1_win": 0.8696, "ama_c1_runs": 23, "ama_c1_st": 0.1109, "ama_c1_tri": 1, "ama_c2_win": 0.4, "ama_c2_runs": 10, "ama_c2_st": 0.125, "ama_c2_tri": 0.7991, "ama_c3_win": 0.1818, "ama_c3_runs": 11, "ama_c3_st": 0.1464, "ama_c3_tri": 0.5736, "ama_c4_win": 0.0588, "ama_c4_runs": 17, "ama_c4_st": 0.1047, "ama_c4_tri": 0.8333, "ama_c5_win": 0.3333, "ama_c5_runs": 12, "ama_c5_st": 0.1208, "ama_c5_tri": 0.9585, "ama_c6_win": 0, "ama_c6_runs": 12, "ama_c6_st": 0.1167, "ama_c6_tri": 0.0191}, {"rank": 29, "toban": 4361, "name": "柳生 泰二", "mn": 15, "m2": 33.3, "bn": 74, "b2": 39.2, "zk": 6.86, "local": false, "win_rate": 0.3029, "triple_rate": 0.6988, "in_win_rate": 0.7949, "form_idx": 4.98, "recent10_avg": 4, "recent3_win": 0.6667, "recent5_win": 0.4, "recent5_triple": 0.4, "recent10_win": 0.3, "avg_st": 0.1425, "st1c": 0.142, "st_stab": 76.9, "fly": 0, "type": "混合", "jizai_win": 0.1144, "ama_c1_win": 0.8, "ama_c1_runs": 5, "ama_c1_st": 0.14, "ama_c1_tri": 0.9777, "ama_c2_win": 0.4, "ama_c2_runs": 5, "ama_c2_st": 0.108, "ama_c2_tri": 0.9545, "ama_c3_win": 0.2, "ama_c3_runs": 5, "ama_c3_st": 0.106, "ama_c3_tri": 0.9557, "ama_c4_win": 0.5, "ama_c4_runs": 4, "ama_c4_st": 0.13, "ama_c4_tri": 1, "ama_c5_win": 0.3333, "ama_c5_runs": 3, "ama_c5_st": 0.1267, "ama_c5_tri": 0.0512, "ama_c6_win": 0, "ama_c6_runs": 7, "ama_c6_st": 0.1543, "ama_c6_tri": 0.9278}, {"rank": 32, "toban": 4719, "name": "上條 暢嵩", "mn": 5, "m2": 32.5, "bn": 13, "b2": 35.4, "zk": 6.85, "local": false, "win_rate": 0.3158, "triple_rate": 0.652, "in_win_rate": 0.8707, "form_idx": 8.67, "recent10_avg": 2.1, "recent3_win": 1, "recent5_win": 0.8, "recent5_triple": 1, "recent10_win": 0.5, "avg_st": 0.1336, "st1c": 0.1274, "st_stab": 81.7, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0705, "ama_c1_win": 0.8, "ama_c1_runs": 5, "ama_c1_st": 0.134, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": 0, "ama_c3_runs": 4, "ama_c3_st": 0.1325, "ama_c3_tri": 0.0865, "ama_c4_win": 0, "ama_c4_runs": 5, "ama_c4_st": 0.148, "ama_c4_tri": 0.0144, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.135, "ama_c5_tri": 0.0151, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1125, "ama_c6_tri": 0}, {"rank": 32, "toban": 4908, "name": "上田 龍星", "mn": 27, "m2": 32.5, "bn": 40, "b2": 22.8, "zk": 6.92, "local": false, "win_rate": 0.3376, "triple_rate": 0.6826, "in_win_rate": 0.7963, "form_idx": 2.85, "recent10_avg": 2.8, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 1, "recent10_win": 0.1, "avg_st": 0.1384, "st1c": 0.1268, "st_stab": 66.2, "fly": 0, "type": "混合", "jizai_win": 0.1267, "ama_c1_win": 1, "ama_c1_runs": 5, "ama_c1_st": 0.16, "ama_c1_tri": 1, "ama_c2_win": 0.3333, "ama_c2_runs": 6, "ama_c2_st": 0.135, "ama_c2_tri": 0.7136, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0, "ama_c4_runs": 5, "ama_c4_st": 0.122, "ama_c4_tri": 0.6226, "ama_c5_win": 0.25, "ama_c5_runs": 4, "ama_c5_st": 0.1325, "ama_c5_tri": 0.709, "ama_c6_win": 0, "ama_c6_runs": 5, "ama_c6_st": 0.14, "ama_c6_tri": 0.2375}, {"rank": 32, "toban": 5224, "name": "西岡 顕心", "mn": 11, "m2": 32.5, "bn": 37, "b2": 51.7, "zk": 6.92, "local": false, "win_rate": 0.2382, "triple_rate": 0.7018, "in_win_rate": 0.7423, "form_idx": 7.24, "recent10_avg": 2.5, "recent3_win": 0.3333, "recent5_win": 0.6, "recent5_triple": 1, "recent10_win": 0.4, "avg_st": 0.1552, "st1c": 0.1414, "st_stab": 60.9, "fly": 0, "type": "混合", "jizai_win": 0.0504, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 35, "toban": 4850, "name": "野中 一平", "mn": 46, "m2": 32.3, "bn": 69, "b2": 24.3, "zk": 6.92, "local": false, "win_rate": 0.251, "triple_rate": 0.635, "in_win_rate": 0.6753, "form_idx": 6.78, "recent10_avg": 2.5, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.4, "avg_st": 0.1152, "st1c": 0.1242, "st_stab": 75.4, "fly": 0, "type": "混合", "jizai_win": 0.1086, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1033, "ama_c2_tri": 0.0954, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.09, "ama_c4_tri": 1, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1633, "ama_c5_tri": 0.0971, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 36, "toban": 4524, "name": "深谷 知博", "mn": 34, "m2": 30.5, "bn": 58, "b2": 29.7, "zk": 6.98, "local": false, "win_rate": 0.247, "triple_rate": 0.6277, "in_win_rate": 0.8182, "form_idx": 2.15, "recent10_avg": 2.8, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.8, "recent10_win": 0.2, "avg_st": 0.1179, "st1c": 0.0967, "st_stab": 76.4, "fly": 0, "type": "グレードメイン", "jizai_win": 0.066, "ama_c1_win": 0.7778, "ama_c1_runs": 9, "ama_c1_st": 0.1033, "ama_c1_tri": 0.9961, "ama_c2_win": 0.25, "ama_c2_runs": 8, "ama_c2_st": 0.16, "ama_c2_tri": 0.9916, "ama_c3_win": 0, "ama_c3_runs": 6, "ama_c3_st": 0.1383, "ama_c3_tri": 0.0282, "ama_c4_win": 0, "ama_c4_runs": 8, "ama_c4_st": 0.1125, "ama_c4_tri": 0.4927, "ama_c5_win": 0.1, "ama_c5_runs": 10, "ama_c5_st": 0.128, "ama_c5_tri": 0.5961, "ama_c6_win": 0, "ama_c6_runs": 6, "ama_c6_st": 0.1167, "ama_c6_tri": 0}, {"rank": 37, "toban": 4168, "name": "石野 貴之", "mn": 40, "m2": 29.7, "bn": 39, "b2": 64.0, "zk": 6.95, "local": false, "win_rate": 0.2939, "triple_rate": 0.6055, "in_win_rate": 0.7451, "form_idx": 2.85, "recent10_avg": 3.3, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.2, "avg_st": 0.1461, "st1c": 0.1448, "st_stab": 64.1, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0599, "ama_c1_win": 0.8333, "ama_c1_runs": 6, "ama_c1_st": 0.1833, "ama_c1_tri": 1, "ama_c2_win": 0.3333, "ama_c2_runs": 3, "ama_c2_st": 0.17, "ama_c2_tri": 1, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.132, "ama_c3_tri": 0, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": 0, "ama_c5_runs": 5, "ama_c5_st": 0.192, "ama_c5_tri": 0.1032, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.095, "ama_c6_tri": 0}, {"rank": 37, "toban": 4320, "name": "峰 竜太", "mn": 31, "m2": 29.7, "bn": 73, "b2": 53.3, "zk": 6.92, "local": false, "win_rate": 0.3149, "triple_rate": 0.7566, "in_win_rate": 0.798, "form_idx": 3.95, "recent10_avg": 2, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 1, "recent10_win": 0.4, "avg_st": 0.1266, "st1c": 0.124, "st_stab": 82.4, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0835, "ama_c1_win": 1, "ama_c1_runs": 3, "ama_c1_st": 0.18, "ama_c1_tri": 1, "ama_c2_win": 0.3333, "ama_c2_runs": 3, "ama_c2_st": 0.15, "ama_c2_tri": 0.0117, "ama_c3_win": 0.3333, "ama_c3_runs": 3, "ama_c3_st": 0.1233, "ama_c3_tri": 1, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.1267, "ama_c4_tri": 1, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 39, "toban": 4459, "name": "片岡 雅裕", "mn": 2, "m2": 29.2, "bn": 75, "b2": 61.2, "zk": 6.97, "local": false, "win_rate": 0.2142, "triple_rate": 0.5667, "in_win_rate": 0.7117, "form_idx": 2.24, "recent10_avg": 3.1, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.3, "avg_st": 0.1197, "st1c": 0.1237, "st_stab": 84.5, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0733, "ama_c1_win": 0.5, "ama_c1_runs": 4, "ama_c1_st": 0.14, "ama_c1_tri": 0.9962, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.17, "ama_c2_tri": 0, "ama_c3_win": 0, "ama_c3_runs": 4, "ama_c3_st": 0.11, "ama_c3_tri": 0.4962, "ama_c4_win": 0.25, "ama_c4_runs": 4, "ama_c4_st": 0.1, "ama_c4_tri": 0.9932, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.0725, "ama_c5_tri": 0.5231, "ama_c6_win": 0, "ama_c6_runs": 5, "ama_c6_st": 0.162, "ama_c6_tri": 0.0464}, {"rank": 40, "toban": 4074, "name": "柳沢 一", "mn": 53, "m2": 27.5, "bn": 53, "b2": 35.4, "zk": 7.0, "local": false, "win_rate": 0.2542, "triple_rate": 0.6778, "in_win_rate": 0.681, "form_idx": 1.15, "recent10_avg": 3, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.1, "avg_st": 0.1295, "st1c": 0.1171, "st_stab": 79.6, "fly": 0, "type": "混合", "jizai_win": 0.0855, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 40, "toban": 5278, "name": "田中 駿兵", "mn": 52, "m2": 27.5, "bn": 16, "b2": 25.6, "zk": 6.91, "local": false, "win_rate": 0.2762, "triple_rate": 0.631, "in_win_rate": 0.7778, "form_idx": 5.11, "recent10_avg": 2.6, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.4, "avg_st": 0.1498, "st1c": 0.1444, "st_stab": 61.9, "fly": 0, "type": "一般メイン", "jizai_win": 0.1284, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": 0.3333, "ama_c2_runs": 3, "ama_c2_st": 0.27, "ama_c2_tri": 0.4517, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": 0.25, "ama_c5_runs": 4, "ama_c5_st": 0.12, "ama_c5_tri": 0.4065, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 42, "toban": 4528, "name": "黒井 達矢", "mn": 17, "m2": 27.0, "bn": 62, "b2": 26.1, "zk": 6.92, "local": false, "win_rate": 0.3014, "triple_rate": 0.6627, "in_win_rate": 0.7843, "form_idx": 9.16, "recent10_avg": 1.9, "recent3_win": 0.6667, "recent5_win": 0.8, "recent5_triple": 1, "recent10_win": 0.5, "avg_st": 0.1541, "st1c": 0.1509, "st_stab": 70.6, "fly": 0, "type": "混合", "jizai_win": 0.1592, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.19, "ama_c2_tri": 0.5821, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.1367, "ama_c4_tri": 0.59, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1467, "ama_c5_tri": 0.1737, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 42, "toban": 4877, "name": "鈴谷 一平", "mn": 28, "m2": 27.0, "bn": 67, "b2": 25.6, "zk": 6.9, "local": false, "win_rate": 0.2759, "triple_rate": 0.638, "in_win_rate": 0.6353, "form_idx": 7.56, "recent10_avg": 2.5, "recent3_win": 0, "recent5_win": 0.4, "recent5_triple": 0.6, "recent10_win": 0.5, "avg_st": 0.1411, "st1c": 0.146, "st_stab": 69, "fly": 0, "type": "一般メイン", "jizai_win": 0.1381, "ama_c1_win": 0.6429, "ama_c1_runs": 14, "ama_c1_st": 0.1564, "ama_c1_tri": 0.9979, "ama_c2_win": 0.2727, "ama_c2_runs": 11, "ama_c2_st": 0.1573, "ama_c2_tri": 0.441, "ama_c3_win": 0.1667, "ama_c3_runs": 12, "ama_c3_st": 0.1283, "ama_c3_tri": 0.6931, "ama_c4_win": 0.1667, "ama_c4_runs": 12, "ama_c4_st": 0.1533, "ama_c4_tri": 0.7471, "ama_c5_win": 0.25, "ama_c5_runs": 12, "ama_c5_st": 0.135, "ama_c5_tri": 0.3202, "ama_c6_win": 0.0833, "ama_c6_runs": 12, "ama_c6_st": 0.145, "ama_c6_tri": 0.1558}, {"rank": 44, "toban": 5028, "name": "原田 才一郎", "mn": 47, "m2": 25.7, "bn": 23, "b2": 37.1, "zk": 6.93, "local": false, "win_rate": 0.314, "triple_rate": 0.6772, "in_win_rate": 0.8036, "form_idx": 2.2, "recent10_avg": 2.6, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.8, "recent10_win": 0.2, "avg_st": 0.1574, "st1c": 0.1359, "st_stab": 62.7, "fly": 0, "type": "一般メイン", "jizai_win": 0.1093, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.2033, "ama_c4_tri": 0.2519, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 45, "toban": 4295, "name": "小坂 尚哉", "mn": 38, "m2": 25.6, "bn": 44, "b2": 35.1, "zk": 6.87, "local": false, "win_rate": 0.2807, "triple_rate": 0.7132, "in_win_rate": 0.7634, "form_idx": 4.96, "recent10_avg": 2.7, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.6, "recent10_win": 0.3, "avg_st": 0.1411, "st1c": 0.1367, "st_stab": 70, "fly": 0, "type": "一般メイン", "jizai_win": 0.0763, "ama_c1_win": 0.8947, "ama_c1_runs": 19, "ama_c1_st": 0.1305, "ama_c1_tri": 0.9977, "ama_c2_win": 0.0714, "ama_c2_runs": 14, "ama_c2_st": 0.175, "ama_c2_tri": 0.9993, "ama_c3_win": 0.3333, "ama_c3_runs": 15, "ama_c3_st": 0.126, "ama_c3_tri": 0.963, "ama_c4_win": 0.1538, "ama_c4_runs": 13, "ama_c4_st": 0.1262, "ama_c4_tri": 0.624, "ama_c5_win": 0.0667, "ama_c5_runs": 15, "ama_c5_st": 0.1387, "ama_c5_tri": 0.5615, "ama_c6_win": 0.1429, "ama_c6_runs": 14, "ama_c6_st": 0.1486, "ama_c6_tri": 0.3575}, {"rank": 46, "toban": 4772, "name": "石丸 海渡", "mn": 37, "m2": 25.5, "bn": 48, "b2": 43.3, "zk": 6.9, "local": false, "win_rate": 0.2852, "triple_rate": 0.6623, "in_win_rate": 0.7379, "form_idx": 3.16, "recent10_avg": 3, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.2, "avg_st": 0.1105, "st1c": 0.101, "st_stab": 77.7, "fly": 0, "type": "混合", "jizai_win": 0.1429, "ama_c1_win": 0.8333, "ama_c1_runs": 6, "ama_c1_st": 0.12, "ama_c1_tri": 0.9342, "ama_c2_win": 0, "ama_c2_runs": 3, "ama_c2_st": 0.1467, "ama_c2_tri": 0.8608, "ama_c3_win": 0.3333, "ama_c3_runs": 3, "ama_c3_st": 0.1133, "ama_c3_tri": 0.5449, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.06, "ama_c4_tri": 0.9705, "ama_c5_win": 0, "ama_c5_runs": 3, "ama_c5_st": 0.1067, "ama_c5_tri": 0.8589, "ama_c6_win": 0, "ama_c6_runs": 4, "ama_c6_st": 0.1725, "ama_c6_tri": 0.0258}, {"rank": 47, "toban": 4024, "name": "井口 佳典", "mn": 33, "m2": 24.3, "bn": 14, "b2": 34.4, "zk": 6.88, "local": false, "win_rate": 0.243, "triple_rate": 0.6144, "in_win_rate": 0.6364, "form_idx": 0.87, "recent10_avg": 3.8, "recent3_win": 0, "recent5_win": 0, "recent5_triple": 0.4, "recent10_win": 0.1, "avg_st": 0.1509, "st1c": 0.1441, "st_stab": 76.2, "fly": 0, "type": "グレードメイン", "jizai_win": 0.0744, "ama_c1_win": 0.6, "ama_c1_runs": 5, "ama_c1_st": 0.148, "ama_c1_tri": 0.9891, "ama_c2_win": 0.2, "ama_c2_runs": 5, "ama_c2_st": 0.176, "ama_c2_tri": 0.957, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.126, "ama_c3_tri": 0.9891, "ama_c4_win": 0, "ama_c4_runs": 3, "ama_c4_st": 0.14, "ama_c4_tri": 0.3311, "ama_c5_win": 0, "ama_c5_runs": 4, "ama_c5_st": 0.14, "ama_c5_tri": 0.0537, "ama_c6_win": 0, "ama_c6_runs": 5, "ama_c6_st": 0.182, "ama_c6_tri": 0.0211}, {"rank": 48, "toban": 4932, "name": "新開 航", "mn": 7, "m2": 23.6, "bn": 28, "b2": 25.6, "zk": 6.89, "local": false, "win_rate": 0.2915, "triple_rate": 0.6644, "in_win_rate": 0.7453, "form_idx": 5.31, "recent10_avg": 2, "recent3_win": 0.3333, "recent5_win": 0.4, "recent5_triple": 0.6, "recent10_win": 0.5, "avg_st": 0.143, "st1c": 0.1296, "st_stab": 73.3, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1126, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 49, "toban": 3590, "name": "濱野谷 憲吾", "mn": 62, "m2": 23.0, "bn": 41, "b2": 30.7, "zk": 6.95, "local": false, "win_rate": 0.2668, "triple_rate": 0.6497, "in_win_rate": 0.6729, "form_idx": 2.18, "recent10_avg": 3.8, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.4, "recent10_win": 0.1, "avg_st": 0.1367, "st1c": 0.1224, "st_stab": 72, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1082, "ama_c1_win": 0.75, "ama_c1_runs": 4, "ama_c1_st": 0.1525, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0.25, "ama_c4_runs": 4, "ama_c4_st": 0.17, "ama_c4_tri": 0.5225, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 50, "toban": 3744, "name": "徳増 秀樹", "mn": 56, "m2": 21.4, "bn": 43, "b2": 34.3, "zk": 6.97, "local": false, "win_rate": 0.3041, "triple_rate": 0.6375, "in_win_rate": 0.7438, "form_idx": 4.55, "recent10_avg": 2.7, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.4, "recent10_win": 0.5, "avg_st": 0.13, "st1c": 0.1347, "st_stab": 75.1, "fly": 0, "type": "混合", "jizai_win": 0.1376, "ama_c1_win": 0.8571, "ama_c1_runs": 7, "ama_c1_st": 0.1414, "ama_c1_tri": 0.9525, "ama_c2_win": 0, "ama_c2_runs": 6, "ama_c2_st": 0.1283, "ama_c2_tri": 0.0769, "ama_c3_win": 0, "ama_c3_runs": 5, "ama_c3_st": 0.116, "ama_c3_tri": 0.95, "ama_c4_win": 0, "ama_c4_runs": 6, "ama_c4_st": 0.0867, "ama_c4_tri": 0.4905, "ama_c5_win": 0.1667, "ama_c5_runs": 6, "ama_c5_st": 0.1233, "ama_c5_tri": 0.5008, "ama_c6_win": 0, "ama_c6_runs": 3, "ama_c6_st": 0.0733, "ama_c6_tri": 0.4119}, {"rank": 51, "toban": 3721, "name": "守田 俊介", "mn": 50, "m2": 21.0, "bn": 49, "b2": 42.1, "zk": 7.05, "local": false, "win_rate": 0.341, "triple_rate": 0.7048, "in_win_rate": 0.8679, "form_idx": 2.53, "recent10_avg": 3, "recent3_win": 0.3333, "recent5_win": 0.2, "recent5_triple": 0.6, "recent10_win": 0.2, "avg_st": 0.1237, "st1c": 0.1135, "st_stab": 79.8, "fly": 0, "type": "混合", "jizai_win": 0.11, "ama_c1_win": 1, "ama_c1_runs": 5, "ama_c1_st": 0.138, "ama_c1_tri": 1, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": 0.3333, "ama_c4_runs": 3, "ama_c4_st": 0.0967, "ama_c4_tri": 0.1948, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}, {"rank": 52, "toban": 4856, "name": "豊田 健士郎", "mn": 51, "m2": 20.6, "bn": 33, "b2": 41.9, "zk": 6.95, "local": false, "win_rate": 0.2868, "triple_rate": 0.6396, "in_win_rate": 0.7561, "form_idx": 6.78, "recent10_avg": 2.3, "recent3_win": 0.6667, "recent5_win": 0.4, "recent5_triple": 0.8, "recent10_win": 0.3, "avg_st": 0.1422, "st1c": 0.1362, "st_stab": 75.9, "fly": 0, "type": "グレードメイン", "jizai_win": 0.1027, "ama_c1_win": null, "ama_c1_runs": 0, "ama_c1_st": null, "ama_c1_tri": null, "ama_c2_win": null, "ama_c2_runs": 0, "ama_c2_st": null, "ama_c2_tri": null, "ama_c3_win": null, "ama_c3_runs": 0, "ama_c3_st": null, "ama_c3_tri": null, "ama_c4_win": null, "ama_c4_runs": 0, "ama_c4_st": null, "ama_c4_tri": null, "ama_c5_win": null, "ama_c5_runs": 0, "ama_c5_st": null, "ama_c5_tri": null, "ama_c6_win": null, "ama_c6_runs": 0, "ama_c6_st": null, "ama_c6_tri": null}];
+
+function pct(v,d=1){return v==null?'—':(v*100).toFixed(d)+'%'}
+function num(v,d=2){return v==null?'—':v.toFixed(d)}
+function mCls(v){return v>=55?'m-hot':v>=40?'m-good':'m-norm'}
+function zkCls(v){return v<6.85?'zt-f':v<=6.92?'zt-g':'zt-s'}
+function formCls(v){return v==null?'':(v>=8?'style="color:var(--orange);font-weight:900"':v>=5?'style="color:var(--green)"':'')}
+function barH(v,max,cls,w=80){const px=v==null?0:Math.round(v/max*w);return`<div class="bar"><div class="bar-fill ${cls}" style="width:${px}px"></div><span class="bar-val">${typeof v==='number'&&v<=1?pct(v):num(v,1)}</span></div>`}
+function winBar(v,runs){
+  if(v==null)return'<span style="color:var(--muted);font-size:10px">データなし</span>';
+  const pctV=(v*100).toFixed(0);
+  const col=v>=0.7?'var(--green)':v>=0.5?'var(--accent)':v>=0.3?'var(--gold)':(v===0?'var(--muted)':'var(--silver)');
+  const barW=Math.round(v*60);
+  const trust=runs>=10?'高':runs>=5?'中':'低';
+  const trustCol=runs>=10?'var(--green)':runs>=5?'var(--gold)':'var(--muted)';
+  return`<div style="display:flex;align-items:center;gap:5px"><div style="background:rgba(255,255,255,.06);border-radius:2px;width:60px;height:5px;overflow:hidden;flex-shrink:0"><div style="height:5px;background:${col};width:${barW}px;border-radius:2px"></div></div><span style="color:${col};font-weight:700;font-size:11px;font-family:'Orbitron',monospace;min-width:32px">${pctV}%</span><span style="color:${trustCol};font-size:9px">(${runs}走)</span></div>`;
+}
+function courseColor(v){
+  if(v==null)return'rgba(255,255,255,.06)';
+  if(v>=0.7)return'rgba(255,59,92,.25)';
+  if(v>=0.5)return'rgba(0,229,255,.2)';
+  if(v>=0.3)return'rgba(255,215,0,.18)';
+  if(v>0)return'rgba(255,255,255,.1)';
+  return'rgba(255,255,255,.04)';
+}
+function courseTextColor(v){
+  if(v==null)return'var(--muted)';
+  if(v>=0.5)return'#fff';
+  if(v>=0.3)return'var(--silver)';
+  return'var(--muted)';
+}
+function photoUrl(toban){return`https://www.boatrace.jp/racerphoto/${toban}.jpg`}
+
+// ── GO ──
+function go(id,btn){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('s-'+id).classList.add('on');
+  btn.classList.add('on');
+  if(id==='overview'&&!builtOV)buildOV();
+  if(id==='venue'&&!builtVenue)buildVenue();
+  if(id==='motor'&&!builtMotor)buildMotor([...D]);
+  if(id==='form'&&!builtForm)buildForm([...D]);
+  if(id==='amacourse'&&!builtAma)buildAma([...D]);
+  if(id==='players'&&!builtPlayers)buildPlayers([...D]);
+  if(id==='prediction'&&!builtPred)buildPred();
+}
+let builtOV=false,builtVenue=false,builtMotor=false,builtForm=false,builtAma=false,builtPlayers=false,builtPred=false;
+
+// ── OVERVIEW ──
+function buildOV(){
+  builtOV=true;
+  // Composite score: normalized m2 + form + recent5 + ama_c1 (weighted)
+  const scored = D.map(r=>{
+    const m2s = r.m2/75;
+    const fs = (r.form_idx||0)/11;
+    const r5 = r.recent5_win||0;
+    const c1 = r.ama_c1_win!=null ? r.ama_c1_win : 0.5;
+    const c1trust = r.ama_c1_runs>=5 ? 1 : r.ama_c1_runs/5;
+    const c1w = c1*c1trust;
+    const score = m2s*0.35 + fs*0.25 + r5*0.2 + c1w*0.2;
+    return {...r, _score:score};
+  }).sort((a,b)=>b._score-a._score).slice(0,10);
+  document.getElementById('ov-tbody').innerHTML=scored.map((r,i)=>{
+    const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'&nbsp;';
+    const c1d=r.ama_c1_win!=null?`${pct(r.ama_c1_win,0)}(${r.ama_c1_runs}走)`:'—';
+    const c1col=r.ama_c1_win>=0.7?'style="color:var(--red);font-weight:700"':r.ama_c1_win>=0.5?'style="color:var(--accent);font-weight:700"':''
+    const rankBadge=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+    return`<tr>
+      <td style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:var(--gold)">${rankBadge}</td>
+      <td><div class="rname">${r.name}${loc}</div><div class="rtoban">${r.toban}</div></td>
+      <td><span class="mno ${mCls(r.m2)}">${r.mn}</span></td>
+      <td>${barH(r.m2,75,r.m2>=55?'r':r.m2>=40?'g':'a')}</td>
+      <td><span class="zt ${zkCls(r.zk)}">${r.zk.toFixed(2)}</span></td>
+      <td ${formCls(r.form_idx)}>${r.form_idx!=null?r.form_idx.toFixed(2):'—'}</td>
+      <td>${r.recent5_win!=null?pct(r.recent5_win):'—'}</td>
+      <td style="${r.recent3_win>=0.5?'color:var(--orange);font-weight:700':''}">${r.recent3_win!=null?pct(r.recent3_win):'—'}</td>
+      <td ${c1col}>${c1d}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── VENUE ──
+function buildVenue(){
+  builtVenue=true;
+  // Course 1-win bars
+  const cData=[
+    {c:1,v:0.6094,diff:+0.054},
+    {c:2,v:0.1021,diff:-0.035},
+    {c:3,v:0.1136,diff:-0.020},
+    {c:4,v:0.0982,diff:-0.013},
+    {c:5,v:0.0576,diff:-0.008},
+    {c:6,v:0.0192,diff:-0.002},
+  ];
+  const courseColors=['var(--red)','var(--accent)','var(--green)','var(--gold)','#a078ff','var(--muted)'];
+  document.getElementById('course-1win-bars').innerHTML=cData.map((d,i)=>{
+    const w=Math.round(d.v*260);
+    const diffStr=d.diff>=0?`<span style="color:var(--green);font-size:9px">+${(d.diff*100).toFixed(1)}pt</span>`:`<span style="color:var(--red);font-size:9px">${(d.diff*100).toFixed(1)}pt</span>`;
+    return`<div style="display:grid;grid-template-columns:28px 1fr 44px 52px;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div style="font-family:'Orbitron',monospace;font-size:11px;color:${courseColors[i]};font-weight:700">${d.c}C</div>
+      <div style="background:rgba(255,255,255,.05);border-radius:2px;height:6px;overflow:hidden"><div style="height:6px;background:${courseColors[i]};width:${w}px;border-radius:2px"></div></div>
+      <div style="font-family:'Orbitron',monospace;font-size:12px;color:${courseColors[i]};font-weight:700;text-align:right">${(d.v*100).toFixed(1)}%</div>
+      <div>${diffStr}</div>
+    </div>`;
+  }).join('');
+
+  // Aare bars
+  const aareData=[53.8,53.5,48.6,48.7,44.8,25.4,43.4,42.6,31,29,19.8,22.6];
+  document.getElementById('aare-bars').innerHTML=aareData.map((v,i)=>{
+    const col=v>=50?'var(--red)':v>=40?'var(--orange)':v>=30?'var(--gold)':'var(--accent)';
+    const w=Math.round(v/60*200);
+    return`<div style="display:grid;grid-template-columns:32px 1fr 40px;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--muted)">${i+1}R</div>
+      <div style="background:rgba(255,255,255,.05);border-radius:2px;height:5px;overflow:hidden"><div style="height:5px;background:${col};width:${w}px;border-radius:2px"></div></div>
+      <div style="font-family:'Orbitron',monospace;font-size:11px;color:${col};font-weight:700;text-align:right">${v}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── MOTOR ──
+function buildMotor(data){
+  builtMotor=true;
+  renderMotor(data);
+}
+function renderMotor(data){
+  document.getElementById('motor-tbody').innerHTML=data.map(r=>{
+    const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'';
+    const formBadge=r.form_idx>=8?'<span class="bdg bdg-form">🔥 好調</span>':r.form_idx>=5?'<span class="bdg bdg-ace">↑ 上昇</span>':'';
+    return`<tr>
+      <td style="font-family:'Orbitron',monospace;font-size:11px;color:var(--muted)">${r.rank}</td>
+      <td><div class="rname">${r.name}${loc}${formBadge}</div><div class="rtoban">${r.toban}</div></td>
+      <td><span class="mno ${mCls(r.m2)}">${r.mn}</span></td>
+      <td>${barH(r.m2,75,r.m2>=55?'r':r.m2>=40?'g':'a')}</td>
+      <td style="font-size:11px;color:var(--muted)">${r.bn}</td>
+      <td>${barH(r.b2,70,r.b2>=55?'g':'a')}</td>
+      <td><span class="zt ${zkCls(r.zk)}">${r.zk.toFixed(2)}</span></td>
+      <td ${formCls(r.form_idx)}>${r.form_idx!=null?r.form_idx.toFixed(2):'—'}</td>
+      <td>${r.recent5_win!=null?pct(r.recent5_win):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+function sortMotor(field,asc,btn){
+  document.querySelectorAll('#s-motor .sort-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const sorted=[...D].sort((a,b)=>asc?(a[field]||0)-(b[field]||0):(b[field]||0)-(a[field]||0));
+  renderMotor(sorted);
+}
+
+// ── FORM ──
+function buildForm(data){
+  builtForm=true;
+  // Form bars
+  const top15=[...D].sort((a,b)=>(b.form_idx||0)-(a.form_idx||0)).slice(0,15);
+  const maxF=top15[0]?.form_idx||10;
+  document.getElementById('form-bars-main').innerHTML=top15.map(r=>{
+    const col=r.form_idx>=8?'var(--orange)':r.form_idx>=5?'var(--green)':'var(--accent)';
+    const w=Math.round((r.form_idx||0)/maxF*160);
+    return`<div class="form-row">
+      <div class="form-name">${r.name}</div>
+      <div class="form-bg"><div class="form-bar" style="width:${w}px;background:${col}"></div></div>
+      <div class="form-val" style="color:${col}">${r.form_idx!=null?r.form_idx.toFixed(2):'—'}</div>
+    </div>`;
+  }).join('');
+  // Avg rank bars
+  const top10avg=[...D].filter(r=>r.recent10_avg!=null).sort((a,b)=>a.recent10_avg-b.recent10_avg).slice(0,10);
+  document.getElementById('form-avg-bars').innerHTML=top10avg.map(r=>{
+    const col=r.recent10_avg<=2?'var(--red)':r.recent10_avg<=2.5?'var(--orange)':'var(--gold)';
+    const w=Math.round((6-r.recent10_avg)/4*160);
+    return`<div class="form-row">
+      <div class="form-name">${r.name}</div>
+      <div class="form-bg"><div class="form-bar" style="width:${w}px;background:${col}"></div></div>
+      <div class="form-val" style="color:${col}">${r.recent10_avg.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+  renderForm([...D].sort((a,b)=>(b.form_idx||0)-(a.form_idx||0)));
+}
+function renderForm(data){
+  document.getElementById('form-tbody').innerHTML=data.map(r=>{
+    const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'';
+    const fly=r.fly>0?`<span class="bdg bdg-hot">F${r.fly}</span>`:''
+    return`<tr>
+      <td><div class="rname">${r.name}${loc}${fly}</div><div class="rtoban">${r.toban}</div></td>
+      <td ${formCls(r.form_idx)}>${r.form_idx!=null?r.form_idx.toFixed(2):'—'}</td>
+      <td style="${r.recent3_win>=0.5?'color:var(--orange);font-weight:700':''}">${r.recent3_win!=null?pct(r.recent3_win):'—'}</td>
+      <td style="${r.recent5_win>=0.5?'color:var(--green);font-weight:700':''}">${r.recent5_win!=null?pct(r.recent5_win):'—'}</td>
+      <td style="${r.recent5_triple>=0.8?'color:var(--accent);font-weight:700':''}">${r.recent5_triple!=null?pct(r.recent5_triple):'—'}</td>
+      <td style="${r.recent10_win>=0.4?'color:var(--gold);font-weight:700':''}">${r.recent10_win!=null?pct(r.recent10_win):'—'}</td>
+      <td style="${r.recent10_avg!=null&&r.recent10_avg<=2?'color:var(--red);font-weight:700':r.recent10_avg<=2.5?'color:var(--orange)':''}">${r.recent10_avg!=null?r.recent10_avg.toFixed(1):'—'}</td>
+      <td>${r.in_win_rate!=null?pct(r.in_win_rate):'—'}</td>
+      <td style="${r.st_stab>=80?'color:var(--green)':''}">${r.st_stab!=null?r.st_stab.toFixed(1):'—'}</td>
+      <td style="font-size:10px;color:var(--muted)">${r.type||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+function sortForm(field,asc,btn){
+  document.querySelectorAll('#s-form .sort-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const sorted=[...D].sort((a,b)=>asc?(a[field]||9)-(b[field]||9):(b[field]||0)-(a[field]||0));
+  renderForm(sorted);
+}
+
+// ── AMACOURSE ──
+function buildAma(data){
+  builtAma=true;
+  renderAma([...data].sort((a,b)=>(b.ama_c1_win||0)-(a.ama_c1_win||0)));
+}
+function renderAma(data){
+  document.getElementById('ama-tbody').innerHTML=data.map(r=>{
+    const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'';
+    //熟練度 score: sum of runs weighted
+    const totalRuns=[1,2,3,4,5,6].reduce((s,c)=>s+(r[`ama_c${c}_runs`]||0),0);
+    const熟練 = totalRuns>=50?'🏆 高熟練':totalRuns>=20?'◎ 熟練':totalRuns>=10?'○ 経験':totalRuns>=3?'△ 少':'ー 不明';
+    const熟色 = totalRuns>=50?'var(--gold)':totalRuns>=20?'var(--green)':totalRuns>=10?'var(--accent)':'var(--muted)';
+    function cellC(c){
+      const v=r[`ama_c${c}_win`]; const runs=r[`ama_c${c}_runs`]||0;
+      if(runs===0)return'<td style="color:var(--muted);font-size:10px">—</td>';
+      const col=v>=0.7?'var(--red)':v>=0.5?'var(--accent)':v>=0.3?'var(--gold)':v===0?'var(--muted)':'var(--silver)';
+      const trust=runs>=10?'★':runs>=5?'☆':'';
+      return`<td><span style="color:${col};font-weight:700;font-family:'Orbitron',monospace;font-size:12px">${(v*100).toFixed(0)}%</span><span style="color:var(--muted);font-size:9px">(${runs}走)${trust}</span></td>`;
+    }
+    return`<tr>
+      <td><div class="rname">${r.name}${loc}</div><div class="rtoban">${r.toban}</div></td>
+      ${[1,2,3,4,5,6].map(c=>cellC(c)).join('')}
+      <td style="color:${熟色};font-weight:700;font-size:11px">${熟練}<br><span style="color:var(--muted);font-size:9px">${totalRuns}走</span></td>
+    </tr>`;
+  }).join('');
+}
+function sortAma(field,asc,btn){
+  document.querySelectorAll('#s-amacourse .sort-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const sorted=[...D].sort((a,b)=>{
+    const av=a[field]; const bv=b[field];
+    // null sorts to bottom
+    if(av==null&&bv==null)return 0;
+    if(av==null)return 1;
+    if(bv==null)return -1;
+    return asc?av-bv:bv-av;
+  });
+  renderAma(sorted);
+}
+
+// ── PLAYERS GRID ──
+function buildPlayers(data){
+  builtPlayers=true;
+  renderPlayers(data.sort((a,b)=>b.m2-a.m2));
+}
+function renderPlayers(data){
+  document.getElementById('racer-grid').innerHTML=data.map(r=>{
+    const col=r.m2>=55?'var(--red)':r.m2>=40?'var(--green)':'var(--muted)';
+    const loc=r.local?'<span class="bdg bdg-loc" style="font-size:8px">地元</span>':'';
+    const formBadge=r.form_idx>=8?'<span class="bdg bdg-form" style="font-size:8px">🔥</span>':'';
+    // Course mini dots
+    const dots=[1,2,3,4,5,6].map(c=>{
+      const v=r[`ama_c${c}_win`]; const runs=r[`ama_c${c}_runs`]||0;
+      const bg=courseColor(v);
+      const col=courseTextColor(v);
+      const text=v!=null&&runs>0?Math.round(v*100):'-';
+      return`<div class="cm-cell" style="background:${bg};color:${col}">${text}</div>`;
+    }).join('');
+    return`<div class="racer-card" onclick="showModal(${r.toban})">
+      <img class="racer-img" src="${photoUrl(r.toban)}" alt="${r.name}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%230d1525%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 text-anchor=%22middle%22 fill=%22%233d4f63%22 font-size=%2228%22>?</text></svg>'">
+      <div class="racer-card-body">
+        <div class="rc-name">${r.name}${loc}${formBadge}</div>
+        <div class="rc-toban">${r.toban} <span class="mno ${mCls(r.m2)}" style="width:22px;height:18px;font-size:10px">${r.mn}</span> <span style="color:${col};font-size:11px;font-weight:700">${r.m2}%</span></div>
+        <div class="course-mini">${dots}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function sortRacers(field,asc,btn){
+  document.querySelectorAll('#s-players .sort-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const sorted=[...D].sort((a,b)=>asc?(a[field]||0)-(b[field]||0):(b[field]||0)-(a[field]||0));
+  renderPlayers(sorted);
+}
+
+// ── MODAL ──
+function showModal(toban){
+  const r=D.find(d=>d.toban===toban);
+  if(!r)return;
+  const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'';
+  document.getElementById('m-img').src=photoUrl(toban);
+  document.getElementById('m-name').innerHTML=r.name+loc;
+  document.getElementById('m-sub').textContent=`${r.toban} / ${r.type||'—'}`;
+  // Course table
+  const courseRows=[1,2,3,4,5,6].map(c=>{
+    const v=r[`ama_c${c}_win`]; const runs=r[`ama_c${c}_runs`]||0; const st=r[`ama_c${c}_st`]; const tri=r[`ama_c${c}_tri`];
+    if(runs===0)return`<tr><td>${c}C</td><td colspan="3" style="color:var(--muted)">データなし</td></tr>`;
+    const col=v>=0.7?'var(--red)':v>=0.5?'var(--accent)':v>=0.3?'var(--gold)':(v===0?'var(--muted)':'var(--silver)');
+    return`<tr><td style="font-weight:700">${c}C</td>
+      <td style="color:${col};font-weight:700">${(v*100).toFixed(0)}% <span style="color:var(--muted);font-size:9px">(${runs}走)</span></td>
+      <td>${st!=null?st.toFixed(3):'—'}</td>
+      <td style="color:var(--accent);font-size:10px">${tri!=null?(tri*100).toFixed(1)+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mstat-section">
+      <h4>⚙️ 今節 機材</h4>
+      <div class="mstat-row"><span class="mstat-key">モーター</span><span class="mstat-val ${r.m2>=55?'hot':r.m2>=40?'good':''}">${r.mn}号機 ${r.m2}%</span></div>
+      <div class="mstat-row"><span class="mstat-key">ボート</span><span class="mstat-val">${r.bn}号艇 ${r.b2}%</span></div>
+      <div class="mstat-row"><span class="mstat-key">前検タイム</span><span class="mstat-val ${zkCls(r.zk)}">${r.zk.toFixed(2)}</span></div>
+    </div>
+    <div class="mstat-section">
+      <h4>📈 近況フォーム</h4>
+      <div class="mstat-row"><span class="mstat-key">フォーム指数</span><span class="mstat-val ${r.form_idx>=8?'hot':r.form_idx>=5?'good':''}">${r.form_idx!=null?r.form_idx.toFixed(2):'—'}</span></div>
+      <div class="mstat-row"><span class="mstat-key">直近3走1着率</span><span class="mstat-val ${r.recent3_win>=0.5?'hot':''}">${pct(r.recent3_win)}</span></div>
+      <div class="mstat-row"><span class="mstat-key">直近5走1着率</span><span class="mstat-val ${r.recent5_win>=0.5?'gold':''}">${pct(r.recent5_win)}</span></div>
+      <div class="mstat-row"><span class="mstat-key">直近10走平均着順</span><span class="mstat-val ${r.recent10_avg!=null&&r.recent10_avg<=2?'hot':''}">${r.recent10_avg!=null?r.recent10_avg.toFixed(1):'—'}</span></div>
+      <div class="mstat-row"><span class="mstat-key">イン1着率</span><span class="mstat-val">${pct(r.in_win_rate)}</span></div>
+      <div class="mstat-row"><span class="mstat-key">ST安定スコア</span><span class="mstat-val ${r.st_stab>=80?'good':''}">${r.st_stab!=null?r.st_stab.toFixed(1):'—'}</span></div>
+      <div class="mstat-row"><span class="mstat-key">FLY数</span><span class="mstat-val ${r.fly>0?'hot':''}">${r.fly}</span></div>
+    </div>
+    <div class="mstat-section">
+      <h4>📍 尼崎コース別実績</h4>
+      <table class="course-table">
+        <thead><tr><th>C</th><th>1着率(走数)</th><th>平均ST</th><th>時系列補正3連対率</th></tr></thead>
+        <tbody>${courseRows}</tbody>
+      </table>
+    </div>
+    <div class="mstat-section">
+      <h4>📊 全体成績</h4>
+      <div class="mstat-row"><span class="mstat-key">全体1着率</span><span class="mstat-val">${pct(r.win_rate)}</span></div>
+      <div class="mstat-row"><span class="mstat-key">全体3連対率</span><span class="mstat-val">${pct(r.triple_rate)}</span></div>
+      <div class="mstat-row"><span class="mstat-key">選手タイプ</span><span class="mstat-val" style="font-size:11px">${r.type||'—'}</span></div>
+    </div>
+  `;
+  document.getElementById('modal-bg').classList.add('on');
+}
+function closeModal(){document.getElementById('modal-bg').classList.remove('on');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ── PREDICTION ──
+function buildPred(){
+  builtPred=true;
+  // Score: motor + form + ama_c1 + recent
+  const picks = D.map(r=>{
+    const m2s = r.m2/75;
+    const fs = (r.form_idx||0)/11;
+    const r5 = r.recent5_win||0;
+    const r3 = r.recent3_win||0;
+    const c1 = r.ama_c1_win!=null ? r.ama_c1_win : 0.45;
+    const c1t = r.ama_c1_runs>=5?1:r.ama_c1_runs/5;
+    const score = m2s*0.35 + fs*0.25 + r5*0.15 + r3*0.1 + c1*c1t*0.15;
+    return {...r,_score:score};
+  }).sort((a,b)=>b._score-a._score);
+  
+  const mainPicks = picks.slice(0,6);
+  const anaPicks = picks.filter(r=>r.m2<40&&r.form_idx>=6).sort((a,b)=>b.form_idx-a.form_idx).slice(0,5);
+  
+  const reasons = {
+    [4571]: '23号機69.2%の圧倒的機力。フォーム8.69・直近3走67%。イン逃げ実績あり最有力。',
+    [5016]: '地元・前検6.78最速タイム。尼崎C1実績84.2%(19走)圧倒的。ST0.117で速い。',
+    [4500]: '4号機55.1%の好機。尼崎C1実績75.0%(4走)。全体1着率34.7%と高水準。',
+    [4903]: '12号機54.8%。フォーム9.11で好調。直近5走3連対率100%と絶品。尼崎全コース実績豊富。',
+    [4983]: 'フォーム10.05・直近10走平均着順1.8で最高水準。直近3走2勝・5走3勝。',
+    [4686]: 'フォーム10.04・直近10走1着率70%で今大会最高調。尼崎C1実績100%(5走)。',
+    [4719]: '直近3走3連勝！5走4勝で最高波に乗る。尼崎C1実績80%(5走)・ST安定81.7。',
+    [4762]: 'フォーム9.07・直近5走3連対率100%の絶好調。C1逃げ率85.5%でSTも0.121と速い。',
+    [4528]: 'フォーム9.16・直近10走平均着順1.9と今節トップ水準の近況。',
+    [4290]: '尼崎C1実績86.9%(23走)で全選手中最高信頼度。ST0.111の最速クラス。',
+  };
+  document.getElementById('pred-main-list').innerHTML=mainPicks.map((r,i)=>{
+    const loc=r.local?'<span class="bdg bdg-loc">地元</span>':'';
+    const reason=reasons[r.toban]||`フォーム${r.form_idx?.toFixed(2)}・M${r.m2}%・前検${r.zk.toFixed(2)}`;
+    const rank=['🥇','🥈','🥉','④','⑤','⑥'][i];
+    return`<div class="pick-row">
+      <span class="pick-rank">${rank}</span>
+      <div><div class="pick-name">${r.name}${loc}</div></div>
+    </div>
+    <div class="pick-reason" style="margin-bottom:10px">${reason}</div>`;
+  }).join('');
+  document.getElementById('pred-ana-list').innerHTML=anaPicks.map(r=>{
+    const reason=reasons[r.toban]||`フォーム${r.form_idx?.toFixed(2)}・M${r.m2}%。機力劣るが近況好調で一発注意。`;
+    return`<div class="pick-row">
+      <span class="pick-rank" style="color:var(--purple)">▲</span>
+      <div><div class="pick-name">${r.name}</div></div>
+    </div>
+    <div class="pick-reason" style="margin-bottom:10px">${reason}</div>`;
+  }).join('');
+}
+
+// ── INIT ──
+buildOV();
+</script>
+</body>
+</html>
