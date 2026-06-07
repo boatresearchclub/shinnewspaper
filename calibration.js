@@ -20,7 +20,8 @@
 
   // admin 判定（URLに ?admin or #admin が含まれる場合のみパネルを描画）
   // ※ 関数定義自体は必ず行う（top_stats.js から呼ばれるため）
-  const _isAdmin = location.search.includes('admin') || location.hash.includes('admin');
+  // → 常時表示に変更（adminチェック廃止）
+  const _isAdmin = true;
 
   // ── ビン定義 ──
   // hitProbEst の値域 [0, 1] を6段階に分割
@@ -273,87 +274,112 @@
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // コース別（1着枠番別）キャリブレーション
+  // コース別 勝率キャリブレーション（本物版）
   // ──────────────────────────────────────────────────────────────────
-  // actualResult の1着枠番（1〜6）でグループ分けし、
-  // 各コースの推定的中率 vs 実績的中率を集計する。
-  // ※ 進入変更バナーは collectResultsForDateScen 側で除外済みのため
-  //    actualResult の1着枠番 ≒ コース番号として扱える。
+  // 各レースの全艇 boatProbs（final_prob）を展開し、
+  // 「モデルが各枠番に与えた予測勝率の平均」vs「実際の勝率」を比較する。
+  //
+  // 集計単位: 艇（boat）× レース
+  //   - 推定: boatProbs[boat] = その艇の final_prob（モデル予測勝率）
+  //   - 実績: actualResult の1着枠番が boat と一致するか（0 or 1）
+  //
+  // これにより「1コースをモデルが過小評価しているか」が正確にわかる。
+  // ══════════════════════════════════════════════════════════════════
   function calcCalibrationByCourse(results) {
     const courses = [1, 2, 3, 4, 5, 6];
+
+    // 各コース（枠番）ごとに全レースの boatProbs を展開して集計
     return courses.map(course => {
-      // actualResult = "1-2-3" 形式の先頭数字でフィルタ
-      const inCourse = results.filter(r => {
-        if (!r.actualResult) return false;
-        const first = parseInt((r.actualResult + '').split(/[-－−]/)[0]);
-        return first === course;
+      let sumEst   = 0;  // 予測勝率の合計
+      let sumAct   = 0;  // 実際に勝った回数
+      let count    = 0;  // boatProbs にデータがあった艇×レース数
+
+      results.forEach(r => {
+        const bp = r.boatProbs;
+        if (!bp || bp[course] == null) return; // このレースにデータなし
+
+        const est = bp[course]; // モデルのこの枠番の予測勝率
+        const won = (() => {
+          if (!r.actualResult) return null;
+          const first = parseInt((r.actualResult + '').split(/[-－−]/)[0]);
+          return first === course ? 1 : 0;
+        })();
+        if (won === null) return;
+
+        sumEst += est;
+        sumAct += won;
+        count++;
       });
-      const withEst = inCourse.filter(r => r.hitProbEst != null);
-      const total   = inCourse.length;
-      const hits    = inCourse.filter(r => r.isHit).length;
-      const actual  = total > 0 ? hits / total : null;
-      const estAvg  = withEst.length > 0
-        ? withEst.reduce((s, r) => s + r.hitProbEst, 0) / withEst.length
-        : null;
-      return { course, total, hits, actual, estAvg };
+
+      const estAvg = count > 0 ? sumEst / count : null; // 平均予測勝率
+      const actual = count > 0 ? sumAct / count : null; // 実際の勝率
+
+      return { course, count, estAvg, actual };
     });
   }
 
-  // コース別キャリブレーション HTML生成
+  // コース別勝率キャリブレーション HTML生成
   function buildCoursCalibHTML(courseStats, totalAll) {
-    const maxBar = 100; // px
+    const maxBar = 100; // px（バーの最大幅px）
+    const maxProb = 0.7; // バーのスケール最大値（70%で満幅）
+    const courseBg   = ['','#d8d8d8','#333','#e33','#36c','#fa0','#2a9'];
+    const courseText = ['','#333','#fff','#fff','#fff','#333','#fff'];
+
     const rows = courseStats.map(s => {
-      if (s.total === 0) {
+      if (s.count === 0) {
         return `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:4px 6px;font-size:10px;color:var(--text3);font-weight:700;white-space:nowrap">${s.course}コース</td>
+            <td style="padding:4px 6px;white-space:nowrap">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${courseBg[s.course]};color:${courseText[s.course]};font-size:10px;font-weight:700">${s.course}</span>
+            </td>
             <td colspan="4" style="padding:4px 6px;font-size:10px;color:var(--text3);text-align:center">—</td>
           </tr>`;
       }
-      const actPct   = s.actual  != null ? (s.actual  * 100).toFixed(0) + '%' : '—';
-      const estPct   = s.estAvg  != null ? (s.estAvg  * 100).toFixed(0) + '%' : '—';
-      const actWidth = s.actual  != null ? Math.round(s.actual  * maxBar) : 0;
-      const estWidth = s.estAvg  != null ? Math.round(s.estAvg  * maxBar) : 0;
-      const diff     = (s.actual != null && s.estAvg != null) ? s.actual - s.estAvg : null;
-      const diffStr  = diff != null
-        ? (diff >= 0 ? '+' : '') + (diff * 100).toFixed(0) + '%'
+
+      const actPct  = s.actual  != null ? (s.actual  * 100).toFixed(1) + '%' : '—';
+      const estPct  = s.estAvg  != null ? (s.estAvg  * 100).toFixed(1) + '%' : '—';
+      const actWidth = s.actual  != null ? Math.round(Math.min(s.actual  / maxProb, 1) * maxBar) : 0;
+      const estWidth = s.estAvg  != null ? Math.round(Math.min(s.estAvg  / maxProb, 1) * maxBar) : 0;
+      const diff    = (s.actual != null && s.estAvg != null) ? s.actual - s.estAvg : null;
+      const diffStr = diff != null
+        ? (diff >= 0 ? '+' : '') + (diff * 100).toFixed(1) + '%'
         : '—';
-      const diffColor = diff == null          ? 'var(--text3)'
-                      : Math.abs(diff) <= 0.05 ? 'var(--green)'
-                      : Math.abs(diff) <= 0.10 ? 'var(--orange)'
-                      : 'var(--red, #e05)';
-      const lowN = s.total < 10;
-      // コース色（競艇の枠番カラー）
-      const courseColors = ['','var(--white,#fff)','var(--black,#222)','var(--red,#e33)','var(--blue,#36c)','var(--yellow,#fa0)','var(--green,#2a9)'];
-      const courseBg     = ['','#e0e0e0','#333','#e33','#36c','#fa0','#2a9'];
-      const courseText   = ['','#333','#fff','#fff','#fff','#333','#fff'];
+      const diffColor = diff == null           ? 'var(--text3)'
+                      : Math.abs(diff) <= 0.03  ? 'var(--green)'
+                      : Math.abs(diff) <= 0.07  ? 'var(--orange)'
+                      : 'var(--red,#e05)';
+      const lowN = s.count < 50;
+      // 実績 > 推定なら過小評価（緑）、実績 < 推定なら過大評価（橙）
+      const barColor = (diff == null || Math.abs(diff) < 0.01) ? 'var(--green)'
+                     : diff > 0 ? 'var(--green)' : 'var(--orange)';
+
       return `
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:4px 6px;white-space:nowrap">
             <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${courseBg[s.course]};color:${courseText[s.course]};font-size:10px;font-weight:700">${s.course}</span>
-            <span style="font-size:9px;color:var(--text3);margin-left:2px">${s.total}件</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:2px">${s.count}R</span>
           </td>
-          <td style="padding:4px 6px;min-width:80px">
+          <td style="padding:4px 6px;min-width:${maxBar}px">
             <div style="position:relative;height:14px;background:var(--bg2);border-radius:2px;overflow:hidden">
-              <div style="position:absolute;left:0;top:0;height:100%;width:${estWidth}px;background:var(--border);border-radius:2px;opacity:0.6"></div>
-              <div style="position:absolute;left:0;top:0;height:100%;width:${actWidth}px;background:${actWidth >= estWidth ? 'var(--green)' : 'var(--orange)'};border-radius:2px;opacity:0.85"></div>
+              <div style="position:absolute;left:0;top:0;height:100%;width:${estWidth}px;background:var(--border);border-radius:2px;opacity:0.7"></div>
+              <div style="position:absolute;left:0;top:0;height:100%;width:${actWidth}px;background:${barColor};border-radius:2px;opacity:0.85"></div>
             </div>
           </td>
           <td style="padding:4px 6px;text-align:right;font-size:10px;color:var(--text3)">${estPct}</td>
-          <td style="padding:4px 6px;text-align:right;font-size:11px;font-weight:700;color:var(--text${lowN ? '3' : ''})">${actPct}${lowN ? '<span style="font-size:9px;color:var(--text3)">*</span>' : ''}</td>
+          <td style="padding:4px 6px;text-align:right;font-size:11px;font-weight:700;color:var(--text)">${actPct}${lowN ? '<span style="font-size:9px;color:var(--text3)">*</span>' : ''}</td>
           <td style="padding:4px 6px;text-align:right;font-size:10px;font-weight:700;color:${diffColor}">${diffStr}</td>
         </tr>`;
     }).join('');
 
     return `
       <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
-        <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🚤 コース別 キャリブレーション</div>
-        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">1着枠番別 推定 vs 実績（計${totalAll}件）</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🚤 コース別 勝率キャリブレーション</div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">枠番別 予測勝率 vs 実際の勝率（計${totalAll}件）</div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse">
             <thead>
               <tr style="border-bottom:1px solid var(--border)">
-                <th style="padding:3px 6px;text-align:left;font-size:9px;color:var(--text3);font-weight:500">コース</th>
+                <th style="padding:3px 6px;text-align:left;font-size:9px;color:var(--text3);font-weight:500">枠</th>
                 <th style="padding:3px 6px;text-align:left;font-size:9px;color:var(--text3);font-weight:500">バー</th>
                 <th style="padding:3px 6px;text-align:right;font-size:9px;color:var(--text3);font-weight:500">推定</th>
                 <th style="padding:3px 6px;text-align:right;font-size:9px;color:var(--text3);font-weight:500">実績</th>
@@ -364,7 +390,7 @@
           </table>
         </div>
         <div style="font-size:9px;color:var(--text3);margin-top:4px">
-          灰バー=推定、色バー=実績　* N&lt;10の参考値　1着枠番=コース番号（進入変更除外済）
+          灰バー=推定勝率、色バー=実勝率　緑=過小評価、橙=過大評価　* N&lt;50の参考値
         </div>
       </div>`;
   }

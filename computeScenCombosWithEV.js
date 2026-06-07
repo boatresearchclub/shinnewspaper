@@ -797,12 +797,24 @@
       const { weighted: weighted2nd, ranked: ranked2ndList } = calcWeighted2nd(sd, fp1st);
       const { weighted: weighted3rd, ranked: ranked3rdList } = calcWeighted3rd(sd, fp1st);
 
+      // ── 各艇の予測勝率マップ（コース別キャリブレーション用）──
+      // ranked2 の final_prob を { 枠番: 予測勝率 } 形式で返す。
+      // calibration.js が「モデルが各コースに何%の勝率を与えていたか」を
+      // 実績と比較するために使用する。
+      const boatProbs = {};
+      ranked2.forEach(b => {
+        if (b.boat != null && b.final_prob != null) {
+          boatProbs[b.boat] = b.final_prob;
+        }
+      });
+
       return {
         combos      : allCombos,
         hitProbEst,             // キャリブレーション補正済み
         _rawHitProbEst: rawHitProbEst, // デバッグ用（補正前）
         synthOdds   : null,     // 呼び出し側（top_stats.js）で ODDS_DATA から計算
         ev          : null,     // 同上（synthOdds が確定してから計算）
+        boatProbs,              // { 枠番: final_prob } コース別勝率キャリブレーション用
         // 2着/3着順位リスト（top_stats.js で actual2nd/3rd と照合して pred?ndRank を付与）
         ranked2ndList,          // [最有力艇, 2位艇, ...] 加重確率降順
         ranked3rdList,          // 同上（3着）
