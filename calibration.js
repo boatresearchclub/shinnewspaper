@@ -272,6 +272,103 @@
       </div>`;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // コース別（1着枠番別）キャリブレーション
+  // ──────────────────────────────────────────────────────────────────
+  // actualResult の1着枠番（1〜6）でグループ分けし、
+  // 各コースの推定的中率 vs 実績的中率を集計する。
+  // ※ 進入変更バナーは collectResultsForDateScen 側で除外済みのため
+  //    actualResult の1着枠番 ≒ コース番号として扱える。
+  function calcCalibrationByCourse(results) {
+    const courses = [1, 2, 3, 4, 5, 6];
+    return courses.map(course => {
+      // actualResult = "1-2-3" 形式の先頭数字でフィルタ
+      const inCourse = results.filter(r => {
+        if (!r.actualResult) return false;
+        const first = parseInt((r.actualResult + '').split(/[-－−]/)[0]);
+        return first === course;
+      });
+      const withEst = inCourse.filter(r => r.hitProbEst != null);
+      const total   = inCourse.length;
+      const hits    = inCourse.filter(r => r.isHit).length;
+      const actual  = total > 0 ? hits / total : null;
+      const estAvg  = withEst.length > 0
+        ? withEst.reduce((s, r) => s + r.hitProbEst, 0) / withEst.length
+        : null;
+      return { course, total, hits, actual, estAvg };
+    });
+  }
+
+  // コース別キャリブレーション HTML生成
+  function buildCoursCalibHTML(courseStats, totalAll) {
+    const maxBar = 100; // px
+    const rows = courseStats.map(s => {
+      if (s.total === 0) {
+        return `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:4px 6px;font-size:10px;color:var(--text3);font-weight:700;white-space:nowrap">${s.course}コース</td>
+            <td colspan="4" style="padding:4px 6px;font-size:10px;color:var(--text3);text-align:center">—</td>
+          </tr>`;
+      }
+      const actPct   = s.actual  != null ? (s.actual  * 100).toFixed(0) + '%' : '—';
+      const estPct   = s.estAvg  != null ? (s.estAvg  * 100).toFixed(0) + '%' : '—';
+      const actWidth = s.actual  != null ? Math.round(s.actual  * maxBar) : 0;
+      const estWidth = s.estAvg  != null ? Math.round(s.estAvg  * maxBar) : 0;
+      const diff     = (s.actual != null && s.estAvg != null) ? s.actual - s.estAvg : null;
+      const diffStr  = diff != null
+        ? (diff >= 0 ? '+' : '') + (diff * 100).toFixed(0) + '%'
+        : '—';
+      const diffColor = diff == null          ? 'var(--text3)'
+                      : Math.abs(diff) <= 0.05 ? 'var(--green)'
+                      : Math.abs(diff) <= 0.10 ? 'var(--orange)'
+                      : 'var(--red, #e05)';
+      const lowN = s.total < 10;
+      // コース色（競艇の枠番カラー）
+      const courseColors = ['','var(--white,#fff)','var(--black,#222)','var(--red,#e33)','var(--blue,#36c)','var(--yellow,#fa0)','var(--green,#2a9)'];
+      const courseBg     = ['','#e0e0e0','#333','#e33','#36c','#fa0','#2a9'];
+      const courseText   = ['','#333','#fff','#fff','#fff','#333','#fff'];
+      return `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:4px 6px;white-space:nowrap">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:${courseBg[s.course]};color:${courseText[s.course]};font-size:10px;font-weight:700">${s.course}</span>
+            <span style="font-size:9px;color:var(--text3);margin-left:2px">${s.total}件</span>
+          </td>
+          <td style="padding:4px 6px;min-width:80px">
+            <div style="position:relative;height:14px;background:var(--bg2);border-radius:2px;overflow:hidden">
+              <div style="position:absolute;left:0;top:0;height:100%;width:${estWidth}px;background:var(--border);border-radius:2px;opacity:0.6"></div>
+              <div style="position:absolute;left:0;top:0;height:100%;width:${actWidth}px;background:${actWidth >= estWidth ? 'var(--green)' : 'var(--orange)'};border-radius:2px;opacity:0.85"></div>
+            </div>
+          </td>
+          <td style="padding:4px 6px;text-align:right;font-size:10px;color:var(--text3)">${estPct}</td>
+          <td style="padding:4px 6px;text-align:right;font-size:11px;font-weight:700;color:var(--text${lowN ? '3' : ''})">${actPct}${lowN ? '<span style="font-size:9px;color:var(--text3)">*</span>' : ''}</td>
+          <td style="padding:4px 6px;text-align:right;font-size:10px;font-weight:700;color:${diffColor}">${diffStr}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:2px">🚤 コース別 キャリブレーション</div>
+        <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">1着枠番別 推定 vs 実績（計${totalAll}件）</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border)">
+                <th style="padding:3px 6px;text-align:left;font-size:9px;color:var(--text3);font-weight:500">コース</th>
+                <th style="padding:3px 6px;text-align:left;font-size:9px;color:var(--text3);font-weight:500">バー</th>
+                <th style="padding:3px 6px;text-align:right;font-size:9px;color:var(--text3);font-weight:500">推定</th>
+                <th style="padding:3px 6px;text-align:right;font-size:9px;color:var(--text3);font-weight:500">実績</th>
+                <th style="padding:3px 6px;text-align:right;font-size:9px;color:var(--text3);font-weight:500">差</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="font-size:9px;color:var(--text3);margin-top:4px">
+          灰バー=推定、色バー=実績　* N&lt;10の参考値　1着枠番=コース番号（進入変更除外済）
+        </div>
+      </div>`;
+  }
+
   // ── DOM への描画 ──
   function _ensureContainer() {
     let el = document.getElementById('top-ai-calibration-panel');
@@ -336,11 +433,15 @@
       const violations = countMonotonicViolations(binStats);
       const p2stats    = calcPlace2Calibration(all);
       const p3stats    = calcPlace3Calibration(all);
+      // コース別キャリブレーション
+      const courseStats = calcCalibrationByCourse(all);
+
       container.innerHTML = `
         <div class="ai-stats-card" style="margin-bottom:0.6rem">
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
             ${buildCalibrationHTML(binStats, calError, violations, totalValid)}
             ${buildPlace2CalibHTML(p2stats, p3stats)}
+            ${buildCoursCalibHTML(courseStats, all.length)}
           </div>
         </div>`;
     } catch (e) {
