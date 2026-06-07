@@ -1,0 +1,47 @@
+{
+  "venue": "芦屋",
+  "venue_slug": "ashiya",
+  "date": "20260607",
+  "race": 6,
+  "fetched_at": "2026-06-07 10:55:16",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 340,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 170,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 180,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-1",
+      "odds": 1220,
+      "ninki": 6
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-1-4",
+      "odds": 4230,
+      "ninki": 17
+    }
+  ],
+  "cancelled": false
+}
