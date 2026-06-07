@@ -395,6 +395,124 @@
       </div>`;
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // 30〜40%帯 過大評価 内訳調査パネル（管理者専用）
+  // ──────────────────────────────────────────────────────────────────
+  function buildOverestimateAnalysisHTML(results) {
+    // 30〜40%帯のレースだけ抽出
+    const band = results.filter(r => r.hitProbEst != null && r.hitProbEst >= 0.30 && r.hitProbEst < 0.40);
+    if (band.length === 0) return '';
+
+    // ── 会場別集計 ──
+    const venueMap = {};
+    band.forEach(r => {
+      const v = r.venue || '不明';
+      if (!venueMap[v]) venueMap[v] = { total: 0, hits: 0 };
+      venueMap[v].total++;
+      if (r.isHit) venueMap[v].hits++;
+    });
+    const venueRows = Object.entries(venueMap)
+      .map(([v, s]) => ({ venue: v, ...s, actual: s.hits / s.total }))
+      .sort((a, b) => a.actual - b.actual); // 的中率低い順
+
+    // ── レース番号別集計 ──
+    const rnoMap = {};
+    band.forEach(r => {
+      const rno = r.rno != null ? `${r.rno}R` : '不明';
+      if (!rnoMap[rno]) rnoMap[rno] = { total: 0, hits: 0 };
+      rnoMap[rno].total++;
+      if (r.isHit) rnoMap[rno].hits++;
+    });
+    const rnoRows = Object.entries(rnoMap)
+      .map(([rno, s]) => ({ rno, ...s, actual: s.hits / s.total }))
+      .sort((a, b) => {
+        const na = parseInt(a.rno); const nb = parseInt(b.rno);
+        return na - nb;
+      });
+
+    // ── EV帯別集計（synth × hitProbEst）──
+    const evMap = { '〜0.9': { total:0,hits:0 }, '0.9〜1.0': { total:0,hits:0 }, '1.0〜1.1': { total:0,hits:0 }, '1.1〜1.3': { total:0,hits:0 }, '1.3〜': { total:0,hits:0 } };
+    band.forEach(r => {
+      const ev = r.ev;
+      if (ev == null) return;
+      const key = ev < 0.9 ? '〜0.9' : ev < 1.0 ? '0.9〜1.0' : ev < 1.1 ? '1.0〜1.1' : ev < 1.3 ? '1.1〜1.3' : '1.3〜';
+      evMap[key].total++;
+      if (r.isHit) evMap[key].hits++;
+    });
+
+    const totalBand = band.length;
+    const hitsBand  = band.filter(r => r.isHit).length;
+    const actBand   = hitsBand / totalBand;
+
+    // ── 会場テーブル HTML ──
+    const vHtml = venueRows.map(s => {
+      const pct = (s.actual * 100).toFixed(0) + '%';
+      const color = s.actual < 0.25 ? 'var(--red,#e05)' : s.actual < 0.35 ? 'var(--orange)' : 'var(--green)';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:3px 5px;font-size:10px">${s.venue}</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;color:var(--text3)">${s.total}件</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;font-weight:700;color:${color}">${pct}</td>
+      </tr>`;
+    }).join('');
+
+    // ── レース番号テーブル HTML ──
+    const rHtml = rnoRows.map(s => {
+      const pct = (s.actual * 100).toFixed(0) + '%';
+      const color = s.actual < 0.25 ? 'var(--red,#e05)' : s.actual < 0.35 ? 'var(--orange)' : 'var(--green)';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:3px 5px;font-size:10px">${s.rno}</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;color:var(--text3)">${s.total}件</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;font-weight:700;color:${color}">${pct}</td>
+      </tr>`;
+    }).join('');
+
+    // ── EV帯テーブル HTML ──
+    const eHtml = Object.entries(evMap).map(([key, s]) => {
+      if (s.total === 0) return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:3px 5px;font-size:10px">EV${key}</td>
+        <td colspan="2" style="padding:3px 5px;font-size:10px;text-align:center;color:var(--text3)">—</td>
+      </tr>`;
+      const pct = (s.hits / s.total * 100).toFixed(0) + '%';
+      const color = (s.hits/s.total) < 0.25 ? 'var(--red,#e05)' : (s.hits/s.total) < 0.35 ? 'var(--orange)' : 'var(--green)';
+      return `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:3px 5px;font-size:10px">EV${key}</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;color:var(--text3)">${s.total}件</td>
+        <td style="padding:3px 5px;font-size:10px;text-align:right;font-weight:700;color:${color}">${pct}</td>
+      </tr>`;
+    }).join('');
+
+    const thStyle = `padding:3px 5px;text-align:left;font-size:9px;color:var(--text3);font-weight:500;border-bottom:1px solid var(--border)`;
+    const mkTable = (title, rows) => `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px">${title}</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr>
+            <th style="${thStyle}">区分</th>
+            <th style="${thStyle};text-align:right">件数</th>
+            <th style="${thStyle};text-align:right">実績</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+
+    return `
+      <div class="admin-only" style="margin-top:8px">
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--orange,#f80)">
+          <div style="font-size:10px;font-weight:700;color:var(--orange,#f80);text-align:center;margin-bottom:2px">
+            🔍 30〜40%帯 過大評価 内訳調査
+          </div>
+          <div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px">
+            推定30〜40%の${totalBand}件 → 実績的中率 <strong style="color:${actBand < 0.30 ? 'var(--red,#e05)' : 'var(--orange)'}">${(actBand*100).toFixed(1)}%</strong>（目標35%）
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+            ${mkTable('会場別', vHtml)}
+            ${mkTable('レース番号別', rHtml)}
+            ${mkTable('EV帯別', eHtml)}
+          </div>
+        </div>
+      </div>`;
+  }
+
   // ── DOM への描画 ──
   function _ensureContainer() {
     let el = document.getElementById('top-ai-calibration-panel');
@@ -467,8 +585,9 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
             ${buildCalibrationHTML(binStats, calError, violations, totalValid)}
             ${buildPlace2CalibHTML(p2stats, p3stats)}
-            ${buildCoursCalibHTML(courseStats, all.length)}
+            <div class="admin-only">${buildCoursCalibHTML(courseStats, all.length)}</div>
           </div>
+          ${buildOverestimateAnalysisHTML(all)}
         </div>`;
     } catch (e) {
       console.warn('[calibration] render error:', e);
