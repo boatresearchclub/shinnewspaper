@@ -1,0 +1,47 @@
+{
+  "venue": "桐生",
+  "venue_slug": "kiryu",
+  "date": "20260607",
+  "race": 7,
+  "fetched_at": "2026-06-07 18:28:22",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 3570,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 810,
+      "ninki": null
+    },
+    {
+      "combo": "5",
+      "odds": 230,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-5",
+      "odds": 11960,
+      "ninki": 19
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-5-6",
+      "odds": 77480,
+      "ninki": 85
+    }
+  ],
+  "cancelled": false
+}
