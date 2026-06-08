@@ -18,10 +18,9 @@
 
 (function () {
 
-  // admin 判定（URLに ?admin or #admin が含まれる場合のみパネルを描画）
+  // admin 判定（body.admin-mode クラスがある場合のみパネルを描画）
   // ※ 関数定義自体は必ず行う（top_stats.js から呼ばれるため）
-  // → 常時表示に変更（adminチェック廃止）
-  const _isAdmin = true;
+  const _isAdmin = document.body.classList.contains('admin-mode');
 
   // ── ビン定義 ──
   // hitProbEst の値域 [0, 1] を6段階に分割
@@ -715,7 +714,8 @@
     const _diagValid = (allResultsScenAll || []).filter(r => r.hitProbEst != null).length;
     console.log('[calibration] allResultsScenAll:', _diagAll, '件 / hitProbEst有効:', _diagValid, '件');
 
-    if (!_isAdmin) return; // adminパラメータがなければ描画しない（ログは上で出力済み）
+    // 呼び出し時点で再判定（defer読み込みのタイミング問題を回避）
+    if (!document.body.classList.contains('admin-mode')) return;
     try {
       const container = _ensureContainer();
       const all       = allResultsScenAll || [];
