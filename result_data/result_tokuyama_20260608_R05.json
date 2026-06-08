@@ -1,0 +1,47 @@
+{
+  "venue": "徳山",
+  "venue_slug": "tokuyama",
+  "date": "20260608",
+  "race": 5,
+  "fetched_at": "2026-06-08 10:37:19",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 290,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 120,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 540,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-2",
+      "odds": 840,
+      "ninki": 3
+    }
+  ],
+  "cancelled": false
+}
