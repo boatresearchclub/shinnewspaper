@@ -1,0 +1,138 @@
+{
+  "date": "2026-06-10",
+  "fetched_at": "14:39",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "ＭＢＰ津幡開設１３周年記念",
+      "period": "6/5-6/10",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "01",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "多摩川": {
+      "grade": "一般",
+      "title": "ボートレース多摩川バースデイカップ",
+      "period": "6/7-6/11",
+      "day": "４日目",
+      "total_days": 5,
+      "jcd": "05",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "一般",
+      "title": "テレしずサマーカップ",
+      "period": "6/6-6/10",
+      "day": "最終日",
+      "total_days": 5,
+      "jcd": "06",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "蒲郡": {
+      "grade": "一般",
+      "title": "中京スポーツ杯争奪　蒲郡ボートキング決定戦",
+      "period": "6/9-6/13",
+      "day": "２日目",
+      "total_days": 5,
+      "jcd": "07",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "津": {
+      "grade": "一般",
+      "title": "住信ＳＢＩネット銀行賞",
+      "period": "6/7-6/12",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "09",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "びわこ": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎびわこ",
+      "period": "6/9-6/14",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "11",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "尼崎": {
+      "grade": "G1",
+      "title": "尼崎市市制１１０周年記念　尼崎センプルカップ",
+      "period": "6/8-6/13",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "13",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "鳴門": {
+      "grade": "一般",
+      "title": "第６回鳴門渦潮歌手高瀬豊子杯競走",
+      "period": "6/10-6/13",
+      "day": "初日",
+      "total_days": 4,
+      "jcd": "14",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "丸亀": {
+      "grade": "一般",
+      "title": "ヴィーナスシリーズ第５戦　マクール杯",
+      "period": "6/6-6/11",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "15",
+      "is_joshi": true,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "一般",
+      "title": "西部発刊１万号記念スポーツ報知杯争奪戦",
+      "period": "6/5-6/10",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "18",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "唐津": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎ唐津",
+      "period": "6/9-6/14",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "23",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "大村": {
+      "grade": "一般",
+      "title": "ミッドナイトボートレースｉｎ大村　３",
+      "period": "6/6-6/10",
+      "day": "最終日",
+      "total_days": 5,
+      "jcd": "24",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    }
+  }
+}

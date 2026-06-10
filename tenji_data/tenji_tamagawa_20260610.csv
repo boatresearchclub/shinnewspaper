@@ -1,0 +1,7 @@
+﻿venue,date,race,frame,racer,grade,lap1,mawari,chokusen,tenji,tenji_rank,tilt,course,is_normal_course,parts_exchange,weight,weight_adjust,fetched_at,motor_no,motor_rate2,motor_rate3,motor_rank,prev_user,start_timing,has_start_change,weather,weather_degree,water_degree,wind_speed,wind_direction,wind_direction_text,wave_height
+tamagawa,2026-06-10,8,1,木村 亮太,B1,36.66,5.93,6.87,6.74,2,-0.5,1,,,52.0,0.0,2026-06-10 14:52:37,18,24.2,39.4,38,滝沢 芳行,0.07,False,晴,22,22,4,5,東,2
+tamagawa,2026-06-10,8,2,伊達 正利,B1,37.57,5.93,7.13,6.78,4,0.0,2,,,55.1,0.0,2026-06-10 14:52:37,66,25.0,50.0,35,藤井 徹,0.09,False,晴,22,22,4,5,東,2
+tamagawa,2026-06-10,8,3,長谷川 暖,B1,37.6,5.7,7.03,6.79,5,-0.5,3,,,50.5,1.5,2026-06-10 14:52:37,47,24.2,39.4,37,荒井 翔伍,0.08,False,晴,22,22,4,5,東,2
+tamagawa,2026-06-10,8,4,豊田 結,A2,37.93,5.9,7.08,6.89,6,0.0,4,,,51.3,0.0,2026-06-10 14:52:37,60,33.3,52.8,19,平田 さやか,0.07,False,晴,22,22,4,5,東,2
+tamagawa,2026-06-10,8,5,廣瀬 将亨,A2,36.93,5.6,7.03,6.71,1,0.0,5,,,55.4,0.0,2026-06-10 14:52:37,74,44.4,60.0,4,本部 めぐみ,0.16,False,晴,22,22,4,5,東,2
+tamagawa,2026-06-10,8,6,市川 瑚幸,B2,37.26,6.1,7.0,6.75,3,-0.5,6,,,47.0,0.0,2026-06-10 14:52:37,58,37.8,56.8,13,三浦 永理,0.16,False,晴,22,22,4,5,東,2
