@@ -690,7 +690,6 @@
       </div>`;
   }
 
-<<<<<<< HEAD
   // ── DOM への描画 ──
   function _ensureContainer() {
     let el = document.getElementById('top-ai-calibration-panel');
@@ -775,89 +774,3 @@
   };
 
 })();
-=======
-  // ── DOM への描画 ──
-  function _ensureContainer() {
-    let el = document.getElementById('top-ai-calibration-panel');
-    if (el) return el;
-    el = document.createElement('div');
-    el.id = 'top-ai-calibration-panel';
-    const ref = document.getElementById('top-ai-stats-history-summary');
-    if (ref && ref.parentNode) {
-      ref.parentNode.insertBefore(el, ref.nextSibling);
-    } else {
-      document.body.appendChild(el);
-    }
-    return el;
-  }
-
-  // ── 公開関数（これだけ既存コードから呼ぶ）──
-  // 関数は常に定義する。admin でない場合は中でスキップするだけ。
-  window._renderCalibrationPanel = function (allResultsScenAll) {
-    // 診断ログ: _isAdmin チェックより前に出力し、admin 未設定でも件数が確認できる
-    // console.debug は Chrome デフォルトで非表示のため console.log に変更
-    const _diagAll   = (allResultsScenAll || []).length;
-    const _diagValid = (allResultsScenAll || []).filter(r => r.hitProbEst != null).length;
-    console.log('[calibration] allResultsScenAll:', _diagAll, '件 / hitProbEst有効:', _diagValid, '件');
-
-    // 呼び出し時点で再判定（defer読み込みのタイミング問題を回避）
-    if (!document.body.classList.contains('admin-mode')) return;
-    try {
-      const container = _ensureContainer();
-      const all       = allResultsScenAll || [];
-      const totalAll  = all.length;
-      const totalValid = _diagValid;
-
-      // 修正: allResultsScenAll が [] のまま呼ばれたとき（非同期計算完了前）は
-      // 「集計中」表示にしてデータ不足と区別する
-      if (totalAll === 0) {
-        container.innerHTML = `
-          <div class="ai-stats-card" style="margin-bottom:0.6rem">
-            <div style="display:grid;grid-template-columns:1fr;gap:10px">
-              <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)">
-                <div style="font-size:10px;font-weight:700;color:var(--text3);text-align:center;margin-bottom:4px">📐 確率キャリブレーション</div>
-                <div style="color:var(--text3);font-size:11px;text-align:center;padding:0.3rem 0">集計中...</div>
-              </div>
-            </div>
-          </div>`;
-        return;
-      }
-
-      // ―― 生データで集計（補正前）→ 補正テーブル更新 ――
-      const binStatsRaw = calcCalibration(all);
-      if (typeof updateCalibPoints === 'function') updateCalibPoints(binStatsRaw);
-
-      // ―― 補正後の hitProbEst で再集計してパネルに表示 ――
-      let binStats = binStatsRaw;
-      if (typeof calibrateProb === 'function') {
-        const allCorrected = all.map(r => r.hitProbEst != null
-          ? Object.assign({}, r, { hitProbEst: calibrateProb(r.hitProbEst) })
-          : r
-        );
-        binStats = calcCalibration(allCorrected);
-      }
-
-      const calError   = calcCalibrationError(binStats);
-      const violations = countMonotonicViolations(binStats);
-      const p2stats    = calcPlace2Calibration(all);
-      const p3stats    = calcPlace3Calibration(all);
-      // コース別キャリブレーション
-      const courseStats = calcCalibrationByCourse(all);
-
-      container.innerHTML = `
-        <div class="ai-stats-card" style="margin-bottom:0.6rem">
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px">
-            ${buildCalibrationHTML(binStats, calError, violations, totalValid)}
-            ${buildPlace2CalibHTML(p2stats, p3stats)}
-            <div class="admin-only">${buildCoursCalibHTML(courseStats, all.length)}</div>
-          </div>
-          ${buildOverestimateAnalysisHTML(all)}
-          ${buildDiagnosisHTML(all)}
-        </div>`;
-    } catch (e) {
-      console.warn('[calibration] render error:', e);
-    }
-  };
-
-})();
->>>>>>> 71977d02f21aaedfa25a5b188fdbd7816e489bfd
