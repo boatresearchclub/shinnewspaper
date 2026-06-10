@@ -520,10 +520,12 @@ function buildTopPickupRaces() {
   section.style.display = 'block';
 
   cardsEl.innerHTML = pickups.map(p => {
-    const t = p.tags[0];
-    const badgeHtml = `<div class="alert-card-badge" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;letter-spacing:.03em;white-space:nowrap;line-height:1.4;text-align:center">${t.label}</div>`;
+    // 全タグのバッジを表示（複数タグがある場合も全て見える）
+    const badgesHtml = p.tags.map(t =>
+      `<div class="alert-card-badge" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;letter-spacing:.03em;white-space:nowrap;line-height:1.4;text-align:center;margin-bottom:2px">${t.label}<br><span style="font-size:9px;font-weight:400;opacity:.85">${t.sub||''}</span></div>`
+    ).join('');
     return `<div class="alert-card" onclick="jumpToPickup('${p.venue}',${p.rno})">
-      ${badgeHtml}
+      ${badgesHtml}
       <div class="alert-card-venue">${p.venue}</div>
       <div class="alert-card-race">${p.rno}R</div>
       <div class="alert-card-time">${p.time} 発走</div>
@@ -564,22 +566,9 @@ function jumpToPickup(venue, rno) {
   if(btn){ btn.classList.add('active'); btn.scrollIntoView({behavior:'auto',block:'nearest',inline:'center'}); }
   updateHeaderMeta(venue, rno);
 
-  // ピックアップタグ種別を buildScenarioBuyPanel に伝える
-  // 締め切り後に buildTopPickupRaces が再計算しても上書きされるため、
-  // renderBuy を呼ぶ直前にセットし、呼んだ直後にリセットする。
-  const pickupCard = _lastPickups && _lastPickups.find(p => p.venue === venue && p.rno === rno);
-  if (pickupCard) {
-    const tagTypes = pickupCard.tags.map(t => t.type);
-    _pickupRaceTagType = tagTypes.includes('in_neg')    ? 'in_neg'
-                       : tagTypes.includes('in_tetsup') ? 'in_tetsup'
-                       : null;
-  } else {
-    _pickupRaceTagType = null;
-  }
-
-  switchTab('detail2');
-  renderBuy(rno);
-  _pickupRaceTagType = null;  // 使い捨てリセット
+  // 出走表（detail タブ）へ遷移する
+  switchTab('detail');
+  renderDetail(rno);
 }
 
 function isVenueFinished(vdata) {

@@ -13,7 +13,7 @@ auto_push.py  —  CSV・展示情報JSON・index.html を GitHub に自動push
   git init / git remote add origin ... / git push -u origin master
 """
 
-import subprocess, time, json, glob, os, re, sys
+import subprocess, time, json, glob, os, re, sys, queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime
@@ -2081,19 +2081,17 @@ def fetch_result_for_venues(venues_in_csv: dict[str, str]) -> bool:
         # inject_result_to_html()
         write_result_json()    # data/result_YYYYMMDD.json を更新
         write_data_index()     # インデックスも更新
-        # 結果取得後は自前でpushまで完結させる（メインループ待ちにしない）
-        run(["git", "add", str(INDEX_HTML)])
-        code, out = run(["git", "status", "--porcelain"])
-        tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
-        if tracked:
-            msg = f"result update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-            run(["git", "commit", "-m", msg])
-            code, _ = run(["git", "push", "origin", "main"])
-            if code != 0:
-                run(["git", "push", "origin", "master"])
-            log(f"  結果取得完了: {fetched}レース → push済み")
-        else:
-            log(f"  結果取得完了: {fetched}レース → 変更なし（スキップ）")
+        # commit+pushはキューに委譲（他系統のpushと重ならないように）
+        with _git_lock:
+            run(["git", "add", str(INDEX_HTML)])
+            code, out = _run_nolock(["git", "status", "--porcelain"])
+            tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
+            if tracked:
+                msg = f"result update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                _push_queue.put(("raw", None, msg))
+                log(f"  結果取得完了: {fetched}レース → pushキューに追加")
+            else:
+                log(f"  結果取得完了: {fetched}レース → 変更なし（スキップ）")
 
     # 全タスクがスキップ（=全レース確定済み）なら True を返して以降の呼び出しを止める
     all_done = (skipped == len(tasks))
@@ -2435,6 +2433,76 @@ _data_js_lock = _threading.Lock()
 # すべての git 操作をこのロックで直列化して競合を防ぐ。
 _git_lock = _threading.Lock()
 
+# ── pushキュー: 全系統のpushをここに集約して直列処理 ──────────────────────────
+# GitHub Pagesは短時間に複数pushが来ると前のデプロイをCancelledにする。
+# 全pushをこのキューに入れ、専用ワーカーが順番に処理することで
+# Cancelledを防ぐ。
+#
+# キューのアイテム形式:
+#   ("files",  [Path, ...], commit_msg)   → 通常のファイルpush
+#   ("raw",    None,        commit_msg)   → git add済み想定・commit+pushのみ
+#
+_push_queue: queue.Queue = queue.Queue()
+_DEPLOY_WAIT_SEC = 130  # GitHub Pagesデプロイ完了までの待機秒数（約2分）
+
+def _push_queue_worker():
+    """
+    pushキューを順番に処理する専用スレッド。
+    前のpushから _DEPLOY_WAIT_SEC 秒待ってから次を実行することで
+    GitHub Pages の Cancelled 連鎖を防ぐ。
+    """
+    last_push_time = 0.0
+    while True:
+        try:
+            item = _push_queue.get(timeout=5)
+        except queue.Empty:
+            continue
+
+        if item is None:  # 終了シグナル
+            break
+
+        kind, files, msg = item
+
+        # 前のpushからの経過時間が足りなければ待機
+        elapsed = time.time() - last_push_time
+        if elapsed < _DEPLOY_WAIT_SEC and last_push_time > 0:
+            wait = _DEPLOY_WAIT_SEC - elapsed
+            log(f"  [PushQueue] ⏳ デプロイ完了待ち {wait:.0f}秒...")
+            time.sleep(wait)
+
+        try:
+            with _git_lock:
+                if kind == "files" and files:
+                    for f in files:
+                        _run_nolock(["git", "add", str(f)])
+
+                code, out = _run_nolock(["git", "status", "--porcelain"])
+                tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
+                if not tracked:
+                    log(f"  [PushQueue] 差分なし → スキップ ({msg})")
+                    _push_queue.task_done()
+                    continue
+
+                _run_nolock(["git", "commit", "-m", msg])
+                code, _ = _run_nolock(["git", "push", "origin", "main"])
+                if code != 0:
+                    code, _ = _run_nolock(["git", "push", "origin", "master"])
+
+            if code == 0:
+                last_push_time = time.time()
+                log(f"  [PushQueue] ✓ push完了: {msg}")
+            else:
+                log(f"  [PushQueue] ✕ push失敗: {msg}")
+
+        except Exception as e:
+            log(f"  [PushQueue] ✕ 例外: {e}")
+
+        _push_queue.task_done()
+
+# ワーカースレッドを起動
+_push_queue_thread = _threading.Thread(target=_push_queue_worker, daemon=True)
+_push_queue_thread.start()
+
 
 
 # data.js に必要なプレースホルダー宣言一覧
@@ -2632,18 +2700,16 @@ def _odds_loop_worker() -> None:
             if saved:
                 _write_and_push_odds_json(saved)
                 inject_odds_to_html()
-                run(["git", "add", str(INDEX_HTML)])
-                if DATA_JS.exists():
-                    run(["git", "add", str(DATA_JS)])
-                code, out = run(["git", "status", "--porcelain"])
-                tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
-                if tracked:
-                    msg = f"odds update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-                    run(["git", "commit", "-m", msg])
-                    code, _ = run(["git", "push", "origin", "main"])
-                    if code != 0:
-                        run(["git", "push", "origin", "master"])
-                    log(f"  [OddsLoop] ✓ オッズpush完了 ({len(saved)}件)")
+                with _git_lock:
+                    run(["git", "add", str(INDEX_HTML)])
+                    if DATA_JS.exists():
+                        run(["git", "add", str(DATA_JS)])
+                    code, out = _run_nolock(["git", "status", "--porcelain"])
+                    tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
+                    if tracked:
+                        msg = f"odds update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                        _push_queue.put(("raw", None, msg))
+                        log(f"  [OddsLoop] ✓ オッズpushキューに追加 ({len(saved)}件)")
 
             if not has_active:
                 # deadline_map が正常に取れていた場合のみ真の終了とみなす
@@ -2722,19 +2788,11 @@ def _write_and_push_odds_json(saved_paths: list) -> bool:
         tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
         if not tracked:
             return False
-
         total_races = sum(len(races) for venues in by_date.values() for races in venues.values())
         msg = f"odds json {datetime.now().strftime('%Y-%m-%d %H:%M')} ({total_races}R)"
-        _run_nolock(["git", "commit", "-m", msg])
-        code, _ = _run_nolock(["git", "push", "origin", "main"])
-        if code != 0:
-            code, _ = _run_nolock(["git", "push", "origin", "master"])
-    if code == 0:
-        log(f"  [OddsJSON] ✓ 軽量push完了: {[p.name for p in written_paths]}")
-        return True
-    else:
-        log("  [OddsJSON] ✕ 軽量push失敗（data.js push で補完）")
-        return False
+        _push_queue.put(("raw", None, msg))
+    log(f"  [OddsJSON] ✓ 軽量pushキューに追加: {[p.name for p in written_paths]}")
+    return True
 
 
 def _start_odds_loop_if_needed() -> None:
@@ -3299,11 +3357,68 @@ require('fs').writeFileSync(process.argv[3], result);
     return out_path
 
 
+def _summarize_push_targets(changed_files):
+    """
+    changed_files のファイル名から会場・レース番号を抽出して人間が読みやすい文字列を返す。
+
+    ファイル名の想定パターン:
+      tenji_data/tenji_{venue}_{YYYYMMDD}_R{rno}.json  → 会場+レース番号
+      csv_output/{venue}_{YYYYMMDD}.csv                → 会場のみ
+      data/index.json, data.js, index.html など        → その他
+
+    戻り値例:
+      "びわこR3, 丸亀R5, 唐津R7"
+      "唐津 (CSV), index.html, data.js"
+    """
+    import re as _re
+    venue_races = {}   # venue → set of race_no strings
+    other_labels = []
+
+    for f in changed_files:
+        name = Path(str(f)).name
+        # tenji_{venue}_{YYYYMMDD}_R{rno}.json
+        m = _re.search(r"tenji_(.+?)_\d{8}_R(\d+)\.json$", name)
+        if m:
+            venue_races.setdefault(m.group(1), set()).add(m.group(2))
+            continue
+        # {venue}_{YYYYMMDD}.csv  (csv_output)
+        m = _re.search(r"^(.+?)_\d{8}\.csv$", name)
+        if m:
+            venue_races.setdefault(m.group(1), set())   # レース番号なし
+            continue
+        # 結果: result_{venue}_{YYYYMMDD}_R{rno}.json
+        m = _re.search(r"result_(.+?)_\d{8}_R(\d+)\.json$", name)
+        if m:
+            venue_races.setdefault(m.group(1), set()).add(m.group(2))
+            continue
+        # その他（index.html, data.js など）
+        other_labels.append(name)
+
+    parts = []
+    for venue, races in sorted(venue_races.items()):
+        if races:
+            sorted_races = sorted(races, key=lambda x: int(x))
+            parts.append(f"{venue} R{','.join(sorted_races)}")
+        else:
+            parts.append(f"{venue} (CSV)")
+    parts.extend(other_labels)
+    return ", ".join(parts) if parts else "（不明）"
+
+
 def git_push(changed_files):
-    # git_push 全体を _git_lock で保護し、add→commit→push をアトミックに実行する。
-    # （run() 内のロックだけでは commit〜push 間に別スレッドが割り込む場合があるため）
+    # git add（難読化含む）はここで実施し、commit+push はキューに委譲する。
+    # → 複数系統のpushが短時間に重なってGitHub PagesがCancelledになるのを防ぐ。
     with _git_lock:
-        return _git_push_locked(changed_files)
+        _git_add_locked(changed_files)
+        push_summary = _summarize_push_targets(changed_files)
+        msg = f"update {datetime.now().strftime('%Y-%m-%d %H:%M')} [{push_summary}]"
+        code, out = _run_nolock(["git", "status", "--porcelain"])
+        tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
+        if not tracked:
+            return False
+        _push_queue.put(("raw", None, msg))
+        log(f"  pushキューに追加 [{push_summary}]")
+        return True
 
 def _run_nolock(cmd):
     """_git_lock 取得済みの内部から呼ぶ git サブコマンド実行（ロックなし版）"""
@@ -3313,8 +3428,8 @@ def _run_nolock(cmd):
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
     return r.returncode, (r.stdout + r.stderr).strip()
 
-def _git_push_locked(changed_files):
-    """_git_lock 保持中に呼ばれる実体。run() の代わりに _run_nolock() を使う。"""
+def _git_add_locked(changed_files):
+    """_git_lock 保持中に呼ばれる。git add（難読化含む）だけ実施。commit/pushはしない。"""
     # 変更ファイルをadd
     for f in changed_files:
         _run_nolock(["git", "add", str(f)])
@@ -3412,30 +3527,7 @@ def _git_push_locked(changed_files):
         for jf in DATA_DIR.glob("*.json"):
             _run_nolock(["git", "add", str(jf)])
 
-    # 変更確認（??行＝未追跡ファイルは除外して判定）
-    code, out = _run_nolock(["git", "status", "--porcelain"])
-    tracked_changes = [l for l in out.strip().splitlines() if not l.startswith("??")]
-    if not tracked_changes:
-        return False  # 追跡済みファイルに変更なし
-
-    # commit
-    msg = f"update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    code, out = _run_nolock(["git", "commit", "-m", msg])
-    if code != 0:
-        log(f"  commit失敗: {out}")
-        return False
-
-    # push（mainを試してダメならmaster）
-    log("  GitHub へ push 中...")
-    code, out = _run_nolock(["git", "push", "origin", "main"])
-    if code != 0:
-        code, out = _run_nolock(["git", "push", "origin", "master"])
-    if code != 0:
-        log(f"  push失敗: {out}")
-        return False
-
-    log("  ✓ push完了")
-    return True
+    # addのみ。commit/pushは呼び出し元がキュー経由で実施する。
 
 def get_past_venues_from_csvs(days_back: int = HISTORY_DAYS) -> dict:
     """
@@ -3579,11 +3671,8 @@ def backfill_past_results():
                 tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
                 if tracked:
                     msg = f"backfill result {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-                    _run_nolock(["git", "commit", "-m", msg])
-                    code, _ = _run_nolock(["git", "push", "origin", "main"])
-                    if code != 0:
-                        _run_nolock(["git", "push", "origin", "master"])
-                    log("  ✓ バックフィル push完了")
+                    _push_queue.put(("raw", None, msg))
+                    log("  ✓ バックフィル pushキューに追加")
                 else:
                     log("  バックフィル: 変更なし（既に最新）")
         else:
@@ -3791,26 +3880,23 @@ def main():
                     inject_tenji_to_html()
                     inject_comment_to_html()
                     inject_flying_to_html()
+                    # git add だけここで実施し、commit+pushはキューに委譲
                     with _git_lock:
                         if DATA_JS.exists():
                             _run_nolock(["git", "add", str(DATA_JS)])
-                        # data/tenji_YYYYMMDD.json も先行push対象に含める
                         write_tenji_json_file()
                         for tj in DATA_DIR.glob("tenji_*.json"):
                             _run_nolock(["git", "add", str(tj)])
-                        # [fix] index.html を data.js と同じコミットに含める
-                        # → キャッシュバスターのバージョンずれを防ぐ
                         update_cache_version()
                         _run_nolock(["git", "add", str(INDEX_HTML)])
                         code2, out2 = _run_nolock(["git", "status", "--porcelain"])
                         tracked2 = [l for l in out2.strip().splitlines() if not l.startswith("??")]
                         if tracked2:
-                            _run_nolock(["git", "commit", "-m", f"tenji update {datetime.now().strftime('%Y-%m-%d %H:%M')}"])
-                            code2, _ = _run_nolock(["git", "push", "origin", "main"])
-                            if code2 != 0:
-                                _run_nolock(["git", "push", "origin", "master"])
-                            log("  ✓ 展示情報 先行push完了")
-                            tenji_push_done = True  # ★ 先行push成功
+                            tenji_summary = _summarize_push_targets(changed)
+                            msg2 = f"tenji update {datetime.now().strftime('%Y-%m-%d %H:%M')} [{tenji_summary}]"
+                            _push_queue.put(("raw", None, msg2))
+                            log(f"  ✓ 展示情報 pushキューに追加 [{tenji_summary}]")
+                            tenji_push_done = True  # ★ キュー追加成功
                 else:
                     inject_tenji_to_html()
                     inject_comment_to_html()

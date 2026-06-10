@@ -2621,18 +2621,33 @@ function renderBuy(rno){
       return picked;
     }
 
-    // scenarioPlace2 から対象シナリオの p2 リストを取得
-    // 2着指定艇・1着軸を除いた残りを p2 降順でモード別累積%まで採用
+    // ── merged3rdMap（calc3rdScores）ベースで3着候補を選出 ──
+    // rate3（tenkai_remaining 展開別3着率）× 展示係数 × avg_rank補正 の合成スコアで選ぶ。
+    // p2 ベースだと「2着本命を除いた残り全員」がほぼ均等になり識別力ゼロになる問題を解消。
+    const thirdCandidates = (sd.merged3rdMap?.[winnerBoat]?.[secondBoat] || [])
+      .filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
+
+    if(thirdCandidates.length > 0){
+      const scoreTotal = thirdCandidates.reduce((s, x) => s + x.score, 0) || 1;
+      const picked = []; let cum = 0;
+      for(const t3 of thirdCandidates){ // calc3rdScores で score 降順ソート済み
+        picked.push(t3.boat);
+        cum += t3.score / scoreTotal;
+        if(cum >= pick3Target) break;
+      }
+      if(picked.length > 0) return picked;
+    }
+
+    // フォールバック: merged3rdMap が空の場合のみ p2 ベースを使用
     const place2List = sd.scenarioPlace2[winnerBoat]?.[kimari] || [];
     const candidates = place2List.filter(x => x.boat !== winnerBoat && x.boat !== secondBoat);
 
     if(candidates.length === 0) return [];
     if(candidates.length <= 2) return candidates.map(x => x.boat);
 
-    // p2 の合計で正規化してモード別累積%まで
     const totalP2 = candidates.reduce((s, x) => s + x.p2, 0) || 1;
     const picked = []; let cum = 0;
-    for(const item of candidates){ // candidates は既に p2 降順ソート済み
+    for(const item of candidates){
       picked.push(item.boat);
       cum += item.p2 / totalP2;
       if(cum >= pick3Target) break;
