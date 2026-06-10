@@ -1838,10 +1838,13 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdata
             const personEntry2 = winnerCO[b.name]?.[sc]?.['1'];
             const personRate2  = personEntry2?.rate2 ?? null;
             const personTrust2 = personEntry2?.trust ?? 0;
+            console.log(`[p2debug] ${b.name} ${sc}枠 baseP2:${baseP2?.toFixed(3)} personRate2:${personRate2} trust:${personTrust2} cond:${baseP2 != null && personRate2 != null && personTrust2 > 0.3}`);
             if(baseP2 != null && personRate2 != null && personTrust2 > 0.3){ // 他箇所と統一(count>=10相当)
               p2 = personRate2 * personTrust2 + baseP2 * (1 - personTrust2);
+              console.log(`[p2debug] → 個人補正適用 p2:${p2.toFixed(3)}`);
             } else {
               p2 = baseP2;
+              console.log(`[p2debug] → baseのみ p2:${p2?.toFixed(3)}`);
             }
             if(p2 == null){
               const bt = ranked2.find(r => r.boat === b.boat);
@@ -1902,6 +1905,7 @@ function calcScenarioData(ranked2, rawBoats, tenjiScoreMap, venueOverride, vdata
       const p2Sum = place2List.reduce((s, x) => s + x.p2, 0) || 1;
       place2List.forEach(x => { x.p2 = x.p2 / p2Sum; });
       place2List.sort((a, b) => b.p2 - a.p2);
+      console.log(`[p2debug] 正規化後(winner:${winner.boat} ${kimari}):`, place2List.map(x => `${x.boat}枠:${(x.p2*100).toFixed(0)}%`));
       scenarioPlace2[winner.boat][kimari] = place2List;
     }
   }
