@@ -34,11 +34,6 @@ const DATA_BASE_URL = (function() {
 
 // フェーズ2ローダー: data/index.json を先にfetchして存在する日付だけ並列fetch
 async function fetchAndMergeJsonData() {
-  // ローカル環境ではfetch不要（埋め込みデータで動作）
-  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-    return;
-  }
-
   // ── fetchヘルパー: 失敗しても null を返す ──
   // noCache=true のときのみ no-store（index.json用）、
   // それ以外はブラウザキャッシュを活用して高速化（変更なければ304で即返る）
@@ -63,6 +58,18 @@ async function fetchAndMergeJsonData() {
 
   const resultDates  = idx.result_dates  || [];   // ["20260512", "20260511", ...]
   const historyDates = idx.history_dates || [];
+
+  // ── today_YYYYMMDD.json を fetch して ALL_DATA にセット ──
+  // idx.today_date: "20260611" 形式（auto_push.py の write_data_index が出力）
+  const todayNd = idx.today_date;
+  if (todayNd) {
+    const todayData = await safeFetch(`${DATA_BASE_URL}/today_${todayNd}.json`);
+    if (todayData) {
+      for (const [venue, vdata] of Object.entries(todayData)) {
+        ALL_DATA[venue] = vdata;
+      }
+    }
+  }
 
   // ② RESULT_DATA: index.json に記録された日付だけfetch（404が出ない）
   const resultFetches = resultDates.map(nd =>
@@ -230,7 +237,11 @@ function _ensureTenjiCache() {
   }
   _tenjiCacheReady = true;
 }
-function tenjiKey(venue, date, race){ return `${venue}_${date}_${race}`; }
+function tenjiKey(venue, date, race){
+  // _ensureTenjiCache が YYYYMMDD → YYYY-MM-DD に変換するのに合わせる
+  const d = String(date).replace(/^(\d{4})(\d{2})(\d{2})$/, '$1-$2-$3');
+  return `${venue}_${d}_${race}`;
+}
 
 
 // ══════════════════════════════════════════════════════════════════
@@ -5638,9 +5649,13 @@ function updateEV(){
           // fetchできなくてもサイレントに無視（埋め込みデータで継続）
         }
       }
-      // 起動8秒後に1回 + 以降3分ごと（UIレンダ完了後に実行）
-      setTimeout(refreshTenjiData, 8000);
-      setInterval(refreshTenjiData, 3 * 60 * 1000);
+      // DATA が揃うまで待ってから即取得、以降3分ごと
+      function _waitAndRefreshTenji(){
+        if(DATA && DATA.date){ refreshTenjiData(); }
+        else { setTimeout(_waitAndRefreshTenji, 500); }
+      }
+      _waitAndRefreshTenji();
+      setInterval(refreshTenjiData, 3 * 60 * 1000); // 以降3分ごと
     })();
 
     // ── オッズを定期fetch（5分ごと）: data/odds_YYYYMMDD.json ──
@@ -5680,9 +5695,47 @@ function updateEV(){
           // fetchできなくてもサイレントに無視（埋め込みデータで継続）
         }
       }
-      // 起動10秒後に1回 + 以降30秒ごと
-      setTimeout(refreshOddsData, 10000);
-      setInterval(refreshOddsData, 30 * 1000);
+      // DATA が揃うまで待ってから即取得、以降30秒ごと
+      function _waitAndRefreshOdds(){
+        if(DATA && DATA.date){ refreshOddsData(); }
+        else { setTimeout(_waitAndRefreshOdds, 500); }
+      }
+      _waitAndRefreshOdds();
+      setInterval(refreshOddsData, 30 * 1000);  // 以降30秒ごと
+    })();
+
+    // ── 結果を定期fetch（1分ごと）: data/result_YYYYMMDD.json ──
+    (function _scheduleRefreshResult(){
+      let _lastResultHash = '';
+      async function refreshResultData(){
+        if(!DATA || !DATA.date) return;
+        const dateNd = DATA.date.replace(/-/g, '');
+        const url = `data/result_${dateNd}.json`;
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          if(!res.ok) return;
+          const latest = await res.json();
+          const _newHash = JSON.stringify(latest);
+          if(_newHash === _lastResultHash) return;
+          _lastResultHash = _newHash;
+          if(typeof latest === 'object' && latest !== null){
+            for(const [key, val] of Object.entries(latest)){
+              const m = key.match(/^(.+)_(\d+)$/);
+              const fullKey = m ? `${m[1]}_${dateNd}_${m[2]}` : `${key}_${dateNd}`;
+              RESULT_DATA[fullKey] = val;
+            }
+            console.log('[refreshResult] 結果更新完了:', Object.keys(latest).length + '件');
+            invalidateRenderCache();
+            autoRefreshCurrentView();
+          }
+        } catch(e){}
+      }
+      function _waitAndRefreshResult(){
+        if(DATA && DATA.date){ refreshResultData(); }
+        else { setTimeout(_waitAndRefreshResult, 500); }
+      }
+      _waitAndRefreshResult();
+      setInterval(refreshResultData, 60 * 1000);  // 以降1分ごと
     })();
   }
 
@@ -5692,7 +5745,10 @@ function updateEV(){
   fetchAndMergeJsonData()
     .then(() => {
       invalidateRenderCache(); // MASTER_EXT ロード後にキャッシュを破棄（スマホ遅延対応）
+      buildVenueTabs();        // ALL_DATA がセットされた後に会場タブを再構築
       autoRefreshCurrentView();
+      // fetch完了後にトップページ表示中なら再描画する
+      if (typeof showTopPage === 'function') showTopPage();
       // 起動時バックグラウンド事前計算（fetchAndMergeJsonData 完了後）
       _triggerPrefill();
     })

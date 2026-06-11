@@ -302,6 +302,9 @@ function drawSimCanvas(canvas, boats, scenario, boatMeta){
 // hit/rec 分離版・両方同時版に上書きする。
 (function _initCsvButtons() {
   function wire() {
+    // backtest_obf.js が未ロードの場合はスキップ
+    if (typeof exportBacktestCSV_hit === 'undefined') return;
+
     // data-csv-mode 属性で対象ボタンを特定する（推奨）
     document.querySelectorAll('[data-csv-mode]').forEach(btn => {
       const m = btn.getAttribute('data-csv-mode');
