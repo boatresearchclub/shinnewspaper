@@ -278,8 +278,12 @@ body {
 .alert-card {
   flex-shrink: 0; background: #fff;
   border: 1px solid rgba(239,159,39,0.55);
-  border-radius: var(--radius-sm); padding: 6px 10px;
-  min-width: 100px; cursor: pointer;
+  border-radius: var(--radius-sm); padding: 6px 8px;
+  width: 86px; min-width: 86px; max-width: 86px;
+  height: 86px; min-height: 86px; max-height: 86px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden; cursor: pointer;
   transition: background .12s, border-color .12s;
 }
 .alert-card:hover { background: #fff1e0; }
