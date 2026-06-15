@@ -1,0 +1,121 @@
+{
+  "venue": "児島",
+  "venue_slug": "kojima",
+  "date": "20260615",
+  "race": 11,
+  "fetched_at": "2026-06-15 16:37:09",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'48\"9",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "佐々木康幸",
+      "reg_no": "3909",
+      "time": "1'48\"9"
+    },
+    {
+      "rank": "2",
+      "boat": 3,
+      "name": "原田秀弥",
+      "reg_no": "3963",
+      "time": "1'50\"3"
+    },
+    {
+      "rank": "3",
+      "boat": 2,
+      "name": "浮田圭浩",
+      "reg_no": "4202",
+      "time": "1'51\"5"
+    },
+    {
+      "rank": "4",
+      "boat": 5,
+      "name": "井上尚悟",
+      "reg_no": "4750",
+      "time": "1'53\"3"
+    },
+    {
+      "rank": "5",
+      "boat": 4,
+      "name": "蒲原健太",
+      "reg_no": "4873",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "中越博紀",
+      "reg_no": "4260",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.1,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.24,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.27,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 110,
+      "ninki": null
+    },
+    {
+      "combo": "3",
+      "odds": 1440,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-3",
+      "odds": 230,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-3-2",
+      "odds": 990,
+      "ninki": 4
+    }
+  ],
+  "cancelled": false
+}
