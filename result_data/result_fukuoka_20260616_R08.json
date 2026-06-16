@@ -1,0 +1,47 @@
+{
+  "venue": "福岡",
+  "venue_slug": "fukuoka",
+  "date": "20260616",
+  "race": 8,
+  "fetched_at": "2026-06-16 16:00:07",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 760,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-3",
+      "odds": 1690,
+      "ninki": 7
+    }
+  ],
+  "cancelled": false
+}
