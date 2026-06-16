@@ -1,0 +1,47 @@
+{
+  "venue": "江戸川",
+  "venue_slug": "edogawa",
+  "date": "20260616",
+  "race": 10,
+  "fetched_at": "2026-06-16 15:34:37",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 2980,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 400,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 110,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-1",
+      "odds": 6960,
+      "ninki": 19
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-1-3",
+      "odds": 28910,
+      "ninki": 65
+    }
+  ],
+  "cancelled": false
+}
