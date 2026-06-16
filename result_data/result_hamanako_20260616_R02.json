@@ -1,0 +1,47 @@
+{
+  "venue": "浜名湖",
+  "venue_slug": "hamanako",
+  "date": "20260616",
+  "race": 2,
+  "fetched_at": "2026-06-16 12:10:10",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 440,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 220,
+      "ninki": null
+    },
+    {
+      "combo": "3",
+      "odds": 130,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-3",
+      "odds": 2300,
+      "ninki": 12
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-3-1",
+      "odds": 4790,
+      "ninki": 12
+    }
+  ],
+  "cancelled": false
+}
