@@ -1,0 +1,121 @@
+{
+  "venue": "常滑",
+  "venue_slug": "tokoname",
+  "date": "20260615",
+  "race": 3,
+  "fetched_at": "2026-06-16 23:37:16",
+  "kimari": "差し",
+  "henkan": [],
+  "racetime": "1'49\"2",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "鰐部太空海",
+      "reg_no": "5196",
+      "time": "1'49\"2"
+    },
+    {
+      "rank": "2",
+      "boat": 1,
+      "name": "松本純平",
+      "reg_no": "5051",
+      "time": "1'50\"1"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "中島孝平",
+      "reg_no": "4013",
+      "time": "1'51\"3"
+    },
+    {
+      "rank": "4",
+      "boat": 6,
+      "name": "久田敏之",
+      "reg_no": "4188",
+      "time": "1'52\"5"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "瓜生正義",
+      "reg_no": "3783",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 4,
+      "name": "遠藤エミ",
+      "reg_no": "4502",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.25,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.17,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.15,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 500,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 140,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-1",
+      "odds": 1110,
+      "ninki": 4
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-1-3",
+      "odds": 3190,
+      "ninki": 13
+    }
+  ],
+  "cancelled": false
+}
