@@ -1,0 +1,47 @@
+{
+  "venue": "常滑",
+  "venue_slug": "tokoname",
+  "date": "20260616",
+  "race": 2,
+  "fetched_at": "2026-06-16 11:13:58",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 350,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 110,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 280,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 590,
+      "ninki": 2
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-6",
+      "odds": 2970,
+      "ninki": 7
+    }
+  ],
+  "cancelled": false
+}
