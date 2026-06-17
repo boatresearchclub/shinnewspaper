@@ -1,0 +1,121 @@
+{
+  "venue": "住之江",
+  "venue_slug": "suminoe",
+  "date": "20260616",
+  "race": 7,
+  "fetched_at": "2026-06-17 10:22:44",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'50\"2",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "石原光",
+      "reg_no": "5076",
+      "time": "1'50\"2"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "飯山泰",
+      "reg_no": "3940",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "3",
+      "boat": 4,
+      "name": "清水攻二",
+      "reg_no": "3684",
+      "time": "1'52\"6"
+    },
+    {
+      "rank": "4",
+      "boat": 3,
+      "name": "北川敏弘",
+      "reg_no": "3211",
+      "time": "1'54\"0"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "藤田靖弘",
+      "reg_no": "4376",
+      "time": "1'55\"6"
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "近藤友宝",
+      "reg_no": "4439",
+      "time": "1'58\"0"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.22,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.24,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 240,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 110,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 290,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-4",
+      "odds": 830,
+      "ninki": 2
+    }
+  ],
+  "cancelled": false
+}
