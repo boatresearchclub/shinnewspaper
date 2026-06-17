@@ -1,0 +1,121 @@
+{
+  "venue": "住之江",
+  "venue_slug": "suminoe",
+  "date": "20260617",
+  "race": 2,
+  "fetched_at": "2026-06-17 16:03:48",
+  "kimari": "抜き",
+  "henkan": [],
+  "racetime": "1'51\"0",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 4,
+      "name": "島川海輝",
+      "reg_no": "5145",
+      "time": "1'51\"0"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "町田洸希",
+      "reg_no": "4969",
+      "time": "1'52\"0"
+    },
+    {
+      "rank": "3",
+      "boat": 1,
+      "name": "北川敏弘",
+      "reg_no": "3211",
+      "time": "1'52\"6"
+    },
+    {
+      "rank": "4",
+      "boat": 5,
+      "name": "岡村慶太",
+      "reg_no": "4545",
+      "time": "1'53\"5"
+    },
+    {
+      "rank": "5",
+      "boat": 3,
+      "name": "沖島広和",
+      "reg_no": "3986",
+      "time": "1'54\"8"
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "西村勝",
+      "reg_no": "3589",
+      "time": "1'56\"1"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.28,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.21,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.21,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.16,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 190,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-2",
+      "odds": 910,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-2-1",
+      "odds": 4160,
+      "ninki": 13
+    }
+  ],
+  "cancelled": false
+}
