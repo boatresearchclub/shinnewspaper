@@ -1,0 +1,121 @@
+{
+  "venue": "桐生",
+  "venue_slug": "kiryu",
+  "date": "20260616",
+  "race": 5,
+  "fetched_at": "2026-06-17 10:51:13",
+  "kimari": "まくり",
+  "henkan": [],
+  "racetime": "1'49\"2",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 4,
+      "name": "石原凪紗",
+      "reg_no": "5230",
+      "time": "1'49\"2"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "清水愛海",
+      "reg_no": "5163",
+      "time": "1'51\"3"
+    },
+    {
+      "rank": "3",
+      "boat": 1,
+      "name": "栗原直也",
+      "reg_no": "4973",
+      "time": "1'52\"8"
+    },
+    {
+      "rank": "4",
+      "boat": 3,
+      "name": "鈴木孝明",
+      "reg_no": "5066",
+      "time": "1'53\"3"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "大野芳顕",
+      "reg_no": "4363",
+      "time": "1'55\"2"
+    },
+    {
+      "rank": "6",
+      "boat": 5,
+      "name": "冨田秀幸",
+      "reg_no": "3519",
+      "time": "1'56\"2"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.22,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.23,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.2,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "4",
+      "odds": 1940,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "4",
+      "odds": 560,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 130,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "4-2",
+      "odds": 5510,
+      "ninki": 16
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "4-2-1",
+      "odds": 26460,
+      "ninki": 61
+    }
+  ],
+  "cancelled": false
+}
