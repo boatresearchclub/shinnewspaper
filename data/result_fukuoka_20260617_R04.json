@@ -1,0 +1,121 @@
+{
+  "venue": "福岡",
+  "venue_slug": "fukuoka",
+  "date": "20260617",
+  "race": 4,
+  "fetched_at": "2026-06-18 07:51:49",
+  "kimari": "差し",
+  "henkan": [],
+  "racetime": "1'50\"1",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "滝川真由子",
+      "reg_no": "4499",
+      "time": "1'50\"1"
+    },
+    {
+      "rank": "2",
+      "boat": 5,
+      "name": "堀之内紀代子",
+      "reg_no": "4011",
+      "time": "1'52\"1"
+    },
+    {
+      "rank": "3",
+      "boat": 4,
+      "name": "若狭奈美子",
+      "reg_no": "4373",
+      "time": "1'52\"6"
+    },
+    {
+      "rank": "4",
+      "boat": 1,
+      "name": "新田芳美",
+      "reg_no": "3470",
+      "time": "1'55\"1"
+    },
+    {
+      "rank": "5",
+      "boat": 3,
+      "name": "塩崎桐加",
+      "reg_no": "4589",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "西澤日花里",
+      "reg_no": "4720",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.26,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.26,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 320,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 240,
+      "ninki": null
+    },
+    {
+      "combo": "5",
+      "odds": 210,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-5",
+      "odds": 2670,
+      "ninki": 18
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-5-4",
+      "odds": 5520,
+      "ninki": 28
+    }
+  ],
+  "cancelled": false
+}
