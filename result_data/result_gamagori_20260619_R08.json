@@ -1,0 +1,118 @@
+{
+  "venue": "蒲郡",
+  "venue_slug": "gamagori",
+  "date": "20260619",
+  "race": 8,
+  "fetched_at": "2026-06-19 19:07:09",
+  "kimari": "まくり",
+  "henkan": [
+    4
+  ],
+  "racetime": "1'49\"9",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "山田理央",
+      "reg_no": "5218",
+      "time": "1'49\"9"
+    },
+    {
+      "rank": "2",
+      "boat": 5,
+      "name": "和田操拓",
+      "reg_no": "4649",
+      "time": "1'52\"1"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "楠原翔太",
+      "reg_no": "4684",
+      "time": "1'53\"2"
+    },
+    {
+      "rank": "4",
+      "boat": 6,
+      "name": "廣中良一",
+      "reg_no": "3875",
+      "time": "1'54\"2"
+    },
+    {
+      "rank": "5",
+      "boat": 1,
+      "name": "安田吉宏",
+      "reg_no": "4461",
+      "time": null
+    },
+    {
+      "rank": "欠",
+      "boat": 4,
+      "name": "吉岡誠",
+      "reg_no": "3567",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.24,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 240,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 130,
+      "ninki": null
+    },
+    {
+      "combo": "5",
+      "odds": 140,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-5",
+      "odds": 870,
+      "ninki": 5
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-5-3",
+      "odds": 2030,
+      "ninki": 9
+    }
+  ],
+  "cancelled": false
+}

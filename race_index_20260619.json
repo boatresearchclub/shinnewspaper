@@ -1,0 +1,138 @@
+{
+  "date": "2026-06-19",
+  "fetched_at": "07:05",
+  "venues": {
+    "戸田": {
+      "grade": "一般",
+      "title": "ヴィーナスシリーズ第６戦戸田中央メディックス埼玉杯",
+      "period": "6/18-6/23",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "02",
+      "is_joshi": true,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "平和島": {
+      "grade": "一般",
+      "title": "第４０回東京スポーツ賞",
+      "period": "6/18-6/21",
+      "day": "２日目",
+      "total_days": 4,
+      "jcd": "04",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "多摩川": {
+      "grade": "一般",
+      "title": "第１０回ａｕじぶん銀行賞",
+      "period": "6/17-6/22",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "05",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "蒲郡": {
+      "grade": "一般",
+      "title": "トランスワードトロフィー２０２６",
+      "period": "6/17-6/20",
+      "day": "３日目",
+      "total_days": 4,
+      "jcd": "07",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "津": {
+      "grade": "一般",
+      "title": "マンスリーＢＯＡＴＲＡＣＥ杯",
+      "period": "6/16-6/21",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "09",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "びわこ": {
+      "grade": "一般",
+      "title": "大阪スポーツ杯争奪　第３１回におの湖賞",
+      "period": "6/19-6/24",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "11",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "尼崎": {
+      "grade": "一般",
+      "title": "第３７回サンスポグリーンカップ争奪戦",
+      "period": "6/17-6/22",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "13",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "宮島": {
+      "grade": "G3",
+      "title": "マスターズリーグ第２戦デイリースポーツ杯",
+      "period": "6/17-6/22",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "17",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "G3",
+      "title": "サッポロビールカップ",
+      "period": "6/16-6/21",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "18",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "若松": {
+      "grade": "一般",
+      "title": "ＭＮＢＲ若松２ｎｄＢＯＡＴＢｏｙカップ",
+      "period": "6/18-6/21",
+      "day": "２日目",
+      "total_days": 4,
+      "jcd": "20",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "芦屋": {
+      "grade": "一般",
+      "title": "ＰａｙＰａｙ銀行賞",
+      "period": "6/15-6/20",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "21",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "大村": {
+      "grade": "G2",
+      "title": "ボートレース発祥地記念第３０回モーターボート誕生祭",
+      "period": "6/17-6/22",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "24",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    }
+  }
+}

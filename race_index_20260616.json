@@ -1,0 +1,138 @@
+{
+  "date": "2026-06-16",
+  "fetched_at": "23:37",
+  "venues": {
+    "桐生": {
+      "grade": "一般",
+      "title": "第２３回新東通信杯　ＢＴＳ福島開場１５周年記念",
+      "period": "6/14-6/18",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "01",
+      "is_joshi": false,
+      "cancel_status": "中止",
+      "race_kinds": {}
+    },
+    "江戸川": {
+      "grade": "一般",
+      "title": "スカパー！・ＪＬＣ杯ルーキーシリーズ第１３戦",
+      "period": "6/11-6/16",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "03",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "一般",
+      "title": "体感型動物園　ｉＺｏｏカップ",
+      "period": "6/13-6/16",
+      "day": "最終日",
+      "total_days": 4,
+      "jcd": "06",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "G1",
+      "title": "開設７３周年記念競走トコタンキング決定戦",
+      "period": "6/13-6/18",
+      "day": "４日目",
+      "total_days": 6,
+      "jcd": "08",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "津": {
+      "grade": "一般",
+      "title": "マンスリーＢＯＡＴＲＡＣＥ杯",
+      "period": "6/16-6/21",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "09",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "三国": {
+      "grade": "一般",
+      "title": "ＢＯＡＴＲＡＣＥ振興会会長賞第５０回九頭龍賞",
+      "period": "6/11-6/16",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "10",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "住之江": {
+      "grade": "一般",
+      "title": "ＭＢ選手会会長杯２０２６ダイスポジャンピーカップ",
+      "period": "6/14-6/17",
+      "day": "３日目",
+      "total_days": 4,
+      "jcd": "12",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "児島": {
+      "grade": "一般",
+      "title": "新選手宿舎完成記念　第４２回日本ＭＢ選手会代表杯",
+      "period": "6/11-6/16",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "16",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "徳山": {
+      "grade": "G3",
+      "title": "サッポロビールカップ",
+      "period": "6/16-6/21",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "18",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "下関": {
+      "grade": "一般",
+      "title": "ＭＮＢＲ下関２ｎｄ　日本モーターボート選手会会長杯",
+      "period": "6/12-6/17",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "19",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "芦屋": {
+      "grade": "一般",
+      "title": "ＰａｙＰａｙ銀行賞",
+      "period": "6/15-6/20",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "21",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "福岡": {
+      "grade": "G3",
+      "title": "オールレディース・ＬＯＶＥ　ＦＭ福岡なでしこカップ",
+      "period": "6/12-6/17",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "22",
+      "is_joshi": true,
+      "cancel_status": null,
+      "race_kinds": {}
+    }
+  }
+}

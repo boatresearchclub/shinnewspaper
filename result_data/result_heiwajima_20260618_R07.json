@@ -1,0 +1,47 @@
+{
+  "venue": "平和島",
+  "venue_slug": "heiwajima",
+  "date": "20260618",
+  "race": 7,
+  "fetched_at": "2026-06-18 15:07:46",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 130,
+      "ninki": null
+    },
+    {
+      "combo": "6",
+      "odds": 310,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-6",
+      "odds": 320,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-6-2",
+      "odds": 2260,
+      "ninki": 7
+    }
+  ],
+  "cancelled": false
+}

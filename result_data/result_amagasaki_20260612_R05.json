@@ -1,0 +1,121 @@
+{
+  "venue": "尼崎",
+  "venue_slug": "amagasaki",
+  "date": "20260612",
+  "race": 5,
+  "fetched_at": "2026-06-12 22:34:11",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'49\"0",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "宮田龍馬",
+      "reg_no": "5016",
+      "time": "1'49\"0"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "原田才一郎",
+      "reg_no": "5028",
+      "time": "1'50\"5"
+    },
+    {
+      "rank": "3",
+      "boat": 6,
+      "name": "深谷知博",
+      "reg_no": "4524",
+      "time": "1'52\"0"
+    },
+    {
+      "rank": "4",
+      "boat": 3,
+      "name": "豊田健士郎",
+      "reg_no": "4856",
+      "time": "1'52\"5"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "柳生泰二",
+      "reg_no": "4361",
+      "time": "1'55\"6"
+    },
+    {
+      "rank": "6",
+      "boat": 4,
+      "name": "秦英悟",
+      "reg_no": "4427",
+      "time": "1'56\"9"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.4,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.3,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.28,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 110,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 210,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 440,
+      "ninki": 3
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-6",
+      "odds": 3370,
+      "ninki": 14
+    }
+  ],
+  "cancelled": false
+}

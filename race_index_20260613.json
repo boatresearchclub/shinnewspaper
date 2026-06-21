@@ -1,0 +1,149 @@
+{
+  "date": "2026-06-13",
+  "fetched_at": "10:07",
+  "venues": {
+    "江戸川": {
+      "grade": "一般",
+      "title": "スカパー！・ＪＬＣ杯ルーキーシリーズ第１３戦",
+      "period": "6/11-6/16",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "03",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "浜名湖": {
+      "grade": "一般",
+      "title": "体感型動物園　ｉＺｏｏカップ",
+      "period": "6/13-6/16",
+      "day": "初日",
+      "total_days": 4,
+      "jcd": "06",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "蒲郡": {
+      "grade": "一般",
+      "title": "中京スポーツ杯争奪　蒲郡ボートキング決定戦",
+      "period": "6/9-6/13",
+      "day": "最終日",
+      "total_days": 5,
+      "jcd": "07",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "常滑": {
+      "grade": "G1",
+      "title": "開設７３周年記念競走トコタンキング決定戦",
+      "period": "6/13-6/18",
+      "day": "初日",
+      "total_days": 6,
+      "jcd": "08",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "三国": {
+      "grade": "一般",
+      "title": "ＢＯＡＴＲＡＣＥ振興会会長賞第５０回九頭龍賞",
+      "period": "6/11-6/16",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "10",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "びわこ": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎびわこ",
+      "period": "6/9-6/14",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "11",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "尼崎": {
+      "grade": "G1",
+      "title": "尼崎市市制１１０周年記念　尼崎センプルカップ",
+      "period": "6/8-6/13",
+      "day": "最終日",
+      "total_days": 6,
+      "jcd": "13",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "鳴門": {
+      "grade": "一般",
+      "title": "第６回鳴門渦潮歌手高瀬豊子杯競走",
+      "period": "6/10-6/13",
+      "day": "最終日",
+      "total_days": 4,
+      "jcd": "14",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "児島": {
+      "grade": "一般",
+      "title": "新選手宿舎完成記念　第４２回日本ＭＢ選手会代表杯",
+      "period": "6/11-6/16",
+      "day": "３日目",
+      "total_days": 6,
+      "jcd": "16",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "下関": {
+      "grade": "一般",
+      "title": "ＭＮＢＲ下関２ｎｄ　日本モーターボート選手会会長杯",
+      "period": "6/12-6/17",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "19",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "若松": {
+      "grade": "一般",
+      "title": "若松夜王Ｓ第１戦ミドルダービー日本ＭＢ選手会会長杯",
+      "period": "6/11-6/15",
+      "day": "３日目",
+      "total_days": 5,
+      "jcd": "20",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "福岡": {
+      "grade": "G3",
+      "title": "オールレディース・ＬＯＶＥ　ＦＭ福岡なでしこカップ",
+      "period": "6/12-6/17",
+      "day": "２日目",
+      "total_days": 6,
+      "jcd": "22",
+      "is_joshi": true,
+      "cancel_status": null,
+      "race_kinds": {}
+    },
+    "唐津": {
+      "grade": "一般",
+      "title": "にっぽん未来プロジェクト競走ｉｎ唐津",
+      "period": "6/9-6/14",
+      "day": "５日目",
+      "total_days": 6,
+      "jcd": "23",
+      "is_joshi": false,
+      "cancel_status": null,
+      "race_kinds": {}
+    }
+  }
+}

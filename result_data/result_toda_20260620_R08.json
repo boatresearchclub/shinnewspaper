@@ -1,0 +1,47 @@
+{
+  "venue": "戸田",
+  "venue_slug": "toda",
+  "date": "20260620",
+  "race": 8,
+  "fetched_at": "2026-06-20 14:28:25",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 1060,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 210,
+      "ninki": null
+    },
+    {
+      "combo": "6",
+      "odds": 200,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-6",
+      "odds": 3700,
+      "ninki": 15
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-6-3",
+      "odds": 10800,
+      "ninki": 41
+    }
+  ],
+  "cancelled": false
+}

@@ -1,0 +1,121 @@
+{
+  "venue": "唐津",
+  "venue_slug": "karatsu",
+  "date": "20260612",
+  "race": 4,
+  "fetched_at": "2026-06-12 22:33:05",
+  "kimari": "まくり",
+  "henkan": [],
+  "racetime": "1'49\"8",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "野口勝弘",
+      "reg_no": "4516",
+      "time": "1'49\"8"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "木村仁紀",
+      "reg_no": "4743",
+      "time": "1'50\"9"
+    },
+    {
+      "rank": "3",
+      "boat": 5,
+      "name": "小川晃司",
+      "reg_no": "3352",
+      "time": "1'52\"8"
+    },
+    {
+      "rank": "4",
+      "boat": 3,
+      "name": "上之晃弘",
+      "reg_no": "3843",
+      "time": "1'53\"5"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "花本夏樹",
+      "reg_no": "4181",
+      "time": "1'55\"3"
+    },
+    {
+      "rank": "6",
+      "boat": 1,
+      "name": "伊藤誠二",
+      "reg_no": "3713",
+      "time": "1'56\"9"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.1,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.29,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.08,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 120,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 110,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-4",
+      "odds": 550,
+      "ninki": 2
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-4-5",
+      "odds": 2060,
+      "ninki": 7
+    }
+  ],
+  "cancelled": false
+}

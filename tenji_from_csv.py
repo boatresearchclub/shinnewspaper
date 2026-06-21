@@ -378,8 +378,8 @@ def main():
         help="締め切り何分前から取得開始するか（デフォルト: 25）")
     ap.add_argument("--poll-interval", type=int, default=60,
         help="ポーリング間隔(秒)（デフォルト: 60）")
-    ap.add_argument("--out", default="./tenji_data",
-        help="テン展示データの保存先（デフォルト: ./tenji_data）")
+    ap.add_argument("--out", default=r"C:\Users\user\Desktop\データ収集\scripts\tenji_data",
+        help="テン展示データの保存先（デフォルト: tenji_data）")
     ap.add_argument("--no-save", action="store_true", help="保存しない")
     args = ap.parse_args()
 

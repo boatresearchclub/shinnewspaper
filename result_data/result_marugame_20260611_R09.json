@@ -1,0 +1,49 @@
+{
+  "venue": "丸亀",
+  "venue_slug": "marugame",
+  "date": "20260611",
+  "race": 9,
+  "fetched_at": "2026-06-11 19:16:11",
+  "kimari": null,
+  "henkan": [
+    6
+  ],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 1600,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 410,
+      "ninki": null
+    },
+    {
+      "combo": "3",
+      "odds": 270,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-3",
+      "odds": 5300,
+      "ninki": 20
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-3-2",
+      "odds": 21950,
+      "ninki": 59
+    }
+  ],
+  "cancelled": false
+}

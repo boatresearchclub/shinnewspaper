@@ -4737,7 +4737,29 @@ def main():
     print(f"\n[4/5] 会場統計・イン逃げ分析・会場別コースマスタ・展開別残存マスタ集計中... ({target_grade})")
     df_kaijo        = calc_kaijo_stats(ippan)
     df_in           = calc_in_nige_analysis(ippan)
-    df_venue_course = calc_venue_course_master(ippan)
+
+    # 会場別コースマスタ用：全グレード対象（当地成績）＋進入変更レース除外
+    _raw_waku_col = "艇番" if "艇番" in raw.columns else ("枠" if "枠" in raw.columns else None)
+    if "進入コース" in raw.columns and _raw_waku_col:
+        _nyujo = pd.to_numeric(raw["進入コース"], errors="coerce")
+        _waku  = pd.to_numeric(raw[_raw_waku_col], errors="coerce")
+        _changed_keys_raw = (
+            raw.loc[_nyujo != _waku, "日付"].astype(str) + "_" +
+            raw.loc[_nyujo != _waku, "会場名"].astype(str) + "_" +
+            raw.loc[_nyujo != _waku, "レース番号"].astype(str)
+        ).unique()
+        _all_keys_raw = (
+            raw["日付"].astype(str) + "_" +
+            raw["会場名"].astype(str) + "_" +
+            raw["レース番号"].astype(str)
+        )
+        raw_for_venue = raw[~_all_keys_raw.isin(_changed_keys_raw)].copy()
+        print(f"  [会場別コースマスタ] 進入変更レース除外: {len(_changed_keys_raw):,}レース")
+    else:
+        raw_for_venue = raw.copy()
+        print(f"  [会場別コースマスタ] 進入変更レース除外: スキップ（列なし）")
+
+    df_venue_course = calc_venue_course_master(raw_for_venue)  # 全グレード対象（当地成績）
     df_tenkai_venue, df_tenkai_national = calc_tenkai_survival_master(ippan)
 
     # ── ②③ 新規マスタ集計（一般戦のみ。G1/SGは一般戦データを継続使用） ──

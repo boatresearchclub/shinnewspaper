@@ -1,0 +1,121 @@
+{
+  "venue": "下関",
+  "venue_slug": "shimonoseki",
+  "date": "20260612",
+  "race": 12,
+  "fetched_at": "2026-06-13 02:41:17",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'49\"0",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "石渡鉄兵",
+      "reg_no": "3716",
+      "time": "1'49\"0"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "西村拓也",
+      "reg_no": "4397",
+      "time": "1'50\"3"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "吉川喜継",
+      "reg_no": "4218",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "4",
+      "boat": 6,
+      "name": "末永祐輝",
+      "reg_no": "4475",
+      "time": "1'52\"7"
+    },
+    {
+      "rank": "5",
+      "boat": 2,
+      "name": "林美憲",
+      "reg_no": "3743",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 5,
+      "name": "池永太",
+      "reg_no": "4364",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.21,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 170,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 140,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 130,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 320,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-3",
+      "odds": 1170,
+      "ninki": 3
+    }
+  ],
+  "cancelled": false
+}

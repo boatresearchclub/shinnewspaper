@@ -1,0 +1,121 @@
+{
+  "venue": "津",
+  "venue_slug": "tsu",
+  "date": "20260619",
+  "race": 4,
+  "fetched_at": "2026-06-19 12:28:11",
+  "kimari": "抜き",
+  "henkan": [],
+  "racetime": "1'50\"7",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "原村拓也",
+      "reg_no": "4894",
+      "time": "1'50\"7"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "八木治樹",
+      "reg_no": "4943",
+      "time": "1'51\"9"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "山下大輝",
+      "reg_no": "5126",
+      "time": "1'52\"5"
+    },
+    {
+      "rank": "4",
+      "boat": 2,
+      "name": "荒井翔伍",
+      "reg_no": "4608",
+      "time": "1'53\"4"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "新田洋一",
+      "reg_no": "4951",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 5,
+      "name": "鈴木柊介",
+      "reg_no": "5385",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.1,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.12,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.09,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.13,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 250,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 130,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 970,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 2390,
+      "ninki": 9
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-3",
+      "odds": 8020,
+      "ninki": 24
+    }
+  ],
+  "cancelled": false
+}

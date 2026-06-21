@@ -1,0 +1,121 @@
+{
+  "venue": "鳴門",
+  "venue_slug": "naruto",
+  "date": "20260612",
+  "race": 4,
+  "fetched_at": "2026-06-12 22:40:03",
+  "kimari": "まくり差し",
+  "henkan": [],
+  "racetime": "1'48\"3",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 3,
+      "name": "河野大",
+      "reg_no": "4704",
+      "time": "1'48\"3"
+    },
+    {
+      "rank": "2",
+      "boat": 1,
+      "name": "南彩寧",
+      "reg_no": "5297",
+      "time": "1'49\"6"
+    },
+    {
+      "rank": "3",
+      "boat": 5,
+      "name": "三苫晃幸",
+      "reg_no": "4463",
+      "time": "1'51\"1"
+    },
+    {
+      "rank": "4",
+      "boat": 4,
+      "name": "東潤樹",
+      "reg_no": "4574",
+      "time": "1'52\"5"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "佐々木和伸",
+      "reg_no": "3841",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 2,
+      "name": "鋤柄貴俊",
+      "reg_no": "3934",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.22,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.2,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 220,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 120,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 110,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-1",
+      "odds": 1680,
+      "ninki": 7
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-1-5",
+      "odds": 4870,
+      "ninki": 18
+    }
+  ],
+  "cancelled": false
+}

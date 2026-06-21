@@ -1,0 +1,121 @@
+{
+  "venue": "戸田",
+  "venue_slug": "toda",
+  "date": "20260618",
+  "race": 3,
+  "fetched_at": "2026-06-18 11:57:49",
+  "kimari": "差し",
+  "henkan": [],
+  "racetime": "1'49\"9",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 3,
+      "name": "浜田亜理沙",
+      "reg_no": "4546",
+      "time": "1'49\"9"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "谷川里江",
+      "reg_no": "3302",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "3",
+      "boat": 1,
+      "name": "野田彩加",
+      "reg_no": "5146",
+      "time": "1'52\"8"
+    },
+    {
+      "rank": "4",
+      "boat": 4,
+      "name": "山下夏鈴",
+      "reg_no": "5013",
+      "time": "1'54\"8"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "樋口由加里",
+      "reg_no": "4501",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "柴田愛梨",
+      "reg_no": "5108",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.24,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.2,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.3,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 280,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 120,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 210,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-2",
+      "odds": 1040,
+      "ninki": 5
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-2-1",
+      "odds": 3280,
+      "ninki": 12
+    }
+  ],
+  "cancelled": false
+}

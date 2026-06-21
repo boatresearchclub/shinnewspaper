@@ -21,6 +21,7 @@ fetch_tenji.py  —  boaters-boatrace.com テン展示データ 自動取得ツ�
 import argparse
 import json
 import re
+import threading
 import time
 from datetime import datetime
 from pathlib import Path
@@ -250,6 +251,66 @@ def _debug_typenames(html: str, missing_key: str):
 
 
 # ─────────────────────────────────────────────────────────────
+# __NEXT_DATA__ 抽出共通ヘルパー（メモリ最適化）
+# ─────────────────────────────────────────────────────────────
+# parse_tenji / parse_wind / parse_start_info / parse_motor は
+# いずれも同じ手順（HTML → BeautifulSoup → __NEXT_DATA__タグ → json.loads）
+# で apollo state を取り出している。
+#
+# fetch_one() は風情報ページの同一HTML文字列(wind_html)を
+# parse_wind() と parse_start_info() の両方に渡すため、何も対策しないと
+# 同じ（数百KB〜MB級になりうる）HTMLを2回 BeautifulSoup + json.loads する
+# ことになる。
+#
+# 対策: 直前に処理した1件分の (html文字列のid, apollo辞書) だけを
+# キャッシュする。
+#
+# 重要（スレッド安全性）: main_loop.py は会場ごとに別スレッドで
+# fetch_one() 等を並行実行する設計のため、単純なモジュールグローバル変数で
+# id(html) をキーにキャッシュすると、CPythonのid()がメモリアドレス由来で
+# 再利用されうる点と相まって、別スレッドが書き込んだ結果を誤って受け取る
+# 可能性が理論上ゼロではない。
+# これを完全に避けるため、threading.local() を使い「スレッドごとに
+# 独立したキャッシュ領域」を持たせる。各スレッドは自分が書いた値しか
+# 読めないため、競合状態は構造的に発生しない。
+_apollo_cache_local = threading.local()
+
+
+def _extract_apollo(html: str) -> dict:
+    """
+    HTML文字列から __NEXT_DATA__ の initialApolloState を取り出す。
+    解析できなければ空dictを返す（既存の各parse_*関数と同じ失敗時挙動）。
+
+    スレッドごとに直前1件分だけキャッシュするため、同一スレッド内で
+    同じHTML文字列オブジェクトが連続して渡された場合のみ再パースを
+    スキップする（fetch_one内でwind_htmlをparse_wind→parse_start_infoの
+    順に渡すケースが該当）。他スレッドの結果が混ざることはない。
+    """
+    cached_id     = getattr(_apollo_cache_local, "html_id", None)
+    cached_apollo = getattr(_apollo_cache_local, "apollo", None)
+
+    if html is not None and id(html) == cached_id:
+        return cached_apollo
+
+    from bs4 import BeautifulSoup
+
+    apollo: dict = {}
+    soup = BeautifulSoup(html, "html.parser")
+    nd = soup.find("script", {"id": "__NEXT_DATA__"})
+    if nd and nd.string:
+        try:
+            data = json.loads(nd.string)
+            apollo = data.get("props", {}).get("pageProps", {}).get("initialApolloState", {}) or {}
+        except Exception:
+            apollo = {}
+
+    # このスレッド用の直前1件分だけ更新（古いものは自動的に上書き）
+    _apollo_cache_local.html_id = id(html)
+    _apollo_cache_local.apollo  = apollo
+    return apollo
+
+
+# ─────────────────────────────────────────────────────────────
 # HTMLパース — テン展示テーブル抽出（3段階フォールバック）
 # ─────────────────────────────────────────────────────────────
 def parse_tenji(html: str, venue: str, date: str, race: int) -> list:
@@ -260,19 +321,7 @@ def parse_tenji(html: str, venue: str, date: str, race: int) -> list:
       CrawledRaceBeforeRacer  → tenjiTime(展示) / tenjiRank(展示順位) / tilt(チルト)
       CrawledRaceRacer        → name(選手名) / rank(級別)
     """
-    from bs4 import BeautifulSoup
-
-    soup = BeautifulSoup(html, "html.parser")
-    nd = soup.find("script", {"id": "__NEXT_DATA__"})
-    if not nd or not nd.string:
-        return []
-
-    try:
-        data = json.loads(nd.string)
-    except Exception:
-        return []
-
-    apollo = data.get("props", {}).get("pageProps", {}).get("initialApolloState", {})
+    apollo = _extract_apollo(html)
     if not apollo:
         return []
 
@@ -372,19 +421,7 @@ def parse_wind(html: str) -> dict:
     """
     __NEXT_DATA__ の CrawledRaceBeforeInfo から風・天候情報を抽出。
     """
-    from bs4 import BeautifulSoup
-
-    soup = BeautifulSoup(html, "html.parser")
-    nd = soup.find("script", {"id": "__NEXT_DATA__"})
-    if not nd or not nd.string:
-        return {}
-
-    try:
-        data = json.loads(nd.string)
-    except Exception:
-        return {}
-
-    apollo = data.get("props", {}).get("pageProps", {}).get("initialApolloState", {})
+    apollo = _extract_apollo(html)
     if not apollo:
         return {}
 
@@ -434,19 +471,7 @@ def parse_start_info(html: str) -> dict:
         ],
       }
     """
-    from bs4 import BeautifulSoup
-
-    soup = BeautifulSoup(html, "html.parser")
-    nd = soup.find("script", {"id": "__NEXT_DATA__"})
-    if not nd or not nd.string:
-        return {}
-
-    try:
-        data = json.loads(nd.string)
-    except Exception:
-        return {}
-
-    apollo = data.get("props", {}).get("pageProps", {}).get("initialApolloState", {})
+    apollo = _extract_apollo(html)
     if not apollo:
         return {}
 
@@ -614,19 +639,7 @@ def parse_motor(html: str, debug: bool = False) -> list:
     """
     __NEXT_DATA__ の Apollo State からモーター情報を抽出。
     """
-    from bs4 import BeautifulSoup
-
-    soup = BeautifulSoup(html, "html.parser")
-    nd = soup.find("script", {"id": "__NEXT_DATA__"})
-    if not nd or not nd.string:
-        return []
-
-    try:
-        data = json.loads(nd.string)
-    except Exception:
-        return []
-
-    apollo = data.get("props", {}).get("pageProps", {}).get("initialApolloState", {})
+    apollo = _extract_apollo(html)
     if not apollo:
         return []
 
@@ -978,6 +991,11 @@ def save_csv(rows: list, out_dir: Path, venue: str, date: str, race: int):
         df_old = df_old.reindex(columns=all_cols)
         df_new = df_new.reindex(columns=all_cols)
         df_out = pd.concat([df_old, df_new], ignore_index=True)
+        # 1レース分の保存ごとに呼ばれる関数のため、24会場×12レース規模だと
+        # 1日に数百回呼ばれうる。df_old/df_newは結合後は不要になるので、
+        # 関数を抜けるまで保持せず明示的に解放してピークメモリを抑える
+        # （出力結果には影響しない）。
+        del df_old, df_new
     else:
         df_out = df_new
     df_out.sort_values(["date", "race", "frame"], inplace=True)
@@ -1490,7 +1508,7 @@ def main():
     ap.add_argument("--all", action="store_true", help="全レース 1〜12R")
     ap.add_argument("--poll", type=int, default=0,
         help="ポーリング間隔(秒)。0=1回のみ")
-    ap.add_argument("--out", default="./tenji_data", help="保存先ディレクトリ")
+    ap.add_argument("--out", default=r"C:\Users\user\Desktop\データ収集\scripts\tenji_data", help="保存先ディレクトリ")
     ap.add_argument("--no-save", action="store_true", help="保存しない")
     ap.add_argument("--motor-debug", action="store_true",
         help="モーター取得時に Apollo の型/フィールド名をデバッグ出力する")

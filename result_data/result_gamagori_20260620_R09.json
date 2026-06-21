@@ -1,0 +1,47 @@
+{
+  "venue": "蒲郡",
+  "venue_slug": "gamagori",
+  "date": "20260620",
+  "race": 9,
+  "fetched_at": "2026-06-20 19:23:14",
+  "kimari": null,
+  "henkan": [],
+  "racetime": null,
+  "fly": [],
+  "order": [],
+  "start": [],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 1900,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 430,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 350,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-2",
+      "odds": 13930,
+      "ninki": 29
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-2-3",
+      "odds": 72350,
+      "ninki": 106
+    }
+  ],
+  "cancelled": false
+}

@@ -14,10 +14,25 @@ auto_push.py  —  CSV・展示情報JSON・index.html を GitHub に自動push
 """
 
 import subprocess, time, json, glob, os, re, sys, queue
+import threading, shutil, tempfile
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
+
+# ── Gitデバッグモード ─────────────────────────────────────────────────────────
+# True にすると _run_nolock が実行する全 git コマンドの
+# 終了コード・stdout/stderr をリアルタイムでコンソールに出力する。
+# push が「成功ログなのにGitHubが更新されない」問題の診断に使う。
+# 原因が特定できたら False に戻して運用する。
+_GIT_DEBUG: bool = True
+
+# ── モジュールレベル定数・ロック・キュー ──────────────────────────────────
+_git_lock        = threading.Lock()   # git操作の直列化
+_data_js_lock    = threading.Lock()   # data.js 読み書き排他
+_push_queue      = queue.Queue()      # pushキュー本体
+_DEPLOY_WAIT_SEC = 70                 # GitHub Pages 完了待ち秒
+_PUSH_BRANCH_CACHE: str = ""          # ブランチ名キャッシュ
 
 # ── Windows CP932 対策: stdout/stderr を UTF-8 に強制 ──────────────
 # PowerShell/コマンドプロンプトのデフォルトエンコードがCP932の場合、
@@ -163,9 +178,8 @@ def rebuild_master():
         return False
 
     log("  Excelマスタ更新検知 → master_data.json を再ビルド中...")
-    import sys as _sys
     result = subprocess.run(
-        [_sys.executable, str(BUILD_MASTER_PY), str(XLSX_PATH), str(MASTER_JSON)],
+        [sys.executable, str(BUILD_MASTER_PY), str(XLSX_PATH), str(MASTER_JSON)],
         capture_output=True, text=True, encoding="utf-8", errors="replace"
     )
     if result.returncode != 0:
@@ -990,13 +1004,12 @@ def parse_csv(filepath):
             _period_match = False
             if _period and date:
                 try:
-                    from datetime import datetime as _dt
-                    _year = _dt.now().year
+                    _year = datetime.now().year
                     _parts = _period.replace(" ", "").split("-")
                     if len(_parts) == 2:
-                        _start = _dt.strptime(f"{_year}/{_parts[0]}", "%Y/%m/%d").date()
-                        _end   = _dt.strptime(f"{_year}/{_parts[1]}", "%Y/%m/%d").date()
-                        _csv_d = _dt.strptime(date, "%Y-%m-%d").date()
+                        _start = datetime.strptime(f"{_year}/{_parts[0]}", "%Y/%m/%d").date()
+                        _end   = datetime.strptime(f"{_year}/{_parts[1]}", "%Y/%m/%d").date()
+                        _csv_d = datetime.strptime(date, "%Y-%m-%d").date()
                         _period_match = _start <= _csv_d <= _end
                 except Exception:
                     pass
@@ -1119,13 +1132,12 @@ def parse_csv(filepath):
                 _period_match = False
                 if _period and date:
                     try:
-                        from datetime import datetime as _dt2
-                        _year = _dt2.now().year
+                        _year = datetime.now().year
                         _parts = _period.replace(" ", "").split("-")
                         if len(_parts) == 2:
-                            _start = _dt2.strptime(f"{_year}/{_parts[0]}", "%Y/%m/%d").date()
-                            _end   = _dt2.strptime(f"{_year}/{_parts[1]}", "%Y/%m/%d").date()
-                            _csv_d = _dt2.strptime(date, "%Y-%m-%d").date()
+                            _start = datetime.strptime(f"{_year}/{_parts[0]}", "%Y/%m/%d").date()
+                            _end   = datetime.strptime(f"{_year}/{_parts[1]}", "%Y/%m/%d").date()
+                            _csv_d = datetime.strptime(date, "%Y-%m-%d").date()
                             _period_match = _start <= _csv_d <= _end
                     except Exception:
                         pass
@@ -1255,7 +1267,6 @@ def inject_master_ext_to_html():
 
 def inject_tenji_to_html(days_back=HISTORY_DAYS):
     """tenji_data/*.json を読んで index.html の TENJI_DATA を書き換える（過去日分も含む）"""
-    from datetime import timedelta
     today = datetime.now().date()
     target_dates = [
         (today - timedelta(days=d)).strftime("%Y%m%d")
@@ -1338,8 +1349,7 @@ def inject_tenji_to_html(days_back=HISTORY_DAYS):
     # 展示データありのJSONのみ対象。pushはブロックしない。
     if missing_wind:
         log(f"  ⚠ 風情報未取得: {len(missing_wind)}レース（展示あり）→ バックグラウンドで再取得")
-        import threading as _threading
-        _threading.Thread(
+        threading.Thread(
             target=_refetch_wind_and_push,
             args=(missing_wind, tenji_all, WIND_KEYS),
             daemon=True,
@@ -1458,7 +1468,6 @@ def _refetch_wind(missing_wind: list, tenji_all: dict, WIND_KEYS: tuple):
 
 def inject_comment_to_html(days_back=HISTORY_DAYS):
     """comment_data/*.json を読んで index.html の COMMENT_DATA を書き換える（過去日分も含む）"""
-    from datetime import timedelta
     today = datetime.now().date()
     target_dates = [
         (today - timedelta(days=d)).strftime("%Y%m%d")
@@ -1576,7 +1585,6 @@ def inject_result_to_html(days_back=RESULT_DAYS):
         }
     }
     """
-    from datetime import timedelta
     today = datetime.now().date()
     target_dates = [
         (today - timedelta(days=d)).strftime("%Y%m%d")
@@ -1648,7 +1656,6 @@ def write_result_json(days_back=None):
     """
     if days_back is None:
         days_back = RESULT_DAYS
-    from datetime import timedelta
     today = datetime.now().date()
 
     DATA_DIR.mkdir(exist_ok=True)
@@ -1723,7 +1730,6 @@ def write_history_json(days_back=None):
     """
     if days_back is None:
         days_back = HISTORY_DAYS
-    from datetime import timedelta
     today = datetime.now().date()
 
     DATA_DIR.mkdir(exist_ok=True)
@@ -1860,7 +1866,6 @@ def write_tenji_json_file(days_back=HISTORY_DAYS):
     inject_tenji_to_html() が構築する tenji_all dict と同一構造なので
     sample.js 側のパーサ変更は不要。
     """
-    from datetime import timedelta
     today = datetime.now().date()
     target_dates = [
         (today - timedelta(days=d)).strftime("%Y%m%d")
@@ -2083,7 +2088,9 @@ def fetch_result_for_venues(venues_in_csv: dict[str, str]) -> bool:
         write_data_index()     # インデックスも更新
         # commit+pushはキューに委譲（他系統のpushと重ならないように）
         with _git_lock:
-            run(["git", "add", str(INDEX_HTML)])
+            # [修正④] run() は内部でも _git_lock を取得するためデッドロックになる。
+            # _git_lock 保持中は必ず _run_nolock() を使う。
+            _run_nolock(["git", "add", str(INDEX_HTML)])
             code, out = _run_nolock(["git", "status", "--porcelain"])
             tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
             if tracked:
@@ -2105,7 +2112,6 @@ def inject_history_to_html(days_back=HISTORY_DAYS):
     過去 days_back 日分のCSVを読んで index.html の ALL_DATA_HISTORY を書き換える。
     ALL_DATA_HISTORY = {"2026-05-04": {"鳴門": {...}, ...}, "2026-05-03": {...}}
     """
-    from datetime import timedelta
     today = datetime.now().date()
     history = {}
 
@@ -2379,77 +2385,113 @@ def _build_deadline_map(venues_in_csv: dict) -> dict:
     return deadline_map
 
 
-def fetch_odds_for_venues(venues_in_csv: dict) -> bool:
+def _data_js_ensure_placeholders() -> None:
     """
-    当日CSVに存在する会場のオッズを「1巡」取得して odds_data/ に保存する。
-
-    fetch_odds.py の fetch_all_races() を呼び出す薄いラッパー。
-    ループ制御は呼び出し元（_odds_loop_worker）が行う。
-    失敗しても例外を外に投げず False を返す（メインループを止めない）。
-
-    Returns
-    -------
-    True: 取得成功（アクティブレースの有無に関わらず）
-    False: インポートエラー or 例外
+    data.js を読み込み、必要な変数宣言が欠けていれば補完して書き直す。
+    強制終了・初期化後に宣言が消えた場合の自動修復。
     """
+    if not DATA_JS.exists():
+        return
     try:
-        from fetch_odds import fetch_all_races
-    except ImportError:
-        log("  ⚠ fetch_odds.py が見つかりません → オッズ取得スキップ")
-        return False
+        text = DATA_JS.read_text(encoding="utf-8")
+    except Exception:
+        return
+    added = []
+    for kw, varname, default in _DATA_JS_REQUIRED_VARS:
+        if re.search(r'(?:let|const)\s+' + re.escape(varname) + r'\s*=', text):
+            continue
+        text = f"{kw} {varname} = {default};\n" + text
+        added.append(varname)
+    if added:
+        try:
+            with open(DATA_JS, 'w', encoding='utf-8') as _wf:
+                _wf.write(text)
+            log(f"  [data.js] 欠損宣言を補完: {', '.join(added)}")
+        except Exception as e:
+            log(f"  [data.js] 補完書き込み失敗: {e}")
 
-    # CSVと公式サイトから締め切り時刻マップを構築
-    deadline_map = _build_deadline_map(venues_in_csv)
-    if not deadline_map:
-        log("  ⚠ 締め切り時刻マップ取得不可 → レース番号順で取得")
+def _data_js_read() -> str:
+    """ロックを取得してから data.js を読み込む"""
+    with _data_js_lock:
+        # DATA_JS が存在すればそちらを、なければ INDEX_HTML にフォールバック
+        target = DATA_JS if DATA_JS.exists() else INDEX_HTML
+        return target.read_text(encoding="utf-8")
 
+
+def _data_js_write(text: str) -> None:
+    """ロックを取得してから data.js に書き込む"""
+    with _data_js_lock:
+        target = DATA_JS if DATA_JS.exists() else INDEX_HTML
+        # Windows の OSError: [Errno 22] 対策:
+        # NUL文字(\x00)および他のWindows不正制御文字を除去する
+        # （改行\x0a・タブ\x09・CR\x0dは正常なので残す）
+        cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        try:
+            with open(target, 'w', encoding='utf-8') as _wf:
+                _wf.write(cleaned)
+        except OSError as e:
+            log(f"  [data.js] ✕ 書き込み失敗: {e} → 一時ファイル経由でリトライ")
+            with tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False,
+                                            dir=str(target.parent), suffix='.tmp') as tf:
+                tf.write(cleaned)
+                tmp_path = tf.name
+            shutil.move(tmp_path, str(target))
+
+
+
+# ── オッズ取得は main_loop.py が担当 ────────────────────────────────────────
+# fetch_odds_for_venues / _odds_loop_worker / _write_and_push_odds_json /
+# _start_odds_loop_if_needed は削除。
+# auto_push.py は odds_data/*.json の変化を検知して push するだけ。
+
+
+def _detect_push_branch() -> str:
+    """
+    ローカルリポジトリの現在チェックアウトブランチ名を返す。
+    取得失敗時は "main" にフォールバック（後方互換）。
+    結果を _PUSH_BRANCH_CACHE にキャッシュして2回目以降は git を呼ばない。
+    """
+    global _PUSH_BRANCH_CACHE
+    if _PUSH_BRANCH_CACHE:
+        return _PUSH_BRANCH_CACHE
     try:
-        log(f"  オッズ取得開始（締め切り近い順）: {list(venues_in_csv.keys())}")
-        saved, _wait, _has_active = fetch_all_races(
-            venues_in_csv, verbose=True, deadline_map=deadline_map
+        r = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(SCRIPTS_DIR),
+            capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
-        log(f"  ✓ オッズ1巡完了: {len(saved)}ファイル保存")
-        return True
+        branch = r.stdout.strip()
+        if branch and branch != "HEAD":
+            _PUSH_BRANCH_CACHE = branch
+            log(f"  [GIT] 使用ブランチ自動検出: '{branch}'")
+            return branch
     except Exception as e:
-        log(f"  ✕ オッズ取得エラー: {e}")
-        return False
-
-
-# ── オッズ永続ループワーカー ───────────────────────────────────────────────────
-# このスレッドが fetch_all_races() を繰り返し呼び出す。
-# スレッドが例外で死んでもメインループが検知して再起動する。
-import threading as _threading
-_odds_worker_thread: Optional[_threading.Thread] = None
-_odds_worker_stop   = _threading.Event()      # 停止シグナル
-_odds_worker_done   = False                   # 正常終了フラグ（全締め切り後の再起動防止）
-
-# data.js への書き込みを排他制御するロック
-# 複数スレッドが同時に write_text() を呼ぶと Windows で OSError(22) が発生するため
-_data_js_lock = _threading.Lock()
-
-# ── git操作を排他制御するロック ───────────────────────────────────────────────
-# 複数スレッド（メインループ・バックグラウンド買い目計算・オッズループ・結果取得）が
-# 同時に git add/commit/push を実行すると index.lock の競合 (WinError 32) が発生する。
-# すべての git 操作をこのロックで直列化して競合を防ぐ。
-_git_lock = _threading.Lock()
-
-# ── pushキュー: 全系統のpushをここに集約して直列処理 ──────────────────────────
-# GitHub Pagesは短時間に複数pushが来ると前のデプロイをCancelledにする。
-# 全pushをこのキューに入れ、専用ワーカーが順番に処理することで
-# Cancelledを防ぐ。
-#
-# キューのアイテム形式:
-#   ("files",  [Path, ...], commit_msg)   → 通常のファイルpush
-#   ("raw",    None,        commit_msg)   → git add済み想定・commit+pushのみ
-#
-_push_queue: queue.Queue = queue.Queue()
-_DEPLOY_WAIT_SEC = 130  # GitHub Pagesデプロイ完了までの待機秒数（約2分）
+        log(f"  [GIT] ブランチ検出失敗: {e} → 'main' にフォールバック")
+    _PUSH_BRANCH_CACHE = "main"
+    return _PUSH_BRANCH_CACHE
 
 def _push_queue_worker():
     """
     pushキューを順番に処理する専用スレッド。
     前のpushから _DEPLOY_WAIT_SEC 秒待ってから次を実行することで
     GitHub Pages の Cancelled 連鎖を防ぐ。
+
+    [修正内容 2026-06]
+    バグ①: code変数スコープ汚染による偽陽性の排除
+      - push_code / push_branch を with _git_lock: の外側スコープで宣言し、
+        main/masterフォールバック後の「どのブランチで何が起きたか」を
+        正確に判定・ログ出力する。
+      - 旧実装: master フォールバックが成功(code=0)すると、main への push が
+        失敗していても「✓ push完了」と表示される致命的な偽陽性バグがあった。
+
+    バグ②: git push の stdout/stderr 握り潰しの排除
+      - _run_nolock の戻り値 output を _ で捨てず、push_out として保持。
+      - 失敗時は push_out の内容（rejected/Authentication failed 等）をログ出力。
+      - _GIT_DEBUG=True 時は _run_nolock 内で全コマンドの出力を自動表示。
+
+    バグ③: git commit 失敗の無視を排除
+      - commit_code を取得し、0以外なら push をスキップして原因をログ出力。
+      - 旧実装: _run_nolock(["git", "commit", ...]) の戻り値を完全に捨てていた。
     """
     last_push_time = 0.0
     while True:
@@ -2470,37 +2512,72 @@ def _push_queue_worker():
             log(f"  [PushQueue] ⏳ デプロイ完了待ち {wait:.0f}秒...")
             time.sleep(wait)
 
+        # ── with _git_lock: の外側で宣言（スコープ汚染バグの根本対策） ──
+        push_code   = -1        # 最終的な push の終了コード
+        push_branch = "unknown" # 実際に push を試みたブランチ名
+
         try:
             with _git_lock:
+                # ── git add（"files" タイプのみ）──
                 if kind == "files" and files:
                     for f in files:
-                        _run_nolock(["git", "add", str(f)])
+                        add_code, add_out = _run_nolock(["git", "add", str(f)])
+                        if add_code != 0:
+                            log(f"  [PushQueue] ⚠ git add 失敗 ({Path(str(f)).name}): {add_out[:200]}")
 
-                code, out = _run_nolock(["git", "status", "--porcelain"])
-                tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
+                # ── git status で差分確認 ──
+                _sc, status_out = _run_nolock(["git", "status", "--porcelain"])
+                tracked = [l for l in status_out.strip().splitlines() if not l.startswith("??")]
                 if not tracked:
                     log(f"  [PushQueue] 差分なし → スキップ ({msg})")
                     _push_queue.task_done()
                     continue
 
-                _run_nolock(["git", "commit", "-m", msg])
-                code, _ = _run_nolock(["git", "push", "origin", "main"])
-                if code != 0:
-                    code, _ = _run_nolock(["git", "push", "origin", "master"])
+                # ── git commit ──（バグ③修正: 戻り値を取得して失敗を検知）
+                commit_code, commit_out = _run_nolock(["git", "commit", "-m", msg])
+                if commit_code != 0:
+                    log(f"  [PushQueue] ✕ git commit 失敗 (code={commit_code}) → pushをスキップ")
+                    if commit_out:
+                        log(f"  [PushQueue]   commit詳細: {commit_out[:400]}")
+                    _push_queue.task_done()
+                    continue
 
-            if code == 0:
-                last_push_time = time.time()
-                log(f"  [PushQueue] ✓ push完了: {msg}")
-            else:
-                log(f"  [PushQueue] ✕ push失敗: {msg}")
+                # ── git push ──（ブランチ自動検出版）
+                # バグ①修正: ブランチ名をハードコードせず git で現在のブランチを検出する。
+                # 旧実装の main→masterフォールバックは「masterに謎のブランチが作られるだけで
+                # mainは更新されない」という偽陽性の温床だったため廃止。
+                push_branch = _detect_push_branch()
+                push_code, push_out = _run_nolock(["git", "push", "origin", push_branch])
+                if push_code != 0:
+                    log(f"  [PushQueue] ✕ push origin {push_branch} 失敗 (code={push_code})")
+                    if push_out:
+                        log(f"  [PushQueue]   push失敗詳細: {push_out[:400]}")
+                    # ── upstream 未設定エラーのとき --set-upstream で再試行 ──
+                    if "no upstream branch" in push_out or "has no upstream" in push_out:
+                        log(f"  [PushQueue]   upstream未設定を検出 → --set-upstream で再試行")
+                        push_code, push_out = _run_nolock(
+                            ["git", "push", "--set-upstream", "origin", push_branch]
+                        )
+                        if push_code != 0 and push_out:
+                            log(f"  [PushQueue]   --set-upstream も失敗: {push_out[:400]}")
 
         except Exception as e:
             log(f"  [PushQueue] ✕ 例外: {e}")
+            _push_queue.task_done()
+            continue
+
+        # ── 結果判定（with _git_lock: の外・push_code スコープ確定後） ──
+        # バグ①修正: push_code は必ず「最後に実際に push したブランチの終了コード」になる
+        if push_code == 0:
+            last_push_time = time.time()
+            log(f"  [PushQueue] ✓ push完了 (branch={push_branch}): {msg}")
+        else:
+            log(f"  [PushQueue] ✕ push失敗 (branch={push_branch}, code={push_code}): {msg}")
 
         _push_queue.task_done()
 
 # ワーカースレッドを起動
-_push_queue_thread = _threading.Thread(target=_push_queue_worker, daemon=True)
+_push_queue_thread = threading.Thread(target=_push_queue_worker, daemon=True)
 _push_queue_thread.start()
 
 
@@ -2564,278 +2641,12 @@ def _data_js_write(text: str) -> None:
                 _wf.write(cleaned)
         except OSError as e:
             log(f"  [data.js] ✕ 書き込み失敗: {e} → 一時ファイル経由でリトライ")
-            import tempfile, shutil as _shutil
             with tempfile.NamedTemporaryFile('w', encoding='utf-8', delete=False,
                                             dir=str(target.parent), suffix='.tmp') as tf:
                 tf.write(cleaned)
                 tmp_path = tf.name
-            _shutil.move(tmp_path, str(target))
+            shutil.move(tmp_path, str(target))
 
-
-def _check_missing_tenji_and_odds(venues: dict, deadline_map: dict) -> None:
-    """
-    全レース終了後に展示情報・オッズが取得できていないレースをチェックしてログ出力し、
-    最新データを index.html に埋め込んで最終 git push する。
-
-    venues: {会場名: 日付文字列}
-    deadline_map: {会場名: {rno(int or str): "HH:MM"}}
-    """
-    log("  [終了チェック] 展示情報・オッズ 取得状況を確認中...")
-    any_missing = False
-
-    for venue, date_str in venues.items():
-        slug    = VENUE_SLUG.get(venue, venue)
-        date_nd = date_str.replace("-", "")
-        race_nos = sorted(deadline_map.get(venue, {}).keys(), key=lambda x: int(x))
-
-        if not race_nos:
-            continue
-
-        missing_tenji = []
-        missing_odds  = []
-
-        for rno in race_nos:
-            rno_int = int(rno)   # int/str どちらでも対応
-
-            # 展示チェック: tenji_{slug}_{date_nd}_R{N}.json  (ゼロ埋めなし)
-            tenji_path = TENJI_DIR / f"tenji_{slug}_{date_nd}_R{rno_int}.json"
-            if not tenji_path.exists():
-                missing_tenji.append(rno_int)
-
-            # オッズチェック: odds_{slug}_{date_nd}_R{NN}.json (2桁ゼロ埋め)
-            odds_path = ODDS_DIR / f"odds_{slug}_{date_nd}_R{rno_int:02d}.json"
-            if not odds_path.exists():
-                missing_odds.append(rno_int)
-
-        if missing_tenji:
-            log(f"  [終了チェック] ⚠ {venue}: 展示情報なし → R{', R'.join(str(r) for r in missing_tenji)}")
-            any_missing = True
-        if missing_odds:
-            log(f"  [終了チェック] ⚠ {venue}: オッズなし    → R{', R'.join(str(r) for r in missing_odds)}")
-            any_missing = True
-
-        if not missing_tenji and not missing_odds:
-            log(f"  [終了チェック] ✅ {venue}: 展示・オッズ すべて取得済み ({len(race_nos)}R)")
-
-    if not any_missing:
-        log("  [終了チェック] ✅ 全会場・全レース 展示情報・オッズ 取得完了")
-    else:
-        log("  [終了チェック] ⚠ 上記の未取得レースがありました（手動確認推奨）")
-
-    # ── 最終push: 最新のオッズ・展示・買い目を index.html に埋め込んでpush ──
-    log("  [終了チェック] 最終データ埋め込み＋push 開始...")
-    try:
-        inject_odds_to_html()
-        inject_tenji_to_html()
-        inject_comment_to_html()
-        inject_all_data_to_html()
-        inject_master_ext_to_html()
-        write_all_json_files()
-        pushed = git_push([INDEX_HTML])
-        if pushed:
-            log("  [終了チェック] ✅ 最終push完了 → アプリに反映されました")
-        else:
-            log("  [終了チェック] 変更なし・pushスキップ（すでに最新）")
-    except Exception as e:
-        log(f"  [終了チェック] ✕ 最終push失敗: {e}")
-
-    log("  [終了チェック] 完了 → auto_push.py は監視を継続します（Ctrl+C で終了）")
-
-
-def _odds_loop_worker() -> None:
-    """
-    バックグラウンドで fetch_all_races() を繰り返し呼び出す永続ワーカー。
-
-    【サーバー負荷対策】
-      - リクエスト間隔は fetch_odds.py 側の優先度ロジックに従う
-        （最優先1.5秒 / 通常3.0秒 / 低優先3.0秒）
-      - 巡回間の待機は fetch_all_races() が返す next_wait_sec を使用
-        （最優先30秒 / 通常90秒 / 低優先180秒）
-      - 全レース締め切り or 確定済みになったらループ終了
-
-    【エラー処理】
-      - fetch_all_races() 内の例外はここでキャッチしてログ出力後リトライ
-      - 連続エラー時は指数バックオフ（最大10分）でリトライ間隔を延ばす
-    """
-    try:
-        from fetch_odds import fetch_all_races
-    except ImportError:
-        log("  [OddsLoop] ⚠ fetch_odds.py が見つかりません → ワーカー終了")
-        return
-
-    log("  [OddsLoop] 🟢 オッズ永続ループ開始")
-
-    consecutive_errors = 0
-
-    while not _odds_worker_stop.is_set():
-        # 停止シグナル確認
-        if _odds_worker_stop.is_set():
-            break
-
-        # 最新の会場リストと締め切りマップを都度取得（CSV追加・変更に対応）
-        current_venues = get_venues_in_today_csvs()
-        if not current_venues:
-            log("  [OddsLoop] 当日CSV未着 → 60秒後に再確認")
-            _odds_worker_stop.wait(60)
-            continue
-
-        deadline_map = _build_deadline_map(current_venues)
-
-        # deadline_map が空の場合は互換モード（has_active=False）になって
-        # ループが即終了してしまうため、リトライ待機する
-        if not deadline_map:
-            log("  [OddsLoop] ⚠ 締切時刻マップ取得失敗 → 60秒後に再試行")
-            _odds_worker_stop.wait(60)
-            continue
-
-        try:
-            saved, next_wait_sec, has_active = fetch_all_races(
-                current_venues, verbose=True, deadline_map=deadline_map
-            )
-            consecutive_errors = 0   # 成功したらエラーカウントリセット
-
-            # 取得したファイルがあれば【2段階push】
-            # ① 軽量: odds_YYYYMMDD.json のみ即時push（data.js書き換えなし → 高速）
-            # ② 通常: data.js への埋め込みpush（アプリ再起動時のフォールバック）
-            if saved:
-                _write_and_push_odds_json(saved)
-                inject_odds_to_html()
-                with _git_lock:
-                    run(["git", "add", str(INDEX_HTML)])
-                    if DATA_JS.exists():
-                        run(["git", "add", str(DATA_JS)])
-                    code, out = _run_nolock(["git", "status", "--porcelain"])
-                    tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
-                    if tracked:
-                        msg = f"odds update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-                        _push_queue.put(("raw", None, msg))
-                        log(f"  [OddsLoop] ✓ オッズpushキューに追加 ({len(saved)}件)")
-
-            if not has_active:
-                # deadline_map が正常に取れていた場合のみ真の終了とみなす
-                # （空 deadline_map で互換モード終了した場合の誤終了を防ぐ）
-                if deadline_map:
-                    log("  [OddsLoop] ✅ 全レース締め切り済み・確定待ちなし → ループ終了")
-                    _check_missing_tenji_and_odds(current_venues, deadline_map)
-                    break
-                else:
-                    log("  [OddsLoop] ⚠ deadline_map なしで終了 → 60秒後にリトライ")
-                    _odds_worker_stop.wait(60)
-                    continue
-
-            # 次巡まで待機（停止シグナルを受け取れるように wait を使用）
-            if next_wait_sec > 0:
-                _odds_worker_stop.wait(next_wait_sec)
-
-        except Exception as e:
-            consecutive_errors += 1
-            # 指数バックオフ: 1回目60秒 → 2回目120秒 → … → 最大600秒
-            backoff = min(60 * (2 ** (consecutive_errors - 1)), 600)
-            log(f"  [OddsLoop] ✕ エラー({consecutive_errors}回連続): {e} → {backoff}秒後リトライ")
-            _odds_worker_stop.wait(backoff)
-
-    log("  [OddsLoop] 🔴 オッズ永続ループ終了")
-    global _odds_worker_done
-    _odds_worker_done = True
-
-
-def _write_and_push_odds_json(saved_paths: list) -> bool:
-    """
-    オッズ取得直後に呼ぶ軽量push。
-    data/odds_YYYYMMDD.json を更新してそのファイルだけgit push する。
-    data.js（巨大）は触らないため push が高速に完了する。
-    """
-    if not saved_paths:
-        return False
-
-    DATA_DIR.mkdir(exist_ok=True)
-    slug_venue = {v: k for k, v in VENUE_SLUG.items()}
-
-    by_date: dict[str, dict] = {}
-    for fpath in sorted(ODDS_DIR.glob("odds_*.json")):
-        m = re.match(r"odds_([a-z]+)_(\d{8})_R(\d{2})\.json$", fpath.name)
-        if not m:
-            continue
-        slug, date_nd, rno_str = m.group(1), m.group(2), str(int(m.group(3)))
-        venue = slug_venue.get(slug, slug)
-        try:
-            if fpath.stat().st_size == 0:
-                continue
-            with open(fpath, encoding="utf-8") as f:
-                data = json.load(f)
-        except Exception:
-            continue
-        race_data = {k: v for k, v in data.items() if k != "fetched_at"}
-        by_date.setdefault(date_nd, {}).setdefault(venue, {})[rno_str] = race_data
-
-    if not by_date:
-        return False
-
-    written_paths = []
-    for date_nd, venues_data in by_date.items():
-        out_path = DATA_DIR / f"odds_{date_nd}.json"
-        with open(out_path, 'w', encoding='utf-8') as _wf:
-            _wf.write(json.dumps(venues_data, ensure_ascii=False, separators=(",", ":")))
-        written_paths.append(out_path)
-
-    if not written_paths:
-        return False
-
-    with _git_lock:
-        for p in written_paths:
-            _run_nolock(["git", "add", str(p)])
-        code, out = _run_nolock(["git", "status", "--porcelain"])
-        tracked = [l for l in out.strip().splitlines() if not l.startswith("??")]
-        if not tracked:
-            return False
-        total_races = sum(len(races) for venues in by_date.values() for races in venues.values())
-        msg = f"odds json {datetime.now().strftime('%Y-%m-%d %H:%M')} ({total_races}R)"
-        _push_queue.put(("raw", None, msg))
-    log(f"  [OddsJSON] ✓ 軽量pushキューに追加: {[p.name for p in written_paths]}")
-    return True
-
-
-def _start_odds_loop_if_needed() -> None:
-    """
-    オッズ永続ループスレッドが未起動 or 死亡していれば再起動する。
-    メインループから定期的に呼ばれる（死活監視＋自動再起動）。
-    全締め切り後に正常終了した場合（_odds_worker_done=True）は再起動しない。
-    ただし日付が変わった場合はフラグをリセットして翌日分を取得できるようにする。
-    """
-    global _odds_worker_thread, _odds_worker_stop, _odds_worker_done
-
-    # 日付が変わっていたら「正常終了済み」フラグをリセット
-    if not hasattr(_start_odds_loop_if_needed, '_done_date'):
-        _start_odds_loop_if_needed._done_date = None
-    today = today_str()
-    if _odds_worker_done and _start_odds_loop_if_needed._done_date != today:
-        log("  [OddsLoop] 日付変更を検知 → 正常終了フラグをリセット（翌日分取得を開始）")
-        _odds_worker_done = False
-        _start_odds_loop_if_needed._done_date = today
-
-    # 正常終了済み（全レース締め切り）なら再起動しない
-    if _odds_worker_done:
-        return
-
-    venues = get_venues_in_today_csvs()
-    if not venues:
-        return   # 当日CSVがなければ起動しない
-
-    if _odds_worker_thread is not None and _odds_worker_thread.is_alive():
-        return   # 正常稼働中 → 何もしない
-
-    if _odds_worker_thread is not None:
-        log("  [OddsLoop] ⚠ スレッド停止を検知 → 再起動します")
-
-    # 停止シグナルをリセットして新スレッドを起動
-    _odds_worker_stop.clear()
-    _odds_worker_thread = _threading.Thread(
-        target=_odds_loop_worker,
-        daemon=True,
-        name="OddsLoopWorker",
-    )
-    _odds_worker_thread.start()
-    log("  [OddsLoop] 🟢 スレッド起動完了")
 
 
 def inject_race_entry_to_viewer(csv_paths: list) -> bool:
@@ -2994,10 +2805,9 @@ def fetch_motor_for_csv(csv_paths: list):
         for f in TENJI_DIR.glob(f"tenji_{slug}_{date_nodash}_R*.json"):
             m = re.search(r"_R(\d{2})\.json$", f.name)
             if m:
-                import json as _json
                 try:
                     with open(f, encoding="utf-8") as fp:
-                        rows = _json.load(fp)
+                        rows = json.load(fp)
                     if rows and rows[0].get("motor_no") is not None:
                         existing_races.add(int(m.group(1)))
                 except Exception:
@@ -3109,9 +2919,7 @@ def fetch_tenji_for_csv(csv_paths: list):
                     log(f"    [展示] エラー: {e}")
 
         log("  展示取得完了")
-
-    import threading as _threading
-    _threading.Thread(target=_bg_fetch, daemon=True).start()
+    threading.Thread(target=_bg_fetch, daemon=True).start()
 
 
 def log(msg):
@@ -3170,7 +2978,6 @@ def today_str():
     """
     now = datetime.now()
     if now.hour < 4:
-        from datetime import timedelta
         return (now + timedelta(days=1)).strftime("%Y-%m-%d")
     return now.strftime("%Y-%m-%d")
 
@@ -3182,7 +2989,6 @@ def _race_date_candidates() -> list:
     通常時は当日付のみ。
     """
     now = datetime.now()
-    from datetime import timedelta
     if now.hour < 4:
         next_day = (now + timedelta(days=1)).strftime("%Y-%m-%d")
         today    = now.strftime("%Y-%m-%d")
@@ -3256,14 +3062,13 @@ def update_cache_version():
       - index.html 内の全 .js?v=14桁 を置換（繰り返し確実に動作する）
       - /* __CACHE_VER__ */ プレースホルダーも初回互換で残す
     """
-    import re as _re
     ver = datetime.now().strftime("%Y%m%d%H%M%S")
     try:
         text = INDEX_HTML.read_text(encoding="utf-8")
         # パターン1: 2回目以降 .js?v=XXXXXXXXXXXXXX (14桁) → 全スクリプト対象
-        text2 = _re.sub(r"([.]js[?]v=)\d{14}", lambda m: m.group(1) + ver, text)
+        text2 = re.sub(r"([.]js[?]v=)\d{14}", lambda m: m.group(1) + ver, text)
         # パターン2: 初回 /* __CACHE_VER__ */ プレースホルダー（後方互換）
-        text2 = _re.sub(r"/[*] __CACHE_VER__ [*]/", ver, text2)
+        text2 = re.sub(r"/[*] __CACHE_VER__ [*]/", ver, text2)
         if text2 != text:
             with open(INDEX_HTML, "w", encoding="utf-8") as _wf:
                 _wf.write(text2)
@@ -3279,13 +3084,10 @@ def obfuscate_js(src_path, out_path):
     失敗時はオリジナルをそのまま使う（動作を絶対に止めない）。
     前提: npm install -g javascript-obfuscator
     """
-    import shutil as _shutil, tempfile as _tempfile
-    from pathlib import Path as _Path
-
-    obf_cmd = _shutil.which("javascript-obfuscator")
+    obf_cmd = shutil.which("javascript-obfuscator")
     if not obf_cmd:
         log("[obfuscate] javascript-obfuscator が見つかりません → オリジナルを使用")
-        _shutil.copy2(src_path, out_path)
+        shutil.copy2(src_path, out_path)
         return out_path
 
     stripped_path = SCRIPTS_DIR / "_sample_stripped_tmp.js"
@@ -3306,7 +3108,7 @@ while (i < src.length) {
 }
 require('fs').writeFileSync(process.argv[3], result);
 """
-    with _tempfile.NamedTemporaryFile(suffix=".js", delete=False, mode="w", encoding="utf-8") as tf:
+    with tempfile.NamedTemporaryFile(suffix=".js", delete=False, mode="w", encoding="utf-8") as tf:
         strip_script_path = tf.name
         tf.write(strip_script)
 
@@ -3320,11 +3122,11 @@ require('fs').writeFileSync(process.argv[3], result);
         log("[obfuscate] コメント除去完了")
     except Exception as e:
         log(f"[obfuscate] コメント除去失敗: {e} → オリジナルを使用")
-        _shutil.copy2(src_path, out_path)
+        shutil.copy2(src_path, out_path)
         return out_path
     finally:
         try:
-            import os as _os; _os.unlink(strip_script_path)
+            os.unlink(strip_script_path)
         except Exception:
             pass
 
@@ -3342,12 +3144,12 @@ require('fs').writeFileSync(process.argv[3], result);
             ],
             capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120
         )
-        if r.returncode != 0 or not _Path(out_path).exists():
+        if r.returncode != 0 or not Path(out_path).exists():
             raise RuntimeError(f"obfuscate failed: {r.stderr}")
-        log(f"[obfuscate] 難読化完了: {_Path(out_path).stat().st_size // 1024} KB")
+        log(f"[obfuscate] 難読化完了: {Path(out_path).stat().st_size // 1024} KB")
     except Exception as e:
         log(f"[obfuscate] 難読化失敗: {e} → オリジナルを使用")
-        _shutil.copy2(src_path, out_path)
+        shutil.copy2(src_path, out_path)
     finally:
         try:
             stripped_path.unlink()
@@ -3370,24 +3172,23 @@ def _summarize_push_targets(changed_files):
       "びわこR3, 丸亀R5, 唐津R7"
       "唐津 (CSV), index.html, data.js"
     """
-    import re as _re
     venue_races = {}   # venue → set of race_no strings
     other_labels = []
 
     for f in changed_files:
         name = Path(str(f)).name
         # tenji_{venue}_{YYYYMMDD}_R{rno}.json
-        m = _re.search(r"tenji_(.+?)_\d{8}_R(\d+)\.json$", name)
+        m = re.search(r"tenji_(.+?)_\d{8}_R(\d+)\.json$", name)
         if m:
             venue_races.setdefault(m.group(1), set()).add(m.group(2))
             continue
         # {venue}_{YYYYMMDD}.csv  (csv_output)
-        m = _re.search(r"^(.+?)_\d{8}\.csv$", name)
+        m = re.search(r"^(.+?)_\d{8}\.csv$", name)
         if m:
             venue_races.setdefault(m.group(1), set())   # レース番号なし
             continue
         # 結果: result_{venue}_{YYYYMMDD}_R{rno}.json
-        m = _re.search(r"result_(.+?)_\d{8}_R(\d+)\.json$", name)
+        m = re.search(r"result_(.+?)_\d{8}_R(\d+)\.json$", name)
         if m:
             venue_races.setdefault(m.group(1), set()).add(m.group(2))
             continue
@@ -3421,12 +3222,23 @@ def git_push(changed_files):
         return True
 
 def _run_nolock(cmd):
-    """_git_lock 取得済みの内部から呼ぶ git サブコマンド実行（ロックなし版）"""
+    """
+    _git_lock 取得済みの内部から呼ぶ git サブコマンド実行（ロックなし版）。
+
+    [修正] _GIT_DEBUG=True のとき、全 git コマンドの終了コードと
+    stdout/stderr をリアルタイムでコンソールに出力する。
+    呼び出し元が戻り値の output を _ で捨てていてもログに残る。
+    """
     if cmd[0] == "git" and cmd[1] in ("commit", "add"):
         _clear_git_lock()
     r = subprocess.run(cmd, cwd=str(SCRIPTS_DIR),
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
-    return r.returncode, (r.stdout + r.stderr).strip()
+    output = (r.stdout + r.stderr).strip()
+    if _GIT_DEBUG and cmd[0] == "git":
+        display_cmd = " ".join(cmd[1:])
+        log(f"  [GIT_DEBUG] git {display_cmd} => code={r.returncode}"
+            + (f"\n             {output[:400]}" if output else ""))
+    return r.returncode, output
 
 def _git_add_locked(changed_files):
     """_git_lock 保持中に呼ばれる。git add（難読化含む）だけ実施。commit/pushはしない。"""
@@ -3535,7 +3347,6 @@ def get_past_venues_from_csvs(days_back: int = HISTORY_DAYS) -> dict:
     {会場名: 日付YYYY-MM-DD} の辞書を返す（当日は除く）。
     バックテスト用結果取得の入力として使う。
     """
-    from datetime import timedelta
     today = datetime.now().date()
     target_dates = set(
         (today - timedelta(days=d)).strftime("%Y-%m-%d")
@@ -3572,8 +3383,6 @@ def backfill_past_results():
     if not FETCH_RESULT_PY.exists():
         log(f"  ⚠ {FETCH_RESULT_PY.name} が見つかりません → バックフィルスキップ")
         return
-
-    from datetime import timedelta
     today = datetime.now().date()
 
     # 日付ごとに会場リストを作成
@@ -3677,9 +3486,7 @@ def backfill_past_results():
                     log("  バックフィル: 変更なし（既に最新）")
         else:
             log("  バックフィル: 新規取得なし（全レース未確定または非公開）")
-
-    import threading as _threading
-    _threading.Thread(target=_do_backfill, daemon=True).start()
+    threading.Thread(target=_do_backfill, daemon=True).start()
 
 
 def main():
@@ -3701,6 +3508,7 @@ def main():
     COMMENT_DIR.mkdir(exist_ok=True)
     RESULT_DIR.mkdir(exist_ok=True)
 
+    ODDS_DIR.mkdir(exist_ok=True)
     # 深夜帯は翌日付CSVも監視（_race_date_candidates()に従う）
     prev_csv = {}
     for _pat in [str(CSV_DIR / f"*{d}*.csv") for d in _race_date_candidates()]:
@@ -3709,6 +3517,7 @@ def main():
     prev_comment = get_mtimes(str(COMMENT_DIR / "*.json")) if COMMENT_DIR.exists() else {}
     prev_result  = get_mtimes(str(RESULT_DIR / "*.json")) if RESULT_DIR.exists() else {}
     prev_xlsx_mtime = XLSX_PATH.stat().st_mtime if XLSX_PATH.exists() else None
+    prev_odds    = get_mtimes(str(ODDS_DIR / "*.json")) if ODDS_DIR.exists() else {}
 
     # 起動時: 当日CSVがあればindex.jsonを生成してpush
     today_csvs = get_today_csvs()
@@ -3735,7 +3544,6 @@ def main():
         log("  ✓ 展示・コメント・オッズ・ALL_DATA・ALL_DATA_HISTORY push完了（公式情報取得はバックグラウンドで実行中）")
 
         # ② 重い処理（公式レースインデックス取得・JSON書き出し）はバックグラウンドで実行 → 完了後に追加push
-        import threading as _threading
         def _reprocess_bg():
             log("  [BG] 公式情報・JSONファイル更新 開始...")
             # [fix] inject_all_data_to_html / inject_master_ext_to_html は
@@ -3752,16 +3560,13 @@ def main():
                 log("  [BG] 公式情報・JSONファイル更新 完了 → push済み")
             else:
                 log("  [BG] 公式情報・JSONファイル更新 完了（変更なし・pushスキップ）")
-        _threading.Thread(target=_reprocess_bg, daemon=True).start()
+        threading.Thread(target=_reprocess_bg, daemon=True).start()
 
-        # オッズ永続ループをバックグラウンドで起動（起動時pushを遅らせない）
-        _start_odds_loop_if_needed()
     else:
         log("  当日CSVなし → 深夜帯CSV到着監視モードで待機")
         # ── 深夜帯CSV待機スレッド ─────────────────────────────────
         # 午前1時頃に翌日付CSVが到着した瞬間を検知してpushする専用スレッド。
         # メインループが _race_date_candidates() を更新し始めるまでの橋渡し。
-        import threading as _threading
         def _await_midnight_csv():
             log("  [深夜監視] 翌日付CSV到着を待機中（30秒ごとチェック）...")
             while True:
@@ -3787,10 +3592,9 @@ def main():
                         inject_history_to_html()
                         pushed = git_push([INDEX_HTML, DATA_JS])
                         log("  [深夜監視][BG] 公式情報・JSONファイル更新 完了" + (" → push済み" if pushed else "（変更なし）"))
-                    _threading.Thread(target=_bg, daemon=True).start()
-                    _start_odds_loop_if_needed()
+                    threading.Thread(target=_bg, daemon=True).start()
                     break  # CSV到着確認できたのでスレッド終了（メインループに引き継ぎ）
-        _threading.Thread(target=_await_midnight_csv, daemon=True).start()
+        threading.Thread(target=_await_midnight_csv, daemon=True).start()
 
     # 過去HISTORY_DAYS日分の結果をバックグラウンドで補完（バックテスト用）
     backfill_past_results()
@@ -3806,6 +3610,7 @@ def main():
             curr_comment = get_mtimes(str(COMMENT_DIR / "*.json")) if COMMENT_DIR.exists() else {}
             curr_result  = get_mtimes(str(RESULT_DIR / "*.json")) if RESULT_DIR.exists() else {}
 
+            curr_odds    = get_mtimes(str(ODDS_DIR / "*.json")) if ODDS_DIR.exists() else {}
             changed = []
 
             # Excelマスタ変更チェック → 再ビルド＋MASTER ホットリロード
@@ -3840,8 +3645,12 @@ def main():
                     changed.append(Path(p))
                     log(f"  結果変更: {Path(p).name}")
 
+            # オッズJSON変更チェック
+            for p, mt in curr_odds.items():
+                if p not in prev_odds or prev_odds[p] != mt:
+                    changed.append(Path(p))
+                    log(f"  オッズ変更: {Path(p).name}")
             if changed:
-                # CSVが変わったらindex.jsonも再生成＆ALL_DATA再埋め込み
                 if csv_changed:
                     # 出走表到着 → モーター情報を同期取得 → 展示情報をバックグラウンド取得
                     changed_csv_paths = [p for p in changed if str(p).endswith(".csv")]
@@ -3875,6 +3684,10 @@ def main():
                     for p in changed
                 )
                 tenji_or_comment_changed = tenji_changed or comment_changed
+                odds_changed = any(
+                    "odds" in str(p) and str(p).endswith(".json")
+                    for p in changed
+                )
                 tenji_push_done = False  # ★ 先行push済みフラグ
                 if tenji_or_comment_changed:
                     inject_tenji_to_html()
@@ -3892,7 +3705,11 @@ def main():
                         code2, out2 = _run_nolock(["git", "status", "--porcelain"])
                         tracked2 = [l for l in out2.strip().splitlines() if not l.startswith("??")]
                         if tracked2:
-                            tenji_summary = _summarize_push_targets(changed)
+                            # tenji/comment 系ファイルだけを集計（odds等を混入させない）
+                            tenji_files = [p for p in changed
+                                           if ("tenji" in str(p) or "comment" in str(p))
+                                           and str(p).endswith(".json")]
+                            tenji_summary = _summarize_push_targets(tenji_files) if tenji_files else "展示"
                             msg2 = f"tenji update {datetime.now().strftime('%Y-%m-%d %H:%M')} [{tenji_summary}]"
                             _push_queue.put(("raw", None, msg2))
                             log(f"  ✓ 展示情報 pushキューに追加 [{tenji_summary}]")
@@ -3901,6 +3718,28 @@ def main():
                     inject_tenji_to_html()
                     inject_comment_to_html()
                     inject_flying_to_html()
+
+                # ── オッズ変更時は data/odds_YYYYMMDD.json のみ先行push ──────────────
+                odds_push_done = False
+                if odds_changed:
+                    inject_odds_to_html()
+                    with _git_lock:
+                        # tenji先行pushで既にstageされたtenji系ファイルをoddsコミットから除外
+                        for tj in DATA_DIR.glob("tenji_*.json"):
+                            _run_nolock(["git", "reset", "HEAD", str(tj)])
+                        for oj in DATA_DIR.glob("odds_*.json"):
+                            _run_nolock(["git", "add", str(oj)])
+                        update_cache_version()
+                        _run_nolock(["git", "add", str(INDEX_HTML)])
+                        code3, out3 = _run_nolock(["git", "status", "--porcelain"])
+                        tracked3 = [l for l in out3.strip().splitlines() if not l.startswith("??")]
+                        if tracked3:
+                            msg3 = f"odds update {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                            _push_queue.put(("raw", None, msg3))
+                            log(f"  ✓ オッズ pushキューに追加")
+                            odds_push_done = True
+                else:
+                    inject_odds_to_html()
 
                 # ※ RESULT_DATAはバックグラウンドスレッドが独立してpushするためここでは呼ばない
                 # フェーズ3: 停止 → data/history_YYYYMMDD.json でfetch配信
@@ -3913,19 +3752,18 @@ def main():
                     fetch_and_inject_race_index()  # 公式サイトから開催グレード情報を埋め込む
                 write_all_json_files()    # フェーズ1: data/*.json を追加書き出し（HTML変更なし）
 
-                # オッズ永続ループの死活監視 → 死んでいれば再起動
-                _start_odds_loop_if_needed()
 
                 # ★ 展示先行push済み かつ CSV変更なし → 通常push（obfuscate込み）をスキップ
                 #　 CSV変更あり（出走表・index.html更新）は先行pushの有無に関わらず通常pushも実行
-                if tenji_push_done and not csv_changed:
-                    log("  展示のみ変更 → 先行push済みのため通常pushをスキップ")
+                if (tenji_push_done or odds_push_done) and not csv_changed:
+                    log("  展示/オッズのみ変更 → 先行push済みのため通常pushをスキップ")
                 else:
                     git_push(changed)
                 prev_csv     = curr_csv
                 prev_tenji   = curr_tenji
                 prev_comment = curr_comment
                 prev_result  = curr_result
+                prev_odds    = curr_odds
 
             # 結果バックグラウンド取得（5分ごと・CSVがある会場のみ・全確定後は停止）
             if not hasattr(main, '_last_result_fetch'):
@@ -3949,23 +3787,19 @@ def main():
                     except Exception:
                         continue
                 if venues_in_csv:
-                    import threading as _threading
                     def _result_worker(venues):
                         all_done = fetch_result_for_venues(venues)
                         if all_done:
                             main._result_fetch_done = True
-                    _threading.Thread(
+                    threading.Thread(
                         target=_result_worker,
                         args=(venues_in_csv,),
                         daemon=True,
                     ).start()
 
-            # オッズループの死活監視（CSVに変更がなくても定期的に確認）
-            _start_odds_loop_if_needed()
 
     except KeyboardInterrupt:
         log("\n[終了]")
-        _odds_worker_stop.set()   # オッズループに停止シグナルを送る
 
 if __name__ == "__main__":
     main()
