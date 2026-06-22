@@ -1,0 +1,121 @@
+{
+  "venue": "戸田",
+  "venue_slug": "toda",
+  "date": "20260621",
+  "race": 12,
+  "fetched_at": "2026-06-22 09:03:23",
+  "kimari": "まくり差し",
+  "henkan": [],
+  "racetime": "1'50\"5",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 5,
+      "name": "黒澤めぐみ",
+      "reg_no": "4791",
+      "time": "1'50\"5"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "廣中智紗衣",
+      "reg_no": "4117",
+      "time": "1'52\"0"
+    },
+    {
+      "rank": "3",
+      "boat": 4,
+      "name": "寺田空詩",
+      "reg_no": "5231",
+      "time": "1'53\"5"
+    },
+    {
+      "rank": "4",
+      "boat": 1,
+      "name": "浜田亜理沙",
+      "reg_no": "4546",
+      "time": "1'54\"7"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "内山七海",
+      "reg_no": "5155",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 3,
+      "name": "根岸真優",
+      "reg_no": "5322",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.12,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.17,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.05,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.06,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.02,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "5",
+      "odds": 2050,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "5",
+      "odds": 790,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 200,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "5-2",
+      "odds": 9350,
+      "ninki": 23
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "5-2-4",
+      "odds": 58930,
+      "ninki": 96
+    }
+  ],
+  "cancelled": false
+}

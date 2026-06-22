@@ -1,0 +1,121 @@
+{
+  "venue": "平和島",
+  "venue_slug": "heiwajima",
+  "date": "20260621",
+  "race": 5,
+  "fetched_at": "2026-06-22 08:57:02",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'51\"7",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "柳瀬興志",
+      "reg_no": "3661",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "西原明生",
+      "reg_no": "4034",
+      "time": "1'53\"0"
+    },
+    {
+      "rank": "3",
+      "boat": 2,
+      "name": "山下拓巳",
+      "reg_no": "5273",
+      "time": "1'54\"1"
+    },
+    {
+      "rank": "4",
+      "boat": 5,
+      "name": "高岡竜也",
+      "reg_no": "4950",
+      "time": "1'55\"1"
+    },
+    {
+      "rank": "5",
+      "boat": 6,
+      "name": "加藤雅之",
+      "reg_no": "3372",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 3,
+      "name": "藤田俊祐",
+      "reg_no": "5226",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.13,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.15,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.1,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.16,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 130,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 150,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 360,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-4",
+      "odds": 3600,
+      "ninki": 14
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-4-2",
+      "odds": 12730,
+      "ninki": 45
+    }
+  ],
+  "cancelled": false
+}
