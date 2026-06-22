@@ -1,0 +1,121 @@
+{
+  "venue": "福岡",
+  "venue_slug": "fukuoka",
+  "date": "20260622",
+  "race": 12,
+  "fetched_at": "2026-06-22 18:11:02",
+  "kimari": "逃げ",
+  "henkan": [],
+  "racetime": "1'49\"3",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 1,
+      "name": "上平真二",
+      "reg_no": "3737",
+      "time": "1'49\"3"
+    },
+    {
+      "rank": "2",
+      "boat": 2,
+      "name": "古結宏",
+      "reg_no": "4002",
+      "time": "1'51\"7"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "作間章",
+      "reg_no": "3966",
+      "time": "1'52\"6"
+    },
+    {
+      "rank": "4",
+      "boat": 4,
+      "name": "横澤剛治",
+      "reg_no": "3956",
+      "time": "1'53\"9"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "佐藤大介",
+      "reg_no": "3813",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "飯山泰",
+      "reg_no": "3940",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.04,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.09,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.14,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.18,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.17,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.16,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "1",
+      "odds": 140,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "1",
+      "odds": 150,
+      "ninki": null
+    },
+    {
+      "combo": "2",
+      "odds": 180,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "1-2",
+      "odds": 240,
+      "ninki": 1
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "1-2-3",
+      "odds": 740,
+      "ninki": 1
+    }
+  ],
+  "cancelled": false
+}
