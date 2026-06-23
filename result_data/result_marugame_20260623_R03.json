@@ -1,0 +1,121 @@
+{
+  "venue": "丸亀",
+  "venue_slug": "marugame",
+  "date": "20260623",
+  "race": 3,
+  "fetched_at": "2026-06-23 16:43:09",
+  "kimari": "まくり差し",
+  "henkan": [],
+  "racetime": "1'49\"2",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 3,
+      "name": "高山敬悟",
+      "reg_no": "5207",
+      "time": "1'49\"2"
+    },
+    {
+      "rank": "2",
+      "boat": 4,
+      "name": "西丸敦基",
+      "reg_no": "5299",
+      "time": "1'51\"2"
+    },
+    {
+      "rank": "3",
+      "boat": 2,
+      "name": "廣瀬凜",
+      "reg_no": "5280",
+      "time": "1'53\"1"
+    },
+    {
+      "rank": "4",
+      "boat": 5,
+      "name": "佐藤世那",
+      "reg_no": "5359",
+      "time": "1'53\"2"
+    },
+    {
+      "rank": "5",
+      "boat": 1,
+      "name": "鈴木章司",
+      "reg_no": "5262",
+      "time": "1'53\"4"
+    },
+    {
+      "rank": "6",
+      "boat": 6,
+      "name": "常盤海心",
+      "reg_no": "5143",
+      "time": "1'56\"6"
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.12,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.12,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.11,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.08,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.09,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.13,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "3",
+      "odds": 330,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "3",
+      "odds": 120,
+      "ninki": null
+    },
+    {
+      "combo": "4",
+      "odds": 250,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "3-4",
+      "odds": 1050,
+      "ninki": 6
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "3-4-2",
+      "odds": 2550,
+      "ninki": 9
+    }
+  ],
+  "cancelled": false
+}
