@@ -1,0 +1,121 @@
+{
+  "venue": "三国",
+  "venue_slug": "mikuni",
+  "date": "20260623",
+  "race": 2,
+  "fetched_at": "2026-06-23 09:18:09",
+  "kimari": "差し",
+  "henkan": [],
+  "racetime": "1'50\"2",
+  "fly": [],
+  "order": [
+    {
+      "rank": "1",
+      "boat": 2,
+      "name": "入海馨",
+      "reg_no": "4886",
+      "time": "1'50\"2"
+    },
+    {
+      "rank": "2",
+      "boat": 1,
+      "name": "三浦洋次朗",
+      "reg_no": "4706",
+      "time": "1'52\"5"
+    },
+    {
+      "rank": "3",
+      "boat": 3,
+      "name": "安部慎一",
+      "reg_no": "4727",
+      "time": "1'53\"7"
+    },
+    {
+      "rank": "4",
+      "boat": 6,
+      "name": "福田翔吾",
+      "reg_no": "5036",
+      "time": "1'54\"1"
+    },
+    {
+      "rank": "5",
+      "boat": 5,
+      "name": "橋本英一",
+      "reg_no": "4866",
+      "time": null
+    },
+    {
+      "rank": "6",
+      "boat": 4,
+      "name": "南野利騰",
+      "reg_no": "4405",
+      "time": null
+    }
+  ],
+  "start": [
+    {
+      "boat": 1,
+      "st": 0.19,
+      "fly": false
+    },
+    {
+      "boat": 2,
+      "st": 0.17,
+      "fly": false
+    },
+    {
+      "boat": 3,
+      "st": 0.16,
+      "fly": false
+    },
+    {
+      "boat": 4,
+      "st": 0.24,
+      "fly": false
+    },
+    {
+      "boat": 5,
+      "st": 0.21,
+      "fly": false
+    },
+    {
+      "boat": 6,
+      "st": 0.21,
+      "fly": false
+    }
+  ],
+  "tansho": [
+    {
+      "combo": "2",
+      "odds": 370,
+      "ninki": null
+    }
+  ],
+  "fukusho": [
+    {
+      "combo": "2",
+      "odds": 100,
+      "ninki": null
+    },
+    {
+      "combo": "1",
+      "odds": 100,
+      "ninki": null
+    }
+  ],
+  "nirentan": [
+    {
+      "combo": "2-1",
+      "odds": 410,
+      "ninki": 2
+    }
+  ],
+  "sanrentan": [
+    {
+      "combo": "2-1-3",
+      "odds": 1950,
+      "ninki": 7
+    }
+  ],
+  "cancelled": false
+}
